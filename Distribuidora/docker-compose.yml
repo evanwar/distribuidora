@@ -1,0 +1,72 @@
+name: distribuidora
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-distribuidora}
+      POSTGRES_USER: ${POSTGRES_USER:-distribuidora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be configured in .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - backend
+
+  api:
+    image: distribuidora-api:local
+    labels:
+      com.microsoft.visualstudio.project-name: Distribuidora.Api
+    build:
+      context: .
+      dockerfile: src/Distribuidora.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-distribuidora};Username=${POSTGRES_USER:-distribuidora};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be configured in .env};Include Error Detail=false"
+      Database__AutoMigrate: "true"
+      Logging__EnableOutboxProcessor: "true"
+      Jwt__Issuer: ${JWT_ISSUER:-Distribuidora.Api}
+      Jwt__Audience: ${JWT_AUDIENCE:-Distribuidora.Client}
+      Jwt__Key: ${JWT_KEY:-local-development-jwt-key-change-me-123456789}
+      Seed__AdminUsername: ${SEED_ADMIN_USERNAME:-admin}
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@local.test}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - http://localhost:8080/api/v1/health
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+    name: distribuidora_postgres_data
+
+networks:
+  backend:
+    name: distribuidora_backend

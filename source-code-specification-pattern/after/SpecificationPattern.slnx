@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SpecificationPattern.AppHost/SpecificationPattern.AppHost.csproj" />
+  <Project Path="SpecificationPattern/SpecificationPattern.csproj" />
+</Solution>

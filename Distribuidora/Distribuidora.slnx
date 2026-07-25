@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/Docker/">
+    <Project Path="docker-compose.dcproj">
+      <Build />
+    </Project>
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Distribuidora.Api/Distribuidora.Api.csproj" />
+    <Project Path="src/Distribuidora.Application/Distribuidora.Application.csproj" />
+    <Project Path="src/Distribuidora.Contracts/Distribuidora.Contracts.csproj" />
+    <Project Path="src/Distribuidora.Domain/Distribuidora.Domain.csproj" />
+    <Project Path="src/Distribuidora.Infrastructure/Distribuidora.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Distribuidora.IntegrationTests/Distribuidora.IntegrationTests.csproj" />
+    <Project Path="tests/Distribuidora.UnitTests/Distribuidora.UnitTests.csproj" />
+  </Folder>
+</Solution>
