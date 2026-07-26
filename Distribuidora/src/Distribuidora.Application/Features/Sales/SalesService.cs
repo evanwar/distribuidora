@@ -74,6 +74,7 @@ public sealed class SalesService(
         db.ExecuteAtomicAsync(async token =>
         {
             var sale = GetById(id);
+            EnsureStockAvailable(sale);
             sale.Confirm(datetimeProvider.UtcNow);
             if (sale.PaymentCondition != PaymentCondition.Cash)
             {
@@ -156,6 +157,27 @@ public sealed class SalesService(
             throw new ArgumentException("An active customer is required.");
         if (request.Items.Count == 0 || request.Items.Any(x => x.Quantity <= 0 || x.UnitPrice < 0))
             throw new ArgumentException("Sale requires valid items.");
+        if (request.Items.Select(x => x.ProductId).Distinct().Count() != request.Items.Count)
+            throw new ArgumentException("A product cannot be repeated in the same sale.");
+    }
+
+    private void EnsureStockAvailable(CounterSale sale)
+    {
+        foreach (var line in sale.Items.GroupBy(x => x.ProductId))
+        {
+            var requested = line.Sum(x => x.Quantity);
+            var balance = db.Query(Specification.Create<StockBalance>(
+                x => x.WarehouseId == sale.SourceWarehouseId && x.ProductId == line.Key))
+                .SingleOrDefault();
+            var available = Math.Max(0, (balance?.Quantity ?? 0) - (balance?.ReservedQuantity ?? 0));
+            if (requested <= available) continue;
+
+            var productName = db.Query(Specification.Create<Product>(x => x.Id == line.Key))
+                .Select(x => x.Name)
+                .SingleOrDefault() ?? "Producto";
+            throw new DomainRuleException(
+                $"Stock insuficiente para {productName}. Disponible: {available:0.####}; solicitado: {requested:0.####}.");
+        }
     }
 
     private void AddLines(CounterSale sale, CreateSaleRequest request, Guid actorId)

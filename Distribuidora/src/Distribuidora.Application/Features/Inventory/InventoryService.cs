@@ -17,6 +17,11 @@ public sealed class InventoryService(
     AuditEntryService audit,
     IDatatimeProvider datetimeProvider)
 {
+    public IReadOnlyCollection<InventoryAdjustment> GetAdjustments() =>
+        db.Query(Specification.All<InventoryAdjustment>())
+            .OrderByDescending(x => x.CreatedAt)
+            .ToArray();
+
     public IReadOnlyCollection<StockBalance> GetBalances(Guid? warehouseId, Guid? productId) =>
         db.Query(Specification.Create<StockBalance>(x =>
                 (!warehouseId.HasValue || x.WarehouseId == warehouseId) &&
@@ -49,6 +54,13 @@ public sealed class InventoryService(
     {
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Items.Count == 0)
             throw new ArgumentException("Reason and items are required.");
+        if (!db.Query(Specification.Create<Domain.Catalogs.Warehouse>(
+                x => x.Id == request.WarehouseId && x.Active)).Any())
+            throw new ArgumentException("Warehouse is inactive or does not exist.");
+        if (request.Items.Any(x => x.PhysicalQuantity < 0 || x.UnitCost < 0))
+            throw new ArgumentException("Physical quantity and unit cost cannot be negative.");
+        if (request.Items.Select(x => x.ProductId).Distinct().Count() != request.Items.Count)
+            throw new ArgumentException("A product cannot be repeated in the same adjustment.");
 
         var adjustment = new InventoryAdjustment
         {
@@ -59,6 +71,9 @@ public sealed class InventoryService(
         };
         foreach (var item in request.Items)
         {
+            if (!db.Query(Specification.Create<Domain.Catalogs.Product>(
+                    x => x.Id == item.ProductId && x.Active)).Any())
+                throw new ArgumentException("Product is inactive or does not exist.");
             var current = db.Query(Specification.Create<StockBalance>(
                 x => x.WarehouseId == request.WarehouseId && x.ProductId == item.ProductId))
                 .SingleOrDefault()?.Quantity ?? 0;
@@ -82,9 +97,16 @@ public sealed class InventoryService(
             var adjustment = GetAdjustment(id);
             adjustment.AuthorizedBy = actorId;
             adjustment.Confirm(datetimeProvider.UtcNow);
-            foreach (var item in adjustment.Items.Where(x => x.DifferenceQuantity != 0))
-                posting.Post(item.ProductId, adjustment.WarehouseId, item.DifferenceQuantity, item.UnitCost,
-                    MovementType.Adjustment, nameof(InventoryAdjustment), adjustment.Id, actorId);
+            foreach (var item in adjustment.Items)
+            {
+                var current = db.Query(Specification.Create<StockBalance>(
+                    x => x.WarehouseId == adjustment.WarehouseId && x.ProductId == item.ProductId))
+                    .SingleOrDefault()?.Quantity ?? 0;
+                var difference = item.PhysicalQuantity - current;
+                if (difference != 0)
+                    posting.Post(item.ProductId, adjustment.WarehouseId, difference, item.UnitCost,
+                        MovementType.Adjustment, nameof(InventoryAdjustment), adjustment.Id, actorId);
+            }
             audit.Add("Confirm", "inventory", nameof(InventoryAdjustment), id, actorId, correlationId);
             await db.SaveChangesAsync(token);
             return adjustment;
@@ -107,6 +129,14 @@ public sealed class InventoryService(
                 throw new ArgumentException("Warehouses must differ.");
             if (request.Quantity <= 0)
                 throw new ArgumentException("Quantity must be positive.");
+            if (!db.Query(Specification.Create<Domain.Catalogs.Product>(
+                    x => x.Id == request.ProductId && x.Active)).Any())
+                throw new ArgumentException("Product is inactive or does not exist.");
+            var activeWarehouses = db.Query(Specification.Create<Domain.Catalogs.Warehouse>(
+                    x => (x.Id == request.SourceWarehouseId || x.Id == request.DestinationWarehouseId) && x.Active))
+                .Count();
+            if (activeWarehouses != 2)
+                throw new ArgumentException("Both warehouses must be active.");
             var reference = Guid.NewGuid();
             posting.Post(request.ProductId, request.SourceWarehouseId, -request.Quantity, request.UnitCost,
                 MovementType.InternalTransfer, "InternalTransfer", reference, actorId, false, request.Notes);

@@ -29,7 +29,9 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("/api/v1/counter-sales/{id}/confirm", body);
+        Assert.Contains("/api/v1/goods-receipts", body);
         Assert.Contains("/api/v1/goods-receipts/{id}/close", body);
+        Assert.Contains("/api/v1/inventory/adjustments", body);
         Assert.Contains("/api/v1/inventory/kardex", body);
         Assert.Contains("/api/v1/customers", body);
         Assert.Contains("/api/v1/suppliers", body);

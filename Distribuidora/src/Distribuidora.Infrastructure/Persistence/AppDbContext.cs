@@ -130,6 +130,8 @@ public sealed class AppDbContext(
         var utcNow = datetimeProvider.UtcNow;
         foreach (var entry in ChangeTracker.Entries<AuditableEntity>().Where(x => x.State == EntityState.Added))
             if (entry.Entity.CreatedAt == default) entry.Entity.CreatedAt = utcNow;
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>().Where(x => x.State == EntityState.Modified))
+            entry.Entity.RowVersion++;
 
         foreach (var entry in ChangeTracker.Entries<AuditLog>().Where(x => x.State == EntityState.Added))
         {

@@ -1,0 +1,45 @@
+# FILE_INDEX
+
+Total de archivos Markdown: 41
+
+- `00_ORQUESTADOR.md`
+- `01_CONTEXTO_NEGOCIO_Y_ALCANCE.md`
+- `02_ARQUITECTURA_GLOBAL.md`
+- `03_CONVENCIONES_TRANSVERSALES.md`
+- `04_CONTRATO_INTEGRACION_BACKEND.md`
+- `05_DESIGN_SYSTEM_MATERIAL_RESPONSIVE.md`
+- `06_MATRIZ_ENDPOINTS_FRONTEND.md`
+- `07_ARQUITECTURA_COMPONENTES_UX.md`
+- `AGENTS.md`
+- `FILE_INDEX.md`
+- `MANIFEST.md`
+- `README.md`
+- `modules/F01_autenticacion_usuarios_permisos.md`
+- `modules/F02_catalogos_base_mostrador.md`
+- `modules/F03_inventario_existencias_kardex.md`
+- `modules/F04_compras_recepcion_mercancia.md`
+- `modules/F05_punto_venta_mostrador.md`
+- `modules/F06_cobranza_cuentas_por_cobrar.md`
+- `modules/F07_auditoria_ajustes_cancelaciones.md`
+- `modules/F08_reportes_dashboard_mostrador.md`
+- `modules/F09_administracion_configuracion.md`
+- `skills/skill_01_angular_architecture.md`
+- `skills/skill_02_feature_vertical_slice.md`
+- `skills/skill_03_signals_rxjs_state.md`
+- `skills/skill_04_reactive_forms_validation.md`
+- `skills/skill_05_openapi_backend_contracts.md`
+- `skills/skill_06_auth_security_permissions.md`
+- `skills/skill_07_material_accessibility_responsive.md`
+- `skills/skill_08_testing_quality.md`
+- `skills/skill_09_pos_ux_performance.md`
+- `skills/skill_10_error_handling_observability.md`
+- `templates/TEMPLATE_ADR.md`
+- `templates/TEMPLATE_GAP_API.md`
+- `templates/TEMPLATE_PROMPT_SLICE.md`
+- `workflows/WF01_bootstrap_frontend.md`
+- `workflows/WF02_implementacion_slice_por_agente.md`
+- `workflows/WF03_flujo_venta_mostrador.md`
+- `workflows/WF04_pruebas_criterios_aceptacion.md`
+- `workflows/WF05_sincronizacion_openapi.md`
+- `workflows/WF06_validacion_material_responsive.md`
+- `workflows/WF07_auditoria_composicion_ux.md`

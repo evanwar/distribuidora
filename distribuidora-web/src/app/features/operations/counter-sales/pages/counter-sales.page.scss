@@ -1,0 +1,386 @@
+:host {
+  display: block;
+}
+
+.pos-page {
+  max-width: 100rem;
+}
+
+.sale-layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sale-main {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+mat-card,
+.surface {
+  border-color: var(--app-border);
+}
+
+.sale-settings mat-card-content {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
+
+.product-picker,
+.cart,
+.history,
+.checkout {
+  padding: var(--space-4);
+}
+
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.section-heading p {
+  margin: var(--space-1) 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.9rem;
+}
+
+.shortcut {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-xs);
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+}
+
+.product-search {
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
+.product-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 18rem));
+}
+
+.compact-empty,
+.cart-empty {
+  padding: var(--space-5);
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.cart-empty {
+  display: grid;
+  place-items: center;
+}
+
+.cart-empty > span {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: var(--space-3);
+  place-items: center;
+  border-radius: 50%;
+  background: var(--app-surface-muted);
+  color: var(--app-primary);
+}
+
+.cart-empty app-ui-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.cart-empty p {
+  margin: var(--space-1) 0 0;
+}
+
+.cart-lines,
+.sales-list {
+  display: grid;
+}
+
+.cart-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--app-border);
+}
+
+.cart-line__product {
+  display: grid;
+  min-width: 0;
+}
+
+.cart-line__product span,
+.cart-line__product small {
+  color: var(--app-text-muted);
+}
+
+.cart-line__product .cart-line__stock {
+  margin-top: var(--space-1);
+  color: var(--app-success);
+  font-weight: 650;
+}
+
+.cart-line__product span {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.quantity {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-pill);
+}
+
+.quantity button,
+.quantity input,
+.remove-line {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.quantity button {
+  width: 3rem;
+  height: 3rem;
+  cursor: pointer;
+}
+
+.quantity button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.quantity input {
+  width: 3.25rem;
+  padding: 0.5rem 0;
+  text-align: center;
+  appearance: textfield;
+}
+
+.line-total {
+  text-align: end;
+}
+
+.remove-line { color: var(--app-danger); }
+
+.checkout {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.checkout__eyebrow {
+  color: var(--app-primary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.checkout h2 {
+  margin: var(--space-2) 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.checkout__total {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: clamp(2rem, 8vw, 3rem);
+  letter-spacing: -0.055em;
+}
+
+dl {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+dt {
+  color: var(--app-text-muted);
+}
+
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkout-form,
+.checkout-actions,
+.modal__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.history {
+  min-width: 0;
+}
+
+.sale-row {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--app-border);
+}
+
+.sale-row > div:first-child,
+.sale-row__amount {
+  display: grid;
+}
+
+.sale-row span {
+  color: var(--app-text-muted);
+  font-size: 0.82rem;
+}
+
+.sale-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.quiet-danger {
+  color: var(--app-danger);
+}
+
+.modal {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.modal__header,
+.modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.modal__header span {
+  color: var(--app-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.modal__header h2 {
+  margin: var(--space-1) 0 0;
+}
+
+.ticket {
+  padding: var(--space-5);
+}
+
+.ticket header {
+  display: grid;
+  justify-items: center;
+  padding-bottom: var(--space-4);
+  text-align: center;
+}
+
+.ticket__mark {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: var(--space-2);
+  place-items: center;
+  border-radius: var(--app-radius-sm);
+  background: var(--app-primary);
+  color: white;
+  font-weight: 800;
+}
+
+.ticket__meta,
+.ticket__line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-top: 1px dashed var(--app-border);
+}
+
+.ticket__meta {
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+}
+
+.ticket dl {
+  padding-block: var(--space-4);
+  border-block: 1px dashed var(--app-border);
+}
+
+.ticket__total {
+  padding-top: var(--space-2);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.ticket__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+@media (min-width: 44rem) {
+  .sale-settings mat-card-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cart-line {
+    grid-template-columns: minmax(12rem, 1fr) auto 7rem auto;
+  }
+
+  .sale-row {
+    grid-template-columns: minmax(10rem, 1fr) auto 8rem minmax(16rem, auto);
+    align-items: center;
+  }
+
+  .sale-row__amount {
+    text-align: end;
+  }
+}
+
+@media (min-width: 75rem) {
+  .sale-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 23rem);
+    align-items: start;
+  }
+
+  .checkout {
+    position: sticky;
+    top: 5.25rem;
+  }
+}
+
+@media print {
+  .pos-page,
+  .ticket__actions {
+    display: none;
+  }
+
+  .ticket {
+    width: 80mm;
+    border: 0;
+    box-shadow: none;
+  }
+}

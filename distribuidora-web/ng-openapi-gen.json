@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/ng-openapi-gen/ng-openapi-gen-schema.json",
+  "input": "openapi/distribuidora.v1.json",
+  "output": "src/app/core/api/generated",
+  "services": true,
+  "promises": false,
+  "indexFile": true,
+  "enumStyle": "alias",
+  "removeStaleFiles": true
+}

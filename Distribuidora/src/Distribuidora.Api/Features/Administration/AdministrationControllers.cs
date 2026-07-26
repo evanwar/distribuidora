@@ -45,7 +45,9 @@ public sealed class FolioSequencesController(AdministrationService service, ICur
 [ApiController, Route("api/v1/admin/payment-methods"), Authorize, Produces(MediaTypeNames.Application.Json)]
 public sealed class PaymentMethodsController(AdministrationService service, ICurrentUser currentUser) : ControllerBase
 {
-    [HttpGet, Authorize(Policy = Permissions.Administration.View)]
+    // El catálogo activo es necesario en venta y cobranza; su mantenimiento
+    // continúa protegido por los permisos administrativos de POST/PUT.
+    [HttpGet]
     public ActionResult<ApiResponse<IReadOnlyCollection<PaymentMethodResponse>>> GetAll() =>
         Ok(ApiResponse<IReadOnlyCollection<PaymentMethodResponse>>.Ok(service.GetPaymentMethods().Select(HttpResponseMapper.Map).ToArray(), HttpContext.TraceIdentifier));
 

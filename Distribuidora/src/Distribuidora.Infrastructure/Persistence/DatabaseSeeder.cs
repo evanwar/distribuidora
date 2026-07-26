@@ -49,17 +49,33 @@ public static class DatabaseSeeder
                      Specification.Create<Permission>(x => !assigned.Contains(x.Key))).ToListAsync(ct))
             adminRole.Permissions.Add(permission);
 
-        if (!await db.Query(Specification.All<User>()).AnyAsync(ct))
+        var adminUsername = configuration["Seed:AdminUsername"] ?? "admin";
+        var adminEmail = configuration["Seed:AdminEmail"] ?? "admin@local.test";
+        var adminPassword = configuration["Seed:AdminPassword"] ?? "ChangeMe123!";
+        var syncAdminCredentials = configuration.GetValue("Seed:SyncAdminCredentials", false);
+        var admin = await db.Query(Specification.Create<User>(x => x.Username == adminUsername))
+            .Include(x => x.Roles)
+            .SingleOrDefaultAsync(ct);
+        if (admin is null)
         {
-            var admin = new User
+            admin = new User
             {
                 Name = "System Administrator",
-                Username = configuration["Seed:AdminUsername"] ?? "admin",
-                Email = configuration["Seed:AdminEmail"] ?? "admin@local.test",
-                PasswordHash = passwords.Hash(configuration["Seed:AdminPassword"] ?? "ChangeMe123!")
+                Username = adminUsername,
+                Email = adminEmail,
+                PasswordHash = passwords.Hash(adminPassword)
             };
             admin.Roles.Add(adminRole);
             db.Add(admin);
+        }
+        else if (syncAdminCredentials)
+        {
+            // En Docker el .env es la fuente autoritativa de la cuenta semilla.
+            // Esto permite rotar la credencial aun cuando PostgreSQL usa un volumen persistente.
+            admin.Email = adminEmail;
+            admin.PasswordHash = passwords.Hash(adminPassword);
+            admin.Active = true;
+            if (admin.Roles.All(x => x.Id != adminRole.Id)) admin.Roles.Add(adminRole);
         }
 
         if (!await db.Query(Specification.All<Warehouse>()).AnyAsync(ct))

@@ -14,6 +14,12 @@ namespace Distribuidora.Api.Features.Inventory;
 [ApiController, Route("api/v1/inventory"), Authorize, Produces(MediaTypeNames.Application.Json)]
 public sealed class InventoryController(InventoryService service, ICurrentUser currentUser) : ControllerBase
 {
+    [HttpGet("adjustments"), Authorize(Policy = Permissions.Inventory.View)]
+    public ActionResult<ApiResponse<IReadOnlyCollection<InventoryAdjustmentResponse>>> GetAdjustments() =>
+        Ok(ApiResponse<IReadOnlyCollection<InventoryAdjustmentResponse>>.Ok(
+            service.GetAdjustments().Select(HttpResponseMapper.Map).ToArray(),
+            HttpContext.TraceIdentifier));
+
     [HttpGet("balances"), Authorize(Policy = Permissions.Inventory.View)]
     public ActionResult<ApiResponse<IReadOnlyCollection<StockBalanceResponse>>> GetBalances([FromQuery] InventoryBalanceQuery query) =>
         Ok(ApiResponse<IReadOnlyCollection<StockBalanceResponse>>.Ok(service.GetBalances(query.WarehouseId, query.ProductId).Select(HttpResponseMapper.Map).ToArray(), HttpContext.TraceIdentifier));

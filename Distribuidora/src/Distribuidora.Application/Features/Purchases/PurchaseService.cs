@@ -98,6 +98,9 @@ public sealed class PurchaseService(
         db.Query(Specification.Create<GoodsReceipt>(x => x.Id == id)).SingleOrDefault()
         ?? throw new NotFoundException("Receipt not found.");
 
+    public IReadOnlyCollection<GoodsReceipt> GetReceipts() =>
+        db.Query(Specification.All<GoodsReceipt>()).OrderByDescending(x => x.ReceivedAt).ToArray();
+
     public async Task<GoodsReceipt> CreateReceiptAsync(CreateReceiptRequest request, Guid actorId, CancellationToken cancellationToken)
     {
         EnsureActiveSupplier(request.SupplierId);
@@ -105,6 +108,11 @@ public sealed class PurchaseService(
             throw new ArgumentException("Warehouse is inactive or does not exist.");
         if (request.Items.Count == 0 || request.Items.Any(x => x.Quantity <= 0 || x.UnitCost < 0))
             throw new ArgumentException("Receipt requires valid items.");
+        if (request.Items.Select(x => x.ProductId).Distinct().Count() != request.Items.Count)
+            throw new ArgumentException("A product cannot be repeated in the same receipt.");
+        if (request.Items.Any(item => !db.Query(Specification.Create<Product>(
+                product => product.Id == item.ProductId && product.Active)).Any()))
+            throw new ArgumentException("Receipt contains an inactive or missing product.");
         var receipt = new GoodsReceipt
         {
             Folio = await folios.NextAsync("goods_receipt", "GR-", cancellationToken),

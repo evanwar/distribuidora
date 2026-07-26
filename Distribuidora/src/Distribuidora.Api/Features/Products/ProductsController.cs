@@ -15,6 +15,7 @@ namespace Distribuidora.Api.Features.Products;
 public sealed class ProductsController(ProductService service, ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet, Authorize(Policy = Permissions.Catalogs.View)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<ProductResponse>>), StatusCodes.Status200OK)]
     public ActionResult<ApiResponse<PagedResponse<ProductResponse>>> Search([FromQuery] ProductSearchRequest request)
     {
         var result = service.Search(request.Search, Math.Max(request.Page, 1), Math.Clamp(request.PageSize, 1, 100));
@@ -27,6 +28,7 @@ public sealed class ProductsController(ProductService service, ICurrentUser curr
     }
 
     [HttpGet("{id:guid}"), Authorize(Policy = Permissions.Catalogs.View)]
+    [ProducesResponseType(typeof(ApiResponse<ProductResponse>), StatusCodes.Status200OK)]
     public ActionResult<ApiResponse<ProductResponse>> GetById([FromRoute] Guid id) =>
         Ok(ApiResponse<ProductResponse>.Ok(
             HttpResponseMapper.Map(service.GetById(id)), HttpContext.TraceIdentifier));
@@ -49,6 +51,7 @@ public sealed class ProductsController(ProductService service, ICurrentUser curr
     }
 
     [HttpPut("{id:guid}"), Authorize(Policy = Permissions.Catalogs.Edit)]
+    [ProducesResponseType(typeof(ApiResponse<ProductResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(
         [FromRoute] Guid id,
         [FromBody] ProductRequest request,

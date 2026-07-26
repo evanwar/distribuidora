@@ -1,0 +1,166 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$cyan-palette,
+    ),
+    typography: 'Segoe UI',
+    density: 0,
+  ));
+
+  color-scheme: light;
+  --app-font: 'Segoe UI Variable', 'Segoe UI', Inter, Arial, sans-serif;
+  --app-bg: #f4f7fb;
+  --app-surface: #ffffff;
+  --app-surface-muted: #edf4fb;
+  --app-surface-strong: #e1ecf8;
+  --app-text: #172233;
+  --app-text-muted: #5d6c82;
+  --app-border: #d6dfeb;
+  --app-primary: #0868c2;
+  --app-primary-strong: #004f97;
+  --app-success: #176c42;
+  --app-warning: #8a4b00;
+  --app-danger: #ba1a1a;
+  --app-info: #005fa8;
+  --app-radius-xs: 0.5rem;
+  --app-radius-control: 0.65rem;
+  --app-radius-sm: 0.75rem;
+  --app-radius-md: 1rem;
+  --app-radius-lg: 1.25rem;
+  --app-radius-brand: 0.9rem;
+  --app-radius-pill: 999px;
+  --app-shadow: 0 12px 32px rgb(17 39 67 / 8%);
+  --app-shadow-raised: 0 18px 48px rgb(17 39 67 / 14%);
+  --app-shadow-navigation: 0.5rem 0 2rem rgb(25 55 90 / 4%);
+  --app-overlay: rgb(13 28 45 / 48%);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 0;
+  min-height: 100%;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--app-font);
+}
+
+body {
+  width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.mat-mdc-icon-button {
+  width: 3rem;
+  height: 3rem;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--app-font);
+}
+
+/* Material usa tokens tipográficos propios. Se fijan aquí para evitar que los
+   controles caigan en la fuente serif del navegador cuando Roboto no está instalada. */
+.mat-typography,
+.mat-mdc-button,
+.mat-mdc-card,
+.mat-mdc-form-field,
+.mat-mdc-option,
+.mat-mdc-select,
+.mat-mdc-tab,
+.mat-mdc-table,
+.mat-drawer-container {
+  font-family: var(--app-font);
+}
+
+.mat-mdc-button *,
+.mat-mdc-card *,
+.mat-mdc-form-field *,
+.mat-mdc-option *,
+.mat-mdc-select *,
+.mat-mdc-tab *,
+.mat-mdc-table * {
+  font-family: var(--app-font) !important;
+}
+
+.mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  display: grid;
+  gap: var(--space-5);
+  width: min(100%, 92rem);
+  margin-inline: auto;
+}
+
+.surface {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: -0.015em;
+}
+
+.muted {
+  color: var(--app-text-muted);
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.full-width {
+  width: 100%;
+}
+
+@media (min-width: 48rem) {
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

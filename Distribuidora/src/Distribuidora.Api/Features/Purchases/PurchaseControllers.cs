@@ -53,6 +53,12 @@ public sealed class PurchasesController(PurchaseService service, ICurrentUser cu
 [ApiController, Route("api/v1/goods-receipts"), Authorize, Produces(MediaTypeNames.Application.Json)]
 public sealed class GoodsReceiptsController(PurchaseService service, ICurrentUser currentUser) : ControllerBase
 {
+    [HttpGet, Authorize(Policy = Permissions.Purchases.View)]
+    public ActionResult<ApiResponse<IReadOnlyCollection<GoodsReceiptResponse>>> GetAll() =>
+        Ok(ApiResponse<IReadOnlyCollection<GoodsReceiptResponse>>.Ok(
+            service.GetReceipts().Select(HttpResponseMapper.Map).ToArray(),
+            HttpContext.TraceIdentifier));
+
     [HttpGet("{id:guid}"), Authorize(Policy = Permissions.Purchases.View)]
     public ActionResult<ApiResponse<GoodsReceiptResponse>> GetById([FromRoute] Guid id) =>
         Ok(ApiResponse<GoodsReceiptResponse>.Ok(HttpResponseMapper.Map(service.GetReceipt(id)), HttpContext.TraceIdentifier));

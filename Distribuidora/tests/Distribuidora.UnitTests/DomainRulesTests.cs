@@ -29,6 +29,17 @@ public sealed class DomainRulesTests
     }
 
     [Fact]
+    public void Failed_stock_exit_preserves_the_existing_balance()
+    {
+        var stock = new StockBalance();
+        stock.Apply(3, false, OccurredAt);
+
+        Assert.Throws<DomainRuleException>(() => stock.Apply(-4, false, OccurredAt));
+
+        Assert.Equal(3, stock.Quantity);
+    }
+
+    [Fact]
     public void Cash_sale_requires_full_payment()
     {
         var sale = Sale(PaymentCondition.Cash);

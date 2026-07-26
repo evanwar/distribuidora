@@ -118,6 +118,13 @@ src/
 Las carpetas son feature-first, pero los contratos HTTP, nombres de tablas y
 esquemas de PostgreSQL se mantienen estables.
 
+## Contrato para frontend
+
+La documentación de integración del frontend está en
+[`docs/frontend-api/README.md`](docs/frontend-api/README.md). Incluye los 109
+endpoints agrupados por funcionalidad, autenticación, parámetros, ejemplos de
+body, códigos de respuesta y modelos TypeScript derivados de Swagger.
+
 ## Ejecución con Docker
 
 El stack incluye el API y PostgreSQL 16. La base de datos usa el volumen nombrado
@@ -143,6 +150,16 @@ Servicios locales:
 El API espera a que PostgreSQL esté saludable y luego ejecuta las migraciones y el
 seed inicial mediante `Database__AutoMigrate=true`. Dentro de la red Docker, el API
 se conecta a `postgres:5432`; no utiliza `localhost`.
+
+La cuenta semilla puede sincronizarse con el `.env` aun cuando el volumen ya tenga
+datos. Con `SEED_SYNC_ADMIN_CREDENTIALS=true`, el arranque actualiza correo,
+contraseña, estado y rol administrador del usuario indicado por
+`SEED_ADMIN_USERNAME`. Después de cambiar esas variables, reconstruir solamente el
+API; el volumen de PostgreSQL no se elimina:
+
+```bash
+docker compose up --build -d api
+```
 
 Comandos de operación:
 

@@ -22,8 +22,8 @@ public sealed class StockBalance : AuditableEntity
     public void Apply(decimal delta, bool allowNegativeStock, DateTimeOffset occurredAt)
     {
         var next = Quantity + delta;
-        if (next < 0 && !allowNegativeStock)
-            throw new DomainRuleException("Insufficient stock.");
+        if (next < ReservedQuantity && !allowNegativeStock)
+            throw new DomainRuleException("Insufficient available stock.");
         Quantity = next;
         UpdatedAt = occurredAt;
         Raise(new EntityChangedDomainEvent("StockBalanceChanged", nameof(StockBalance), Id, occurredAt));
