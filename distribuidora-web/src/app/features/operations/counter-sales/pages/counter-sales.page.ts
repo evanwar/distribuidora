@@ -12,6 +12,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent,
+} from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -28,7 +32,7 @@ import { UiPageHeaderComponent } from '../../../../shared/ui/page-header/ui-page
 import { UiStatusChipComponent } from '../../../../shared/ui/status-chip/ui-status-chip.component';
 import { CounterSalesApiAdapter } from '../data-access/counter-sales-api.adapter';
 import { CounterSalesStore } from '../data-access/counter-sales.store';
-import { CounterSale, CreateCounterSale } from '../models/counter-sale.models';
+import { CounterSale, CreateCounterSale, PosCustomer } from '../models/counter-sale.models';
 import { ProductTileComponent } from '../ui/product-tile/product-tile.component';
 
 type SaleAction = 'payment' | 'cancel' | null;
@@ -40,6 +44,7 @@ type SaleAction = 'payment' | 'cancel' | null;
     DatePipe,
     DecimalPipe,
     ReactiveFormsModule,
+    MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
     MatDialogModule,
@@ -119,15 +124,41 @@ type SaleAction = 'payment' | 'cancel' | null;
 
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
                   <mat-label>Cliente</mat-label>
-                  <mat-select formControlName="customerId">
+                  <input
+                    matInput
+                    type="search"
+                    autocomplete="off"
+                    placeholder="Nombre o número celular"
+                    [formControl]="customerSearchControl"
+                    [matAutocomplete]="customerAutocomplete"
+                    (input)="searchCustomers($event)"
+                  />
+                  <mat-autocomplete
+                    #customerAutocomplete="matAutocomplete"
+                    [displayWith]="displayCustomer"
+                    (optionSelected)="selectCustomer($event)"
+                  >
                     <mat-option value="">Venta al público</mat-option>
                     @for (customer of store.customers(); track customer.id) {
                       <mat-option [value]="customer.id" [disabled]="customer.creditBlocked">
-                        {{ customer.name
-                        }}{{ customer.creditBlocked ? ' · Crédito bloqueado' : '' }}
+                        <span class="customer-option">
+                          <strong>{{ customer.name }}</strong>
+                          @if (customer.phone) {
+                            <small>{{ customer.phone }}</small>
+                          }
+                          @if (customer.creditBlocked) {
+                            <small>Crédito bloqueado</small>
+                          }
+                        </span>
                       </mat-option>
                     }
-                  </mat-select>
+                    @if (store.customersLoading()) {
+                      <mat-option disabled>Buscando clientes…</mat-option>
+                    } @else if (store.customers().length === 0) {
+                      <mat-option disabled>No encontramos clientes.</mat-option>
+                    }
+                  </mat-autocomplete>
+                  <mat-hint>Escribe el nombre o celular para filtrar.</mat-hint>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -539,6 +570,7 @@ export class CounterSalesPage implements OnInit {
     customerId: new FormControl('', { nonNullable: true }),
     paymentCondition: new FormControl(0, { nonNullable: true }),
   });
+  protected readonly customerSearchControl = new FormControl('', { nonNullable: true });
   protected readonly paymentForm = new FormGroup({
     tax: new FormControl(0, { nonNullable: true, validators: [Validators.min(0)] }),
     method: new FormControl('cash', { nonNullable: true }),
@@ -577,6 +609,11 @@ export class CounterSalesPage implements OnInit {
       this.ticketDialogRef = null;
     });
   };
+  protected readonly displayCustomer = (customerId: string): string => {
+    if (!customerId) return '';
+    const customer = this.store.customers().find((item) => item.id === customerId);
+    return customer ? this.customerLabel(customer) : customerId;
+  };
 
   constructor() {
     this.saleForm.controls.sourceWarehouseId.valueChanges
@@ -607,6 +644,20 @@ export class CounterSalesPage implements OnInit {
 
   protected inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  protected searchCustomers(event: Event): void {
+    this.saleForm.controls.customerId.setValue('');
+    this.store.searchCustomers(this.inputValue(event));
+  }
+
+  protected selectCustomer(event: MatAutocompleteSelectedEvent): void {
+    const customerId = typeof event.option.value === 'string' ? event.option.value : '';
+    this.saleForm.controls.customerId.setValue(customerId);
+  }
+
+  protected customerLabel(customer: PosCustomer): string {
+    return customer.phone ? `${customer.name} · ${customer.phone}` : customer.name;
   }
 
   protected numericValue(event: Event): number {
@@ -683,6 +734,7 @@ export class CounterSalesPage implements OnInit {
       paymentCondition: paymentConditionValue(sale.paymentCondition),
     });
     this.paymentForm.patchValue({ tax: sale.taxTotal, notes: sale.notes ?? '' });
+    this.customerSearchControl.setValue(sale.customerId ?? '');
     this.tax.set(sale.taxTotal);
     this.view.set('sale');
   }

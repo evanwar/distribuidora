@@ -11,8 +11,28 @@ public sealed class CustomerService(
     IAppDbContext db,
     AuditEntryService audit)
 {
-    public IReadOnlyCollection<Customer> GetAll() =>
-        db.Query(Specification.All<Customer>()).OrderBy(x => x.Name).ToArray();
+    public IReadOnlyCollection<Customer> GetAll(string? search = null, int? limit = null)
+    {
+        var normalizedSearch = search?.Trim().ToLower();
+        var normalizedPhoneSearch = normalizedSearch is null
+            ? string.Empty
+            : string.Concat(normalizedSearch.Where(char.IsDigit));
+        var specification = string.IsNullOrWhiteSpace(normalizedSearch)
+            ? Specification.All<Customer>()
+            : Specification.Create<Customer>(customer =>
+                customer.Name.ToLower().Contains(normalizedSearch)
+                || (normalizedPhoneSearch.Length > 0
+                    && customer.Phone != null
+                    && customer.Phone
+                        .Replace(" ", string.Empty)
+                        .Replace("-", string.Empty)
+                        .Replace("(", string.Empty)
+                        .Replace(")", string.Empty)
+                        .Contains(normalizedPhoneSearch)));
+        var query = db.Query(specification).OrderBy(customer => customer.Name);
+
+        return (limit.HasValue ? query.Take(Math.Clamp(limit.Value, 1, 50)) : query).ToArray();
+    }
 
     public async Task<Customer> SaveAsync(
         Guid? id,

@@ -24,7 +24,7 @@ export class CounterSalesApiAdapter {
     sales: readonly CounterSale[];
   }> {
     return forkJoin({
-      customers: this.api.get<unknown>('/api/v1/customers'),
+      customers: this.api.get<unknown>('/api/v1/customers?limit=20'),
       products: this.api.get<unknown>('/api/v1/products?Page=1&PageSize=100'),
       warehouses: this.api.get<unknown>('/api/v1/warehouses'),
       balances: this.api.get<unknown>('/api/v1/inventory/balances'),
@@ -32,11 +32,7 @@ export class CounterSalesApiAdapter {
       sales: this.api.get<unknown>('/api/v1/counter-sales'),
     }).pipe(
       map(({ customers, products, warehouses, balances, paymentMethods, sales }) => ({
-        customers: asRecords(customers).map((item) => ({
-          id: text(item, 'id'),
-          name: text(item, 'name', 'Cliente sin nombre'),
-          creditBlocked: bool(item, 'creditBlocked'),
-        })),
+        customers: asRecords(customers).map(toCustomer),
         products: asRecords(products)
           .filter((item) => item['active'] !== false)
           .map((item) => ({
@@ -65,6 +61,16 @@ export class CounterSalesApiAdapter {
         sales: asRecords(sales).map(toSale),
       })),
     );
+  }
+
+  searchCustomers(query: string): Observable<readonly PosCustomer[]> {
+    const parameters = new URLSearchParams({ limit: '20' });
+    const normalizedQuery = query.trim();
+    if (normalizedQuery) parameters.set('search', normalizedQuery);
+
+    return this.api
+      .get<unknown>(`/api/v1/customers?${parameters.toString()}`)
+      .pipe(map((response) => asRecords(response).map(toCustomer)));
   }
 
   create(request: CreateCounterSale): Observable<CounterSale> {
@@ -142,6 +148,15 @@ function toSale(value: unknown): CounterSale {
       unitPrice: number(line, 'unitPrice'),
       discount: number(line, 'discount'),
     })),
+  };
+}
+
+function toCustomer(item: Record<string, unknown>): PosCustomer {
+  return {
+    id: text(item, 'id'),
+    name: text(item, 'name', 'Cliente sin nombre'),
+    phone: text(item, 'phone'),
+    creditBlocked: bool(item, 'creditBlocked'),
   };
 }
 

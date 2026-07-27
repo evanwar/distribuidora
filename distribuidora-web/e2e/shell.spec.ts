@@ -19,6 +19,14 @@ test('the point of sale is an operational flow on every viewport', async ({ page
 
   await expect(page.getByRole('heading', { name: 'Punto de venta', exact: true })).toBeVisible();
   await expect(page.getByText('/api/v1/counter-sales')).toHaveCount(0);
+  const customer = page.getByRole('combobox', { name: 'Cliente' });
+  await customer.fill('5512345678');
+  const customerOption = page.getByRole('option', {
+    name: /Cliente frecuente.*55 1234 5678/,
+  });
+  await expect(customerOption).toBeVisible();
+  await customerOption.click();
+  await expect(customer).toHaveValue('Cliente frecuente · 55 1234 5678');
   await page.getByRole('button', { name: /Arroz premium/ }).click();
   await expect(page.getByText('Productos de la venta')).toBeVisible();
   await expect(page.locator('.checkout__total')).toContainText('$45.50');
@@ -176,7 +184,14 @@ async function mockApi(page: import('@playwright/test').Page): Promise<void> {
         total: 1,
       };
     } else if (path === '/api/v1/customers') {
-      data = [{ id: 'customer-1', name: 'Cliente frecuente', creditBlocked: false }];
+      data = [
+        {
+          id: 'customer-1',
+          name: 'Cliente frecuente',
+          phone: '55 1234 5678',
+          creditBlocked: false,
+        },
+      ];
     } else if (path === '/api/v1/warehouses') {
       data = [{ id: 'warehouse-1', name: 'Almacén principal', active: true }];
     } else if (path === '/api/v1/admin/payment-methods') {

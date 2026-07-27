@@ -20,6 +20,13 @@ Total: **3 endpoints**.
 
 > Autenticación: `Authorization: Bearer <accessToken>`.
 
+### Parámetros
+
+| Nombre | Ubicación | Tipo | Requerido | Descripción |
+|---|---|---|---:|---|
+| `search` | query | string | No | Filtra por nombre o número celular. Ignora espacios, guiones y paréntesis del teléfono. |
+| `limit` | query | integer | No | Limita la respuesta entre 1 y 50 clientes. |
+
 ### Estados documentados
 
 | Estado | Significado |

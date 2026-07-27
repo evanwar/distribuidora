@@ -1,6 +1,7 @@
 export interface PosCustomer {
   id: string;
   name: string;
+  phone: string;
   creditBlocked: boolean;
 }
 

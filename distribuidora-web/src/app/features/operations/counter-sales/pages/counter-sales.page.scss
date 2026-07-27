@@ -28,6 +28,15 @@ mat-card,
   padding-top: var(--space-4);
 }
 
+.customer-option {
+  display: grid;
+  line-height: 1.25;
+}
+
+.customer-option small {
+  color: var(--app-text-muted);
+}
+
 .product-picker,
 .cart,
 .history,

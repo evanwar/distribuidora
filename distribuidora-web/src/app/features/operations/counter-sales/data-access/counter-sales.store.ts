@@ -1,5 +1,15 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { finalize, Observable, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  EMPTY,
+  finalize,
+  Observable,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { ApiError } from '../../../../core/error-handling/api-error.model';
 import { CounterSalesApiAdapter } from './counter-sales-api.adapter';
 import {
@@ -17,6 +27,8 @@ import {
 export class CounterSalesStore {
   private readonly api = inject(CounterSalesApiAdapter);
   private readonly customersState = signal<readonly PosCustomer[]>([]);
+  private readonly customerSearchRequests = new Subject<string>();
+  private readonly customersLoadingState = signal(false);
   private readonly productsState = signal<readonly PosProduct[]>([]);
   private readonly warehousesState = signal<readonly PosWarehouse[]>([]);
   private readonly balancesState = signal<readonly PosStockBalance[]>([]);
@@ -33,6 +45,7 @@ export class CounterSalesStore {
   private editingSaleIdState = signal<string | null>(null);
 
   readonly customers = this.customersState.asReadonly();
+  readonly customersLoading = this.customersLoadingState.asReadonly();
   readonly products = computed(() => {
     const query = this.queryState().trim().toLocaleLowerCase('es-MX');
     if (!query) return this.productsState().slice(0, 12);
@@ -61,6 +74,30 @@ export class CounterSalesStore {
     this.linesState().reduce((total, line) => total + line.discount, 0),
   );
 
+  constructor() {
+    this.customerSearchRequests
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        switchMap((query) => {
+          this.customersLoadingState.set(true);
+          return this.api
+            .searchCustomers(query)
+            .pipe(
+              catchError((error: ApiError) => {
+                this.errorState.set(error);
+                return EMPTY;
+              }),
+              finalize(() => this.customersLoadingState.set(false)),
+            );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe({
+        next: (customers) => this.customersState.set(customers),
+      });
+  }
+
   load(): void {
     this.loadingState.set(true);
     this.errorState.set(null);
@@ -83,6 +120,10 @@ export class CounterSalesStore {
 
   search(query: string): void {
     this.queryState.set(query);
+  }
+
+  searchCustomers(query: string): void {
+    this.customerSearchRequests.next(query);
   }
 
   selectWarehouse(warehouseId: string): void {

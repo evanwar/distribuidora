@@ -15,9 +15,11 @@ namespace Distribuidora.Api.Features.Customers;
 public sealed class CustomersController(CustomerService service, ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet, Authorize(Policy = Permissions.Catalogs.View)]
-    public ActionResult<ApiResponse<IReadOnlyCollection<CustomerResponse>>> GetAll() =>
+    public ActionResult<ApiResponse<IReadOnlyCollection<CustomerResponse>>> GetAll(
+        [FromQuery] string? search,
+        [FromQuery] int? limit) =>
         Ok(ApiResponse<IReadOnlyCollection<CustomerResponse>>.Ok(
-            service.GetAll().Select(HttpResponseMapper.Map).ToArray(),
+            service.GetAll(search, limit).Select(HttpResponseMapper.Map).ToArray(),
             HttpContext.TraceIdentifier));
 
     [HttpPost, Authorize(Policy = Permissions.Catalogs.Create)]

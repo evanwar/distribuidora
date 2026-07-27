@@ -31,6 +31,25 @@ describe('CounterSalesStore inventory rules', () => {
     expect(store.hasValidStock()).toBe(true);
     expect(store.stockNotice()).toContain('Se ajustó el carrito');
   });
+
+  it('searches customers by phone after the input debounce', async () => {
+    vi.useFakeTimers();
+    const { store, api } = configureStoreWithApi();
+
+    store.searchCustomers('55 1234 5678');
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(api.searchCustomers).toHaveBeenCalledWith('55 1234 5678');
+    expect(store.customers()).toEqual([
+      {
+        id: 'customer-1',
+        name: 'Angeles Flores Sanchez',
+        phone: '55 1234 5678',
+        creditBlocked: false,
+      },
+    ]);
+    vi.useRealTimers();
+  });
 });
 
 const product = {
@@ -42,6 +61,13 @@ const product = {
 };
 
 function configureStore(): CounterSalesStore {
+  return configureStoreWithApi().store;
+}
+
+function configureStoreWithApi(): {
+  store: CounterSalesStore;
+  api: { loadWorkspace: ReturnType<typeof vi.fn>; searchCustomers: ReturnType<typeof vi.fn> };
+} {
   const api = {
     loadWorkspace: vi.fn().mockReturnValue(
       of({
@@ -63,9 +89,19 @@ function configureStore(): CounterSalesStore {
         sales: [],
       }),
     ),
+    searchCustomers: vi.fn().mockReturnValue(
+      of([
+        {
+          id: 'customer-1',
+          name: 'Angeles Flores Sanchez',
+          phone: '55 1234 5678',
+          creditBlocked: false,
+        },
+      ]),
+    ),
   };
   TestBed.configureTestingModule({
     providers: [CounterSalesStore, { provide: CounterSalesApiAdapter, useValue: api }],
   });
-  return TestBed.inject(CounterSalesStore);
+  return { store: TestBed.inject(CounterSalesStore), api };
 }
