@@ -124,7 +124,7 @@ Además, cada módulo declara sus skills específicas.
 17. Formularios, overlays, navegación y acciones críticas deben adaptarse a móvil, tableta y escritorio.
 18. Usar tema Material 3 y tokens; no dispersar colores, tipografías, elevaciones o radios en componentes.
 19. Los flujos críticos deben tener evidencia Playwright en al menos móvil, tableta y escritorio.
-20. Cada operación backend debe tener ownership, consumidor y estado en `06_MATRIZ_ENDPOINTS_FRONTEND.md`; el objetivo es 109/109 operaciones clasificadas e integradas.
+20. Cada operación backend debe tener ownership, consumidor y estado en `06_MATRIZ_ENDPOINTS_FRONTEND.md`; el objetivo es 111/111 operaciones clasificadas e integradas.
 21. Botones y primitivas compartidas se configuran mediante APIs tipadas y tokens semánticos; no se copian para cambiar texto, color, icono o variante.
 22. Las páginas coordinan estado y navegación; los componentes presentacionales no realizan HTTP ni conocen DTOs generados.
 23. F0 debe entregar el catálogo mínimo de primitivas y su harness antes de multiplicar pantallas.

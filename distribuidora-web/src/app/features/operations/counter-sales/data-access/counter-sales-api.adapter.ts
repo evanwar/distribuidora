@@ -1,3 +1,4 @@
+import { HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { forkJoin, map, Observable } from 'rxjs';
 import { ApiClientService } from '../../../../core/api/api-client.service';
@@ -6,6 +7,7 @@ import {
   CreateCounterSale,
   PosCustomer,
   PosPaymentMethod,
+  PointCardPayment,
   PosProduct,
   PosStockBalance,
   PosWarehouse,
@@ -15,7 +17,7 @@ import {
 export class CounterSalesApiAdapter {
   private readonly api = inject(ApiClientService);
 
-  loadWorkspace(): Observable<{
+  loadWorkspace(context?: HttpContext): Observable<{
     customers: readonly PosCustomer[];
     products: readonly PosProduct[];
     warehouses: readonly PosWarehouse[];
@@ -24,12 +26,12 @@ export class CounterSalesApiAdapter {
     sales: readonly CounterSale[];
   }> {
     return forkJoin({
-      customers: this.api.get<unknown>('/api/v1/customers?limit=20'),
-      products: this.api.get<unknown>('/api/v1/products?Page=1&PageSize=100'),
-      warehouses: this.api.get<unknown>('/api/v1/warehouses'),
-      balances: this.api.get<unknown>('/api/v1/inventory/balances'),
-      paymentMethods: this.api.get<unknown>('/api/v1/admin/payment-methods'),
-      sales: this.api.get<unknown>('/api/v1/counter-sales'),
+      customers: this.api.get<unknown>('/api/v1/customers?limit=20', { context }),
+      products: this.api.get<unknown>('/api/v1/products?Page=1&PageSize=100', { context }),
+      warehouses: this.api.get<unknown>('/api/v1/warehouses', { context }),
+      balances: this.api.get<unknown>('/api/v1/inventory/balances', { context }),
+      paymentMethods: this.api.get<unknown>('/api/v1/admin/payment-methods', { context }),
+      sales: this.api.get<unknown>('/api/v1/counter-sales', { context }),
     }).pipe(
       map(({ customers, products, warehouses, balances, paymentMethods, sales }) => ({
         customers: asRecords(customers).map(toCustomer),
@@ -63,51 +65,83 @@ export class CounterSalesApiAdapter {
     );
   }
 
-  searchCustomers(query: string): Observable<readonly PosCustomer[]> {
+  searchCustomers(query: string, context?: HttpContext): Observable<readonly PosCustomer[]> {
     const parameters = new URLSearchParams({ limit: '20' });
     const normalizedQuery = query.trim();
     if (normalizedQuery) parameters.set('search', normalizedQuery);
 
     return this.api
-      .get<unknown>(`/api/v1/customers?${parameters.toString()}`)
+      .get<unknown>(`/api/v1/customers?${parameters.toString()}`, { context })
       .pipe(map((response) => asRecords(response).map(toCustomer)));
   }
 
-  create(request: CreateCounterSale): Observable<CounterSale> {
+  create(request: CreateCounterSale, context?: HttpContext): Observable<CounterSale> {
     return this.api
-      .post<unknown, CreateCounterSale>('/api/v1/counter-sales', request)
+      .post<unknown, CreateCounterSale>('/api/v1/counter-sales', request, { context })
       .pipe(map(toSale));
   }
 
-  update(id: string, request: CreateCounterSale): Observable<CounterSale> {
+  update(id: string, request: CreateCounterSale, context?: HttpContext): Observable<CounterSale> {
     return this.api
-      .put<unknown, CreateCounterSale>(`/api/v1/counter-sales/${encodeURIComponent(id)}`, request)
+      .put<unknown, CreateCounterSale>(`/api/v1/counter-sales/${encodeURIComponent(id)}`, request, {
+        context,
+      })
       .pipe(map(toSale));
   }
 
-  confirm(id: string): Observable<CounterSale> {
+  confirm(id: string, context?: HttpContext): Observable<CounterSale> {
     return this.api
-      .post<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/confirm`)
+      .post<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/confirm`, undefined, {
+        context,
+      })
       .pipe(map(toSale));
   }
 
-  addPayment(id: string, request: { method: string; amount: number; reference: string | null }) {
+  getById(id: string, context?: HttpContext): Observable<CounterSale> {
+    return this.api
+      .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}`, { context })
+      .pipe(map(toSale));
+  }
+
+  startCardPayment(id: string, amount: number, context?: HttpContext): Observable<PointCardPayment> {
+    return this.api
+      .post<unknown, { amount: number }>(
+        `/api/v1/counter-sales/${encodeURIComponent(id)}/card-payment`,
+        { amount },
+        { context },
+      )
+      .pipe(map(toPointCardPayment));
+  }
+
+  getCardPayment(id: string, context?: HttpContext): Observable<PointCardPayment> {
+    return this.api
+      .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/card-payment`, { context })
+      .pipe(map(toPointCardPayment));
+  }
+
+  addPayment(
+    id: string,
+    request: { method: string; amount: number; reference: string | null },
+    context?: HttpContext,
+  ) {
     return this.api.post<void, typeof request>(
       `/api/v1/counter-sales/${encodeURIComponent(id)}/payments`,
       request,
+      { context },
     );
   }
 
-  cancel(id: string, reason: string) {
+  cancel(id: string, reason: string, context?: HttpContext) {
     return this.api.post<void, { reason: string }>(
       `/api/v1/counter-sales/${encodeURIComponent(id)}/cancel`,
       { reason },
+      { context },
     );
   }
 
-  getPrintable(id: string): Observable<CounterSale> {
+  getPrintable(id: string, context?: HttpContext): Observable<CounterSale> {
     return this.api
-      .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/print`)
+      .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/print`, { context })
       .pipe(map(toSale));
   }
 }
@@ -160,6 +194,23 @@ function toCustomer(item: Record<string, unknown>): PosCustomer {
   };
 }
 
+function toPointCardPayment(value: unknown): PointCardPayment {
+  const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    id: text(item, 'id'),
+    saleId: text(item, 'saleId'),
+    orderId: text(item, 'orderId') || null,
+    amount: number(item, 'amount'),
+    status: text(item, 'status', 'Pending'),
+    statusDetail: text(item, 'statusDetail', 'created'),
+    paymentId: text(item, 'paymentId') || null,
+    paymentMethodType: text(item, 'paymentMethodType') || null,
+    paymentMethodId: text(item, 'paymentMethodId') || null,
+    installments: nullableNumber(item, 'installments'),
+    completedAt: text(item, 'completedAt') || null,
+  };
+}
+
 function text(item: Record<string, unknown>, key: string, fallback = ''): string {
   const value = item[key];
   return typeof value === 'string' ? value : fallback;
@@ -172,4 +223,9 @@ function number(item: Record<string, unknown>, key: string): number {
 
 function bool(item: Record<string, unknown>, key: string): boolean {
   return item[key] === true;
+}
+
+function nullableNumber(item: Record<string, unknown>, key: string): number | null {
+  const value = item[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

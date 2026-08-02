@@ -40,6 +40,7 @@ public sealed class Permission
 
 public sealed class RefreshToken : Entity
 {
+    public uint RowVersion { get; set; }
     public string TokenHash { get; set; } = "";
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;

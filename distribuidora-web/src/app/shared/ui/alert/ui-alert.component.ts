@@ -1,18 +1,22 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { UiButtonComponent } from '../button/ui-button.component';
+import { TraceReferenceComponent } from '../trace-reference/trace-reference.component';
 
 export type UiAlertTone = 'info' | 'success' | 'warning' | 'danger';
 
 @Component({
   selector: 'app-ui-alert',
-  imports: [UiButtonComponent],
+  imports: [UiButtonComponent, TraceReferenceComponent],
   template: `
-    <section [class]="'ui-alert ui-alert--' + tone()" [attr.role]="tone() === 'danger' ? 'alert' : 'status'">
+    <section
+      [class]="'ui-alert ui-alert--' + tone()"
+      [attr.role]="tone() === 'danger' ? 'alert' : 'status'"
+    >
       <div>
         <strong>{{ title() }}</strong>
         <p>{{ message() }}</p>
         @if (correlationId()) {
-          <small>Referencia: {{ correlationId() }}</small>
+          <app-trace-reference [correlationId]="correlationId()!" [operationId]="operationId()" />
         }
       </div>
       @if (actionLabel()) {
@@ -56,12 +60,6 @@ export type UiAlertTone = 'info' | 'success' | 'warning' | 'danger';
     p {
       margin: var(--space-1) 0 0;
     }
-
-    small {
-      display: block;
-      margin-top: var(--space-2);
-      color: var(--app-text-muted);
-    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -70,6 +68,7 @@ export class UiAlertComponent {
   readonly message = input.required<string>();
   readonly tone = input<UiAlertTone>('info');
   readonly correlationId = input<string>();
+  readonly operationId = input<string>();
   readonly actionLabel = input<string>();
   readonly action = output<void>();
 }

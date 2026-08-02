@@ -6,7 +6,7 @@
     <DockerComposeProjectName>distribuidora</DockerComposeProjectName>
     <DockerServiceName>api</DockerServiceName>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-    <DockerServiceUrl>http://localhost:8080/swagger</DockerServiceUrl>
+    <DockerServiceUrl>http://localhost:8080/scalar/v1</DockerServiceUrl>
   </PropertyGroup>
 
   <ItemGroup>

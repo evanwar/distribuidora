@@ -83,3 +83,17 @@ export interface CreateCounterSale {
     reference: string | null;
   }[];
 }
+
+export interface PointCardPayment {
+  id: string;
+  saleId: string;
+  orderId: string | null;
+  amount: number;
+  status: string;
+  statusDetail: string;
+  paymentId: string | null;
+  paymentMethodType: string | null;
+  paymentMethodId: string | null;
+  installments: number | null;
+  completedAt: string | null;
+}

@@ -14,6 +14,10 @@ import { apiV1CounterSalesGet } from '../fn/sales/api-v-1-counter-sales-get';
 import { ApiV1CounterSalesGet$Params } from '../fn/sales/api-v-1-counter-sales-get';
 import { apiV1CounterSalesIdCancelPost } from '../fn/sales/api-v-1-counter-sales-id-cancel-post';
 import { ApiV1CounterSalesIdCancelPost$Params } from '../fn/sales/api-v-1-counter-sales-id-cancel-post';
+import { apiV1CounterSalesIdCardPaymentGet } from '../fn/sales/api-v-1-counter-sales-id-card-payment-get';
+import { ApiV1CounterSalesIdCardPaymentGet$Params } from '../fn/sales/api-v-1-counter-sales-id-card-payment-get';
+import { apiV1CounterSalesIdCardPaymentPost } from '../fn/sales/api-v-1-counter-sales-id-card-payment-post';
+import { ApiV1CounterSalesIdCardPaymentPost$Params } from '../fn/sales/api-v-1-counter-sales-id-card-payment-post';
 import { apiV1CounterSalesIdConfirmPost } from '../fn/sales/api-v-1-counter-sales-id-confirm-post';
 import { ApiV1CounterSalesIdConfirmPost$Params } from '../fn/sales/api-v-1-counter-sales-id-confirm-post';
 import { apiV1CounterSalesIdGet } from '../fn/sales/api-v-1-counter-sales-id-get';
@@ -273,6 +277,60 @@ export class SalesService extends BaseService {
    */
   apiV1CounterSalesIdPrintGet(params: ApiV1CounterSalesIdPrintGet$Params, context?: HttpContext): Observable<void> {
     const resp = this.apiV1CounterSalesIdPrintGet$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `apiV1CounterSalesIdCardPaymentGet()` */
+  static readonly ApiV1CounterSalesIdCardPaymentGetPath = '/api/v1/counter-sales/{id}/card-payment';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `apiV1CounterSalesIdCardPaymentGet()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  apiV1CounterSalesIdCardPaymentGet$Response(params: ApiV1CounterSalesIdCardPaymentGet$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = apiV1CounterSalesIdCardPaymentGet(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `apiV1CounterSalesIdCardPaymentGet$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  apiV1CounterSalesIdCardPaymentGet(params: ApiV1CounterSalesIdCardPaymentGet$Params, context?: HttpContext): Observable<void> {
+    const resp = this.apiV1CounterSalesIdCardPaymentGet$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `apiV1CounterSalesIdCardPaymentPost()` */
+  static readonly ApiV1CounterSalesIdCardPaymentPostPath = '/api/v1/counter-sales/{id}/card-payment';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `apiV1CounterSalesIdCardPaymentPost()` instead.
+   *
+   * This method sends `application/*+json` and handles request body of type `application/*+json`.
+   */
+  apiV1CounterSalesIdCardPaymentPost$Response(params: ApiV1CounterSalesIdCardPaymentPost$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = apiV1CounterSalesIdCardPaymentPost(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `apiV1CounterSalesIdCardPaymentPost$Response()` instead.
+   *
+   * This method sends `application/*+json` and handles request body of type `application/*+json`.
+   */
+  apiV1CounterSalesIdCardPaymentPost(params: ApiV1CounterSalesIdCardPaymentPost$Params, context?: HttpContext): Observable<void> {
+    const resp = this.apiV1CounterSalesIdCardPaymentPost$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<void>): void => r.body)
     );

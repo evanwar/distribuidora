@@ -2,7 +2,7 @@
 
 [← Índice](./README.md)
 
-Tipos generados desde `components.schemas` del contrato OpenAPI. Los campos marcados con `?` no aparecen como obligatorios en Swagger.
+Tipos generados desde `components.schemas` del contrato OpenAPI. Los campos marcados con `?` no aparecen como obligatorios en el contrato.
 
 ## AdjustmentItemRequest
 

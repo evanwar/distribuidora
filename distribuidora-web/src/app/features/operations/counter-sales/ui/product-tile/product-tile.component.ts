@@ -24,7 +24,7 @@ import { PosProduct } from '../../models/counter-sale.models';
       </div>
 
       <mat-card-content>
-        <h3>{{ product().name }}</h3>
+        <h3 [attr.title]="product().name">{{ product().name }}</h3>
         <div
           class="product-tile__stock"
           [class.product-tile__stock--empty]="available() === 0"
@@ -43,21 +43,40 @@ import { PosProduct } from '../../models/counter-sale.models';
           <span>Precio</span>
           <strong>{{ product().price | currency: 'MXN' }}</strong>
         </div>
-        <app-ui-button
-          [label]="actionLabel()"
-          icon="add"
-          size="compact"
-          [disabled]="!canAdd()"
-          [ariaLabel]="
-            actionLabel() +
-            ' ' +
-            product().name +
-            '. ' +
-            available() +
-            ' unidades disponibles'
-          "
-          (pressed)="add.emit()"
-        />
+        <div class="product-tile__actions" [class.product-tile__actions--complete]="!canAdd()">
+          @if (canAdd()) {
+            <app-ui-button
+              label="Agregar"
+              icon="add"
+              size="compact"
+              [ariaLabel]="'Agregar una unidad de ' + product().name"
+              (pressed)="add.emit()"
+            />
+            <app-ui-button
+              label="Agregar todos"
+              variant="outlined"
+              size="compact"
+              [ariaLabel]="
+                'Agregar toda la existencia disponible de ' +
+                product().name +
+                ': ' +
+                available() +
+                ' unidades'
+              "
+              (pressed)="addAll.emit()"
+            />
+          } @else {
+            <app-ui-button
+              [label]="actionLabel()"
+              [icon]="available() === 0 ? undefined : 'check'"
+              tone="neutral"
+              size="compact"
+              [disabled]="true"
+              [fullWidth]="true"
+              [ariaLabel]="actionLabel() + ' para ' + product().name"
+            />
+          }
+        </div>
       </mat-card-actions>
     </mat-card>
   `,
@@ -69,6 +88,7 @@ export class ProductTileComponent {
   readonly available = input.required<number>();
   readonly canAdd = input.required<boolean>();
   readonly add = output<void>();
+  readonly addAll = output<void>();
 
   protected readonly actionLabel = computed(() => {
     if (this.available() === 0) return 'Sin stock';

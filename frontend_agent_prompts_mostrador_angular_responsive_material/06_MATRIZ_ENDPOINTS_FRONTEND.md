@@ -1,7 +1,7 @@
 ---
 project: Distribuidora Frontend - MVP Mostrador
 source_of_truth: ../Distribuidora/docs/frontend-api/README.md
-contract_snapshot: 109 endpoints, 30 controllers
+contract_snapshot: 111 frontend operations, 31 controllers
 ---
 
 # 06 - Matriz de endpoints y cobertura frontend
@@ -33,7 +33,7 @@ Un endpoint se considera integrado únicamente cuando tiene:
 [ ] prueba de componente o E2E para el flujo de negocio
 ```
 
-El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `bloqueado` o `integrado`. La meta de alcance vigente es **109/109 operaciones clasificadas e integradas**. Los endpoints administrativos no deben mezclarse en navegación de catálogos.
+El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `bloqueado` o `integrado`. La meta de alcance vigente es **111/111 operaciones clasificadas e integradas**. Los endpoints administrativos no deben mezclarse en navegación de catálogos.
 
 ## Resumen por módulo
 
@@ -44,12 +44,12 @@ El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `
 | F02 | Customers, Suppliers, Products, ProductAliases, Categories, Brands, Units, Warehouses | 25 | maestros por dominio |
 | F03 | Inventory | 7 | existencias, kardex, ajustes y transferencias |
 | F04 | Purchases, GoodsReceipts | 10 | compras y recepción |
-| F05 | Sales | 9 | punto de venta |
+| F05 | Sales | 11 | punto de venta |
 | F06 | AccountsReceivable, CustomerPayments | 7 | cobranza |
 | F07 | Audit, CancellationReasons, OperationalNotes, Logs | 15 | auditoría, soporte y excepciones |
 | F08 | Reports, Dashboard | 8 | indicadores y reportes |
 | F09 | Settings, FolioSequences, PaymentMethods, Policies, Trace | 16 | administración y trazabilidad técnica |
-| **Total** | **30 recursos** | **109** | |
+| **Total** | **31 recursos** | **111** | |
 
 ## F0 - Bootstrap y diagnóstico (1)
 
@@ -145,6 +145,8 @@ Cada maestro debe tener ruta propia y nombre intuitivo: `/customers`, `/supplier
 | SAL-07 | `POST /api/v1/counter-sales/{id}/cancel` | cancelación con motivo |
 | SAL-08 | `GET /api/v1/counter-sales/{id}/summary` | resumen autoritativo posventa |
 | SAL-09 | `GET /api/v1/counter-sales/{id}/print` | obtención del comprobante imprimible |
+| SAL-10 | `POST /api/v1/counter-sales/{id}/card-payment` | enviar el saldo autoritativo a la terminal Mercado Pago Point; sin reintento automático |
+| SAL-11 | `GET /api/v1/counter-sales/{id}/card-payment` | consultar el estado local sincronizado por webhook hasta aprobación, rechazo o conciliación |
 
 Dependencias de lectura del workspace POS: `PRD-01`, `CUS-01`, `WHS-01` y `PMT-01`. La feature usa contratos públicos/adapters; no importa stores internos de F02 o F09.
 
@@ -257,4 +259,3 @@ Administración
 ```
 
 Las rutas, carpetas, títulos y permisos deben utilizar estos conceptos de negocio. Evitar controladores o features genéricas como `CatalogsController`/`catalogs/` para clientes, proveedores o productos.
-

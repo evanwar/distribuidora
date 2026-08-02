@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Distribuidora.Api.Features.Sales;
 
 [ApiController, Route("api/v1/counter-sales"), Authorize, Produces(MediaTypeNames.Application.Json)]
-public sealed class SalesController(SalesService service, ICurrentUser currentUser) : ControllerBase
+public sealed class SalesController(SalesService service, PointPaymentService pointPayments, ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet, Authorize(Policy = Permissions.Sales.View)]
     public ActionResult<ApiResponse<IReadOnlyCollection<CounterSaleResponse>>> GetAll() =>
@@ -58,4 +58,43 @@ public sealed class SalesController(SalesService service, ICurrentUser currentUs
 
     [HttpGet("{id:guid}/print"), Authorize(Policy = Permissions.Sales.View)]
     public ActionResult<ApiResponse<CounterSaleResponse>> Print([FromRoute] Guid id) => GetById(id);
+
+    [HttpPost("{id:guid}/card-payment"), Authorize(Policy = Permissions.Sales.RegisterPayment)]
+    public async Task<ActionResult<ApiResponse<PointCardPaymentResponse>>> StartCardPayment(
+        [FromRoute] Guid id,
+        [FromBody] StartPointCardPaymentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var payment = await pointPayments.StartAsync(
+            id, request.Amount, currentUser.Id, HttpContext.TraceIdentifier, cancellationToken);
+        return Ok(ApiResponse<PointCardPaymentResponse>.Ok(
+            HttpResponseMapper.Map(payment), HttpContext.TraceIdentifier,
+            "Payment sent to the Mercado Pago Point terminal."));
+    }
+
+    [HttpGet("{id:guid}/card-payment"), Authorize(Policy = Permissions.Sales.View)]
+    public ActionResult<ApiResponse<PointCardPaymentResponse>> GetCardPayment([FromRoute] Guid id) =>
+        Ok(ApiResponse<PointCardPaymentResponse>.Ok(
+            HttpResponseMapper.Map(pointPayments.GetForSale(id)), HttpContext.TraceIdentifier));
+}
+
+[ApiController, Route("api/v1/payments/mercado-pago"), Produces(MediaTypeNames.Application.Json)]
+public sealed class MercadoPagoWebhooksController(PointPaymentService pointPayments) : ControllerBase
+{
+    [AllowAnonymous]
+    [HttpPost("webhook")]
+    public async Task<IActionResult> Receive(
+        [FromQuery(Name = "data.id")] string dataId,
+        [FromHeader(Name = "x-signature")] string signature,
+        [FromHeader(Name = "x-request-id")] string requestId,
+        [FromBody] MercadoPagoWebhookRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(request.Type, "order", StringComparison.OrdinalIgnoreCase) ||
+            (request.Data?.Id is not null && !string.Equals(request.Data.Id, dataId, StringComparison.Ordinal)))
+            return BadRequest();
+        await pointPayments.HandleWebhookAsync(
+            signature, requestId, dataId, request.ApplicationId, cancellationToken);
+        return Ok();
+    }
 }

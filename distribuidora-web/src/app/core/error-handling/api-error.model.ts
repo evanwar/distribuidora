@@ -15,5 +15,6 @@ export interface ApiError {
   fieldErrors: Readonly<Record<string, string[]>>;
   status: number;
   correlationId?: string;
+  operationId?: string;
   retryable: boolean;
 }

@@ -71,7 +71,9 @@ type FieldValue =
                     [class.task--active]="selected()?.id === operation.id"
                     (click)="select(operation)"
                   >
-                    <span class="task__icon"><app-ui-icon [name]="operationIcon(operation)" /></span>
+                    <span class="task__icon"
+                      ><app-ui-icon [name]="operationIcon(operation)"
+                    /></span>
                     <span>
                       <strong>{{ titleFor(operation) }}</strong>
                       <small>{{ shortDescription(operation) }}</small>
@@ -245,7 +247,9 @@ type FieldValue =
                                   "
                                 >
                                   @for (option of store.optionsFor(itemField); track option.value) {
-                                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                                    <mat-option [value]="option.value">{{
+                                      option.label
+                                    }}</mat-option>
                                   }
                                 </mat-select>
                               } @else {
@@ -302,6 +306,7 @@ type FieldValue =
                 [message]="store.error()!.message"
                 tone="danger"
                 [correlationId]="store.error()!.correlationId"
+                [operationId]="store.error()!.operationId"
               />
             }
 
@@ -321,7 +326,9 @@ type FieldValue =
                       {{ resultRows().length === 1 ? 'registro' : 'registros' }}
                     </p>
                   </div>
-                  <span class="success-mark"><app-ui-icon name="check" /> Operación completada</span>
+                  <span class="success-mark"
+                    ><app-ui-icon name="check" /> Operación completada</span
+                  >
                 </div>
                 @if (resultRows().length === 0) {
                   <div class="completed-message">
@@ -438,6 +445,7 @@ export class BusinessWorkspacePage {
   }
 
   protected select(operation: EndpointDefinition): void {
+    this.store.prepareOperation(operation);
     this.workflowMessage.set(null);
     const previousOperation = this.lastExecutedOperation();
     const recentId =

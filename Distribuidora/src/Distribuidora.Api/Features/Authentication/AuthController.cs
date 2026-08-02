@@ -5,6 +5,7 @@ using Distribuidora.Contracts.Requests;
 using Distribuidora.Contracts.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Distribuidora.Api.Features.Authentication;
 
@@ -16,6 +17,7 @@ public sealed class AuthController(AuthService service) : ControllerBase
     /// <summary>Authenticates a user and returns access and refresh tokens.</summary>
     [AllowAnonymous]
     [HttpPost("login")]
+    [EnableRateLimiting("authentication")]
     [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -28,6 +30,7 @@ public sealed class AuthController(AuthService service) : ControllerBase
     /// <summary>Rotates a valid refresh token.</summary>
     [AllowAnonymous]
     [HttpPost("refresh")]
+    [EnableRateLimiting("authentication")]
     [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Refresh([FromBody] RefreshRequest request, CancellationToken cancellationToken)

@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   catchError,
@@ -6,17 +6,23 @@ import {
   distinctUntilChanged,
   EMPTY,
   finalize,
+  last,
   Observable,
   Subject,
   switchMap,
+  tap,
+  takeWhile,
+  timer,
 } from 'rxjs';
 import { ApiError } from '../../../../core/error-handling/api-error.model';
+import { OperationContextService } from '../../../../core/observability/operation-context.service';
 import { CounterSalesApiAdapter } from './counter-sales-api.adapter';
 import {
   CounterSale,
   CreateCounterSale,
   PosCustomer,
   PosPaymentMethod,
+  PointCardPayment,
   PosProduct,
   PosStockBalance,
   PosWarehouse,
@@ -26,6 +32,9 @@ import {
 @Injectable()
 export class CounterSalesStore {
   private readonly api = inject(CounterSalesApiAdapter);
+  private readonly operations = inject(OperationContextService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly operation = this.operations.restoreOrStart('POS', 'counter-sales');
   private readonly customersState = signal<readonly PosCustomer[]>([]);
   private readonly customerSearchRequests = new Subject<string>();
   private readonly customersLoadingState = signal(false);
@@ -42,6 +51,7 @@ export class CounterSalesStore {
   private readonly errorState = signal<ApiError | null>(null);
   private readonly noticeState = signal<string | null>(null);
   private readonly stockNoticeState = signal<string | null>(null);
+  private readonly cardPaymentState = signal<PointCardPayment | null>(null);
   private editingSaleIdState = signal<string | null>(null);
 
   readonly customers = this.customersState.asReadonly();
@@ -66,6 +76,7 @@ export class CounterSalesStore {
   readonly error = this.errorState.asReadonly();
   readonly notice = this.noticeState.asReadonly();
   readonly stockNotice = this.stockNoticeState.asReadonly();
+  readonly cardPayment = this.cardPaymentState.asReadonly();
   readonly editingSaleId = this.editingSaleIdState.asReadonly();
   readonly subtotal = computed(() =>
     this.linesState().reduce((total, line) => total + line.quantity * line.unitPrice, 0),
@@ -81,15 +92,13 @@ export class CounterSalesStore {
         distinctUntilChanged(),
         switchMap((query) => {
           this.customersLoadingState.set(true);
-          return this.api
-            .searchCustomers(query)
-            .pipe(
-              catchError((error: ApiError) => {
-                this.errorState.set(error);
-                return EMPTY;
-              }),
-              finalize(() => this.customersLoadingState.set(false)),
-            );
+          return this.api.searchCustomers(query, this.requestContext()).pipe(
+            catchError((error: ApiError) => {
+              this.errorState.set(error);
+              return EMPTY;
+            }),
+            finalize(() => this.customersLoadingState.set(false)),
+          );
         }),
         takeUntilDestroyed(),
       )
@@ -102,7 +111,7 @@ export class CounterSalesStore {
     this.loadingState.set(true);
     this.errorState.set(null);
     this.api
-      .loadWorkspace()
+      .loadWorkspace(this.requestContext())
       .pipe(finalize(() => this.loadingState.set(false)))
       .subscribe({
         next: (data) => {
@@ -178,6 +187,35 @@ export class CounterSalesStore {
     ]);
   }
 
+  addAll(product: PosProduct): void {
+    const maximum = this.availableStock(product.id);
+    if (maximum <= 0) {
+      this.stockNoticeState.set(
+        `${product.name} no tiene existencia disponible en el almacén seleccionado.`,
+      );
+      return;
+    }
+
+    this.stockNoticeState.set(null);
+    const existing = this.linesState().some((line) => line.productId === product.id);
+    if (existing) {
+      this.changeQuantity(product.id, maximum);
+      return;
+    }
+
+    this.linesState.update((lines) => [
+      ...lines,
+      {
+        productId: product.id,
+        sku: product.sku,
+        name: product.name,
+        quantity: maximum,
+        unitPrice: product.price,
+        discount: 0,
+      },
+    ]);
+  }
+
   changeQuantity(productId: string, quantity: number): void {
     if (quantity <= 0) {
       this.remove(productId);
@@ -228,16 +266,70 @@ export class CounterSalesStore {
     this.noticeState.set(null);
     this.stockNoticeState.set(null);
     this.errorState.set(null);
+    this.cardPaymentState.set(null);
+  }
+
+  saveCard(request: CreateCounterSale, completed: (sale: CounterSale) => void): void {
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.cardPaymentState.set(null);
+    const currentId = this.editingSaleIdState();
+    const saveRequest = currentId
+      ? this.api.update(currentId, request, this.requestContext())
+      : this.api.create(request, this.requestContext());
+    saveRequest
+      .pipe(
+        switchMap((sale) =>
+          this.api.startCardPayment(sale.id, sale.balance, this.requestContext()).pipe(
+            tap((payment) => {
+              this.cardPaymentState.set(payment);
+              this.noticeState.set('Cobro enviado a la terminal. Esperando la tarjeta del cliente.');
+            }),
+            switchMap(() =>
+              timer(0, 2000).pipe(
+                switchMap(() => this.api.getCardPayment(sale.id, this.requestContext())),
+                tap((payment) => this.cardPaymentState.set(payment)),
+                takeWhile((payment) => !isTerminalPointStatus(payment.status), true),
+                last(),
+                switchMap((payment) => {
+                  this.cardPaymentState.set(payment);
+                  return payment.status.toLocaleLowerCase('en') === 'approved'
+                    ? this.api.getById(sale.id, this.requestContext())
+                    : [null];
+                }),
+              ),
+            ),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.savingState.set(false)),
+      )
+      .subscribe({
+        next: (sale) => {
+          if (sale) {
+            this.noticeState.set(`Pago aprobado y venta ${sale.folio} confirmada.`);
+            this.linesState.set([]);
+            this.editingSaleIdState.set(null);
+            completed(sale);
+            this.load();
+            return;
+          }
+          this.noticeState.set(pointStatusMessage(this.cardPaymentState()));
+        },
+        error: (error: ApiError) => this.errorState.set(error),
+      });
   }
 
   save(request: CreateCounterSale, confirm: boolean, completed: (sale: CounterSale) => void): void {
     this.savingState.set(true);
     this.errorState.set(null);
     const currentId = this.editingSaleIdState();
-    const saveRequest = currentId ? this.api.update(currentId, request) : this.api.create(request);
+    const saveRequest = currentId
+      ? this.api.update(currentId, request, this.requestContext())
+      : this.api.create(request, this.requestContext());
     saveRequest
       .pipe(
-        switchMap((sale) => (confirm ? this.api.confirm(sale.id) : [sale])),
+        switchMap((sale) => (confirm ? this.api.confirm(sale.id, this.requestContext()) : [sale])),
         finalize(() => this.savingState.set(false)),
       )
       .subscribe({
@@ -257,30 +349,43 @@ export class CounterSalesStore {
   }
 
   confirmSale(sale: CounterSale): void {
-    this.runAction(this.api.confirm(sale.id), `La venta ${sale.folio} quedó confirmada.`);
+    this.runAction(
+      this.api.confirm(sale.id, this.requestContext()),
+      `La venta ${sale.folio} quedó confirmada.`,
+    );
   }
 
   cancelSale(sale: CounterSale, reason: string): void {
-    this.runAction(this.api.cancel(sale.id, reason), `La venta ${sale.folio} quedó cancelada.`);
+    this.runAction(
+      this.api.cancel(sale.id, reason, this.requestContext()),
+      `La venta ${sale.folio} quedó cancelada.`,
+    );
   }
 
   addPayment(
     sale: CounterSale,
     request: { method: string; amount: number; reference: string | null },
   ): void {
-    this.runAction(this.api.addPayment(sale.id, request), `El pago se registró en ${sale.folio}.`);
+    this.runAction(
+      this.api.addPayment(sale.id, request, this.requestContext()),
+      `El pago se registró en ${sale.folio}.`,
+    );
   }
 
   print(sale: CounterSale, completed: (printable: CounterSale) => void): void {
     this.savingState.set(true);
     this.errorState.set(null);
     this.api
-      .getPrintable(sale.id)
+      .getPrintable(sale.id, this.requestContext())
       .pipe(finalize(() => this.savingState.set(false)))
       .subscribe({
         next: completed,
         error: (error: ApiError) => this.errorState.set(error),
       });
+  }
+
+  private requestContext() {
+    return this.operations.toHttpContext(this.operation);
   }
 
   private runAction(request: Observable<unknown>, notice: string): void {
@@ -317,4 +422,19 @@ export class CounterSalesStore {
       );
     }
   }
+}
+
+function isTerminalPointStatus(status: string): boolean {
+  return ['approved', 'failed', 'cancelled', 'expired', 'actionrequired', 'reconciliationrequired'].includes(
+    status.toLocaleLowerCase('en'),
+  );
+}
+
+function pointStatusMessage(payment: PointCardPayment | null): string {
+  const status = payment?.status.toLocaleLowerCase('en');
+  if (status === 'cancelled') return 'El cobro fue cancelado en la terminal.';
+  if (status === 'expired') return 'La orden de cobro expiró. Puedes intentarlo nuevamente.';
+  if (status === 'reconciliationrequired')
+    return 'Mercado Pago aprobó el cobro, pero la venta requiere conciliación administrativa.';
+  return 'El pago con tarjeta no fue aprobado.';
 }

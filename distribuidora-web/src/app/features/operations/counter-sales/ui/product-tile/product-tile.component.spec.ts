@@ -25,7 +25,7 @@ describe('ProductTileComponent', () => {
     expect(element.textContent).toContain('12 disponibles');
     expect(element.textContent).toContain('$45.50');
     expect(element.querySelector('button')?.getAttribute('aria-label')).toContain(
-      'Agregar Arroz premium',
+      'Agregar una unidad de Arroz premium',
     );
   });
 
@@ -36,11 +36,26 @@ describe('ProductTileComponent', () => {
     expect(additions).toBe(1);
   });
 
+  it('offers and emits the add-all intention', () => {
+    let additions = 0;
+    fixture.componentInstance.addAll.subscribe(() => additions++);
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+
+    expect(buttons[1]?.textContent).toContain('Agregar todos');
+    expect(buttons[1]?.getAttribute('aria-label')).toContain(
+      'Agregar toda la existencia disponible de Arroz premium: 12 unidades',
+    );
+    buttons[1]?.click();
+
+    expect(additions).toBe(1);
+  });
+
   it('communicates and blocks the maximum state', () => {
     fixture.componentRef.setInput('canAdd', false);
     fixture.detectChanges();
     const button = (fixture.nativeElement as HTMLElement).querySelector('button');
     expect(button?.disabled).toBe(true);
     expect(button?.textContent).toContain('Máximo agregado');
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('button')).toHaveLength(1);
   });
 });

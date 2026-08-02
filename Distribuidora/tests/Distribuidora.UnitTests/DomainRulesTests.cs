@@ -57,6 +57,22 @@ public sealed class DomainRulesTests
     }
 
     [Fact]
+    public void Sale_with_negative_payment_is_rejected()
+    {
+        var sale = Sale(PaymentCondition.Cash);
+        sale.Payments.Add(new SalePayment { Amount = -100, Method = "cash" });
+        Assert.Throws<DomainRuleException>(() => sale.Confirm(OccurredAt));
+    }
+
+    [Fact]
+    public void Sale_discount_cannot_exceed_line_amount()
+    {
+        var sale = Sale(PaymentCondition.Credit);
+        sale.Items.Single().Discount = 101;
+        Assert.Throws<DomainRuleException>(() => sale.Confirm(OccurredAt));
+    }
+
+    [Fact]
     public void Confirmed_sale_cannot_be_confirmed_twice()
     {
         var sale = Sale(PaymentCondition.Cash);
@@ -93,6 +109,14 @@ public sealed class DomainRulesTests
         var receivable = new AccountReceivable { Total = 50 };
         receivable.InitializeBalance();
         Assert.Throws<DomainRuleException>(() => receivable.Apply(51, OccurredAt));
+    }
+
+    [Fact]
+    public void Cancelled_customer_payment_cannot_be_allocated_again()
+    {
+        var payment = new CustomerPayment { Amount = 100 };
+        payment.Cancel("voided");
+        Assert.Throws<DomainRuleException>(() => payment.EnsureCanAllocate(50));
     }
 
     [Fact]

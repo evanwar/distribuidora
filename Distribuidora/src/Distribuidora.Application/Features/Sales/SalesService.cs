@@ -43,7 +43,7 @@ public sealed class SalesService(
             CreatedBy = actorId
         };
         AddLines(sale, request, actorId);
-        sale.Recalculate();
+        sale.ValidateCommercialIntegrity();
         db.Add(sale);
         await db.SaveChangesAsync(cancellationToken);
         return sale;
@@ -63,7 +63,7 @@ public sealed class SalesService(
         sale.Items.Clear();
         sale.Payments.Clear();
         AddLines(sale, request, actorId);
-        sale.Recalculate();
+        sale.ValidateCommercialIntegrity();
         sale.UpdatedAt = datetimeProvider.UtcNow;
         sale.UpdatedBy = actorId;
         await db.SaveChangesAsync(cancellationToken);
@@ -114,7 +114,8 @@ public sealed class SalesService(
         var sale = GetById(id);
         var method = db.Query(Specification.Create<Domain.Administration.PaymentMethod>(
             x => x.Code == request.Method && x.Active)).SingleOrDefault();
-        if (method is not null && method.RequiresReference && string.IsNullOrWhiteSpace(request.Reference))
+        if (method is null) throw new ArgumentException("Payment method is inactive or does not exist.");
+        if (method.RequiresReference && string.IsNullOrWhiteSpace(request.Reference))
             throw new ArgumentException("Payment reference is required.");
         sale.RegisterPayment(new SalePayment
         {
@@ -132,6 +133,8 @@ public sealed class SalesService(
         db.ExecuteAtomicAsync(async token =>
         {
             var sale = GetById(id);
+            if (sale.Payments.Count != 0)
+                throw new ConflictException("A paid sale cannot be cancelled until every payment is refunded or reversed.");
             sale.Cancel(reason, actorId, datetimeProvider.UtcNow);
             foreach (var item in sale.Items)
                 inventory.Post(item.ProductId, sale.SourceWarehouseId, item.Quantity, item.HistoricalUnitCost,
@@ -155,7 +158,8 @@ public sealed class SalesService(
             (!request.CustomerId.HasValue ||
              !db.Query(Specification.Create<Customer>(x => x.Id == request.CustomerId && x.Active)).Any()))
             throw new ArgumentException("An active customer is required.");
-        if (request.Items.Count == 0 || request.Items.Any(x => x.Quantity <= 0 || x.UnitPrice < 0))
+        if (request.TaxTotal < 0 || request.Items.Count == 0 || request.Items.Any(x =>
+                x.Quantity <= 0 || x.UnitPrice < 0 || x.Discount < 0 || x.Discount > x.Quantity * x.UnitPrice))
             throw new ArgumentException("Sale requires valid items.");
         if (request.Items.Select(x => x.ProductId).Distinct().Count() != request.Items.Count)
             throw new ArgumentException("A product cannot be repeated in the same sale.");
@@ -187,6 +191,8 @@ public sealed class SalesService(
             var product = db.Query(Specification.Create<Product>(
                 x => x.Id == item.ProductId && x.Active)).SingleOrDefault()
                 ?? throw new ArgumentException("Product is inactive or does not exist.");
+            if (item.UnitPrice != product.BasePrice)
+                throw new DomainRuleException("The sale price must match the current product base price. Authorized price overrides require a dedicated workflow.");
             sale.Items.Add(new CounterSaleItem
             {
                 ProductId = item.ProductId,
@@ -198,6 +204,13 @@ public sealed class SalesService(
         }
         if (request.Payments is null) return;
         foreach (var payment in request.Payments)
+        {
+            var method = db.Query(Specification.Create<Domain.Administration.PaymentMethod>(
+                x => x.Code == payment.Method && x.Active)).SingleOrDefault()
+                ?? throw new ArgumentException("Payment method is inactive or does not exist.");
+            if (payment.Amount <= 0) throw new ArgumentException("Payment amount must be positive.");
+            if (method.RequiresReference && string.IsNullOrWhiteSpace(payment.Reference))
+                throw new ArgumentException("Payment reference is required.");
             sale.Payments.Add(new SalePayment
             {
                 PaymentDate = datetimeProvider.UtcNow,
@@ -206,5 +219,6 @@ public sealed class SalesService(
                 Reference = payment.Reference,
                 ReceivedBy = actorId
             });
+        }
     }
 }

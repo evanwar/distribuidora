@@ -39,10 +39,7 @@ type EntityControl = FormControl<string | number | boolean>;
     UiFeedbackComponent,
     UiPageHeaderComponent,
   ],
-  providers: [
-    EntityManagerStore,
-    { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl },
-  ],
+  providers: [EntityManagerStore, { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }],
   template: `
     <div class="page">
       <app-ui-page-header
@@ -59,6 +56,7 @@ type EntityControl = FormControl<string | number | boolean>;
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
+          [operationId]="store.error()!.operationId"
           actionLabel="Recargar"
           (action)="store.load()"
         />

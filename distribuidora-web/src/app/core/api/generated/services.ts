@@ -15,6 +15,7 @@ export { GoodsReceiptsService } from './services/goods-receipts.service';
 export { HealthService } from './services/health.service';
 export { InventoryService } from './services/inventory.service';
 export { LogsService } from './services/logs.service';
+export { MercadoPagoWebhooksService } from './services/mercado-pago-webhooks.service';
 export { OperationalNotesService } from './services/operational-notes.service';
 export { PaymentMethodsService } from './services/payment-methods.service';
 export { PermissionsService } from './services/permissions.service';

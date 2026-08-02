@@ -51,7 +51,9 @@ public static class DatabaseSeeder
 
         var adminUsername = configuration["Seed:AdminUsername"] ?? "admin";
         var adminEmail = configuration["Seed:AdminEmail"] ?? "admin@local.test";
-        var adminPassword = configuration["Seed:AdminPassword"] ?? "ChangeMe123!";
+        var adminPassword = configuration["Seed:AdminPassword"];
+        if (string.IsNullOrWhiteSpace(adminPassword) || adminPassword == "ChangeMe123!")
+            throw new InvalidOperationException("Seed:AdminPassword must be explicitly configured with a non-default secret.");
         var syncAdminCredentials = configuration.GetValue("Seed:SyncAdminCredentials", false);
         var admin = await db.Query(Specification.Create<User>(x => x.Username == adminUsername))
             .Include(x => x.Roles)

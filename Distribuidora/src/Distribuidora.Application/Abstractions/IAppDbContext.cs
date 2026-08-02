@@ -33,3 +33,38 @@ public interface ICurrentUser
 {
     Guid Id { get; }
 }
+
+public interface IMercadoPagoPointClient
+{
+    string TerminalId { get; }
+    Task<MercadoPagoPointOrder> CreateOrderAsync(
+        string externalReference,
+        string idempotencyKey,
+        decimal amount,
+        CancellationToken cancellationToken);
+    Task<MercadoPagoPointOrder> GetOrderAsync(string orderId, CancellationToken cancellationToken);
+}
+
+public interface IMercadoPagoWebhookValidator
+{
+    bool IsValid(string signature, string requestId, string dataId);
+    bool IsExpectedApplication(string? applicationId);
+}
+
+public sealed record MercadoPagoPointOrder(
+    string Id,
+    string ExternalReference,
+    string Status,
+    string StatusDetail,
+    decimal? TotalPaidAmount,
+    IReadOnlyCollection<MercadoPagoPointTransaction> Payments);
+
+public sealed record MercadoPagoPointTransaction(
+    string Id,
+    decimal Amount,
+    decimal? PaidAmount,
+    string Status,
+    string StatusDetail,
+    string? PaymentMethodType,
+    string? PaymentMethodId,
+    int? Installments);

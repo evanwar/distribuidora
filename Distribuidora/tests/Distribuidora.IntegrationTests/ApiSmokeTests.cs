@@ -23,9 +23,9 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
     }
 
     [Fact]
-    public async Task Swagger_contains_operational_endpoints()
+    public async Task OpenApi_document_contains_operational_endpoints()
     {
-        var response = await _client.GetAsync("/swagger/v1/swagger.json");
+        var response = await _client.GetAsync("/openapi/v1.json");
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("/api/v1/counter-sales/{id}/confirm", body);
@@ -43,6 +43,13 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
         Assert.Contains("/api/v1/logs/events", body);
         Assert.Contains("/api/v1/trace/operations/{operationId}", body);
         Assert.DoesNotContain("\"/api/counter-sales", body);
+    }
+
+    [Fact]
+    public async Task Scalar_api_reference_is_available()
+    {
+        var response = await _client.GetAsync("/scalar/v1");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]

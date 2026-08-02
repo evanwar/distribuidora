@@ -6,7 +6,7 @@
       "commandVersion": "1.0",
       "composeLaunchServiceName": "api",
       "composeLaunchAction": "LaunchBrowser",
-      "composeLaunchUrl": "http://localhost:8080/swagger",
+      "composeLaunchUrl": "http://localhost:8080/scalar/v1",
       "serviceActions": {
         "api": "StartDebugging",
         "postgres": "StartWithoutDebugging"

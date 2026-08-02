@@ -7,8 +7,8 @@
 - Shell responsive, login, guards, sesión en memoria, refresh e interceptores.
 - Errores normalizados con `correlationId`.
 - Componentes configurables para botones, encabezados, barras de acciones, estados, alertas, dinero, fecha y vistas responsive.
-- Snapshot OpenAPI y cliente generado: 56 modelos y 30 servicios.
-- Catálogo validado: 109 operaciones únicas.
+- Snapshot OpenAPI y cliente generado: 59 modelos y 31 servicios.
+- Catálogo validado: 111 operaciones únicas.
 
 ## Seguridad y catálogos
 
@@ -29,7 +29,7 @@
 - Inventario, compras, recepciones, cobranza, auditoría, reportes y administración usan workspaces de negocio.
 - Los workspaces agrupan las tareas por tema, generan formularios guiados, soportan partidas repetibles y presentan resultados legibles.
 - Las rutas HTTP, IDs técnicos de operación y editores JSON ya no se exponen en la interfaz principal.
-- Las 109 operaciones continúan cubiertas entre autenticación, catálogos, POS y workspaces.
+- Las 111 operaciones continúan cubiertas entre autenticación, catálogos, POS y workspaces.
 
 ## Integración Docker
 
@@ -47,5 +47,5 @@ Vitest: 4/4
 Playwright móvil/tableta/escritorio: 9/9
 .NET unit tests: 17/17
 .NET integration tests: 5/5
-OpenAPI: 109 operaciones, 56 modelos, 30 servicios
+OpenAPI: 111 operaciones, 59 modelos, 31 servicios
 ```

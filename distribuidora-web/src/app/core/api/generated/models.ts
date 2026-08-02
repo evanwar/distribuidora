@@ -29,6 +29,8 @@ export type { InventoryAdjustmentResponse } from './models/inventory-adjustment-
 export type { InventoryAdjustmentResponseApiResponse } from './models/inventory-adjustment-response-api-response';
 export type { InventoryPolicyRequest } from './models/inventory-policy-request';
 export type { LoginRequest } from './models/login-request';
+export type { MercadoPagoWebhookData } from './models/mercado-pago-webhook-data';
+export type { MercadoPagoWebhookRequest } from './models/mercado-pago-webhook-request';
 export type { NamedCatalogRequest } from './models/named-catalog-request';
 export type { ObjectApiResponse } from './models/object-api-response';
 export type { OperationalNoteRequest } from './models/operational-note-request';
@@ -49,6 +51,7 @@ export type { RoleResponse } from './models/role-response';
 export type { RoleResponseApiResponse } from './models/role-response-api-response';
 export type { SaleItemRequest } from './models/sale-item-request';
 export type { SalePaymentRequest } from './models/sale-payment-request';
+export type { StartPointCardPaymentRequest } from './models/start-point-card-payment-request';
 export type { SupplierRequest } from './models/supplier-request';
 export type { TransferRequest } from './models/transfer-request';
 export type { UnitRequest } from './models/unit-request';

@@ -43,6 +43,7 @@ import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.compon
               [message]="error()!.message"
               tone="danger"
               [correlationId]="error()!.correlationId"
+              [operationId]="error()!.operationId"
             />
           }
 
@@ -93,7 +94,11 @@ import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.compon
       display: block;
       min-height: 100dvh;
       background:
-        radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--mat-sys-primary) 18%, transparent), transparent 35%),
+        radial-gradient(
+          circle at 10% 10%,
+          color-mix(in srgb, var(--mat-sys-primary) 18%, transparent),
+          transparent 35%
+        ),
         var(--app-bg);
     }
 

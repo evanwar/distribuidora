@@ -1,9 +1,9 @@
 # Contrato del API para frontend
 
-Documentación generada desde Swagger para implementar la integración del frontend con Distribuidora API.
+Documentación generada desde OpenAPI para implementar la integración del frontend con Distribuidora API.
 
 - Base URL local: `http://localhost:8080`
-- Swagger: `http://localhost:8080/swagger`
+- Scalar: `http://localhost:8080/scalar/v1`
 - Endpoints: **109**
 - Funcionalidades: **30**
 - Modelos: [MODELS.md](./MODELS.md)

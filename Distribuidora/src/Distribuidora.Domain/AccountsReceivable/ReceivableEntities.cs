@@ -45,6 +45,13 @@ public sealed class CustomerPayment : AuditableEntity
 
     public decimal AvailableAmount => Amount - Allocations.Where(x => !x.Reversed).Sum(x => x.AmountApplied);
 
+    public void EnsureCanAllocate(decimal amount)
+    {
+        if (Status == DocumentStatus.Cancelled) throw new DomainRuleException("A cancelled payment cannot be allocated.");
+        if (amount <= 0 || amount > AvailableAmount)
+            throw new DomainRuleException("Allocation must be positive and cannot exceed the available payment amount.");
+    }
+
     public void Cancel(string reason)
     {
         if (string.IsNullOrWhiteSpace(reason)) throw new DomainRuleException("Cancellation reason is required.");

@@ -1,6 +1,10 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 import { ApiError, ApiErrorKind } from './api-error.model';
+import {
+  CORRELATION_ID_HEADER,
+  OPERATION_ID_HEADER,
+} from '../observability/observability.constants';
 
 interface ErrorPayload {
   message?: string;
@@ -16,8 +20,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
       }
 
       const payload = (error.error ?? {}) as ErrorPayload;
-      const fieldErrors =
-        payload.errors && !Array.isArray(payload.errors) ? payload.errors : {};
+      const fieldErrors = payload.errors && !Array.isArray(payload.errors) ? payload.errors : {};
       const message =
         payload.message ??
         (Array.isArray(payload.errors) ? payload.errors.join(', ') : undefined) ??
@@ -28,7 +31,15 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
         message,
         fieldErrors,
         status: error.status,
-        correlationId: payload.correlationId,
+        correlationId:
+          payload.correlationId ??
+          error.headers.get(CORRELATION_ID_HEADER) ??
+          request.headers.get(CORRELATION_ID_HEADER) ??
+          undefined,
+        operationId:
+          error.headers.get(OPERATION_ID_HEADER) ??
+          request.headers.get(OPERATION_ID_HEADER) ??
+          undefined,
         retryable: error.status === 0 || error.status >= 500,
       };
 

@@ -1,4 +1,4 @@
-const openApiUrl = process.argv[2] ?? "http://localhost:8080/swagger/v1/swagger.json";
+const openApiUrl = process.argv[2] ?? "http://localhost:8080/openapi/v1.json";
 const response = await fetch(openApiUrl);
 
 if (!response.ok) {

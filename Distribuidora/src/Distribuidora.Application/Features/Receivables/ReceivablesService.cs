@@ -52,8 +52,9 @@ public sealed class ReceivablesService(
         db.ExecuteAtomicAsync(async token =>
         {
             var payment = GetPayment(id);
-            if (request.Allocations.Sum(x => x.Amount) > payment.AvailableAmount)
-                throw new DomainRuleException("Allocations exceed available payment amount.");
+            if (request.Allocations.Count == 0)
+                throw new DomainRuleException("At least one allocation is required.");
+            payment.EnsureCanAllocate(request.Allocations.Sum(x => x.Amount));
             foreach (var requested in request.Allocations)
             {
                 var receivable = db.Query(Specification.Create<AccountReceivable>(x =>

@@ -3,6 +3,8 @@ import { finalize, forkJoin, map } from 'rxjs';
 import { ApiClientService } from '../../../core/api/api-client.service';
 import { EndpointDefinition } from '../../../core/api/endpoint-catalog.generated';
 import { ApiError } from '../../../core/error-handling/api-error.model';
+import { OperationContextService } from '../../../core/observability/operation-context.service';
+import { OperationContext, OperationKind } from '../../../core/observability/trace.models';
 import {
   BusinessField,
   BusinessLineField,
@@ -13,6 +15,9 @@ import {
 @Injectable()
 export class OperationWorkbenchStore {
   private readonly api = inject(ApiClientService);
+  private readonly operations = inject(OperationContextService);
+  private operation: OperationContext | null = null;
+  private operationFamily = '';
   private readonly loadingState = signal(false);
   private readonly resultState = signal<unknown>(null);
   private readonly errorState = signal<ApiError | null>(null);
@@ -37,25 +42,38 @@ export class OperationWorkbenchStore {
     this.errorState.set(null);
   }
 
+  prepareOperation(operation: EndpointDefinition): void {
+    const family = operation.id.split('-')[0];
+    if (family === this.operationFamily && this.operation) return;
+    this.operationFamily = family;
+    this.operation = this.operations.restoreOrStart(
+      operationKind(operation),
+      `workbench-${operation.module}-${family}`,
+    );
+  }
+
   loadBalances(): void {
-    this.api.get<unknown>('/api/v1/inventory/balances').subscribe({
-      next: (response) => {
-        const collection = Array.isArray(response) ? response : [];
-        this.balancesState.set(
-          collection
-            .filter(
-              (item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object',
-            )
-            .map((item) => ({
-              warehouseId: String(item['warehouseId'] ?? ''),
-              productId: String(item['productId'] ?? ''),
-              quantity: finiteNumber(item['quantity']),
-              reservedQuantity: finiteNumber(item['reservedQuantity']),
-            })),
-        );
-      },
-      error: (error: ApiError) => this.errorState.set(error),
-    });
+    this.api
+      .get<unknown>('/api/v1/inventory/balances', { context: this.requestContext() })
+      .subscribe({
+        next: (response) => {
+          const collection = Array.isArray(response) ? response : [];
+          this.balancesState.set(
+            collection
+              .filter(
+                (item): item is Record<string, unknown> =>
+                  Boolean(item) && typeof item === 'object',
+              )
+              .map((item) => ({
+                warehouseId: String(item['warehouseId'] ?? ''),
+                productId: String(item['productId'] ?? ''),
+                quantity: finiteNumber(item['quantity']),
+                reservedQuantity: finiteNumber(item['reservedQuantity']),
+              })),
+          );
+        },
+        error: (error: ApiError) => this.errorState.set(error),
+      });
   }
 
   availableStock(productId: string, warehouseId: string): number | null {
@@ -87,7 +105,7 @@ export class OperationWorkbenchStore {
     forkJoin(
       unique.map((field) =>
         this.api
-          .get<unknown>(field.optionsEndpoint)
+          .get<unknown>(field.optionsEndpoint, { context: this.requestContext() })
           .pipe(map((response) => [lookupKey(field), toOptions(response, field)] as const)),
       ),
     )
@@ -115,10 +133,14 @@ export class OperationWorkbenchStore {
     const path = interpolate(operation.path, parameters);
     const request =
       operation.method === 'GET'
-        ? this.api.get<unknown>(path, { query })
+        ? this.api.get<unknown>(path, { query, context: this.requestContext() })
         : operation.method === 'POST'
-          ? this.api.post<unknown, Record<string, unknown>>(path, body)
-          : this.api.put<unknown, Record<string, unknown>>(path, body);
+          ? this.api.post<unknown, Record<string, unknown>>(path, body, {
+              context: this.requestContext(),
+            })
+          : this.api.put<unknown, Record<string, unknown>>(path, body, {
+              context: this.requestContext(),
+            });
 
     request.pipe(finalize(() => this.loadingState.set(false))).subscribe({
       next: (result) => {
@@ -128,6 +150,19 @@ export class OperationWorkbenchStore {
       error: (error: ApiError) => this.errorState.set(error),
     });
   }
+
+  private requestContext() {
+    if (!this.operation) this.operation = this.operations.start('WEB');
+    return this.operations.toHttpContext(this.operation);
+  }
+}
+
+function operationKind(operation: EndpointDefinition): OperationKind {
+  if (operation.module === 'F03') return 'INV';
+  if (operation.module === 'F04') return 'PUR';
+  if (operation.module === 'F06') return 'AR';
+  if (operation.module === 'F09' || operation.module === 'F01') return 'ADM';
+  return 'WEB';
 }
 
 function lookupKey(field: BusinessLookup): string {

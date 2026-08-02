@@ -2,6 +2,7 @@ using Distribuidora.Application.Abstractions;
 using Distribuidora.Infrastructure.Persistence;
 using Distribuidora.Infrastructure.Observability;
 using Distribuidora.Infrastructure.Security;
+using Distribuidora.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +13,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default")
-            ?? "Host=localhost;Port=5432;Database=distribuidora;Username=postgres;Password=postgres";
+        var connectionString = configuration.GetConnectionString("Default");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("ConnectionStrings:Default must be explicitly configured.");
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddDbContext<LoggingDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
@@ -30,6 +32,14 @@ public static class DependencyInjection
             services.AddHostedService<OutboxProcessor>();
         services.AddSingleton<IPasswordService, PasswordService>();
         services.AddSingleton<ITokenService, TokenService>();
+        services.Configure<MercadoPagoPointOptions>(configuration.GetSection(MercadoPagoPointOptions.SectionName));
+        services.AddHttpClient<IMercadoPagoPointClient, MercadoPagoPointClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MercadoPagoPointOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(20);
+        });
+        services.AddSingleton<IMercadoPagoWebhookValidator, MercadoPagoWebhookValidator>();
         return services;
     }
 }

@@ -1,6 +1,6 @@
 ---
 project: Distribuidora Backend - MVP Mostrador
-stack: ASP.NET Core Web API, .NET 8+, EF Core, PostgreSQL, Npgsql, OpenAPI/Swagger
+stack: ASP.NET Core Web API, .NET 8+, EF Core, PostgreSQL, Npgsql, OpenAPI/Scalar
 architecture: Modular Monolith + Clean Architecture + Vertical Slice + Domain Events
 scope: Backend only, ventas por mostrador, sin rutas ni camiones
 ---
@@ -34,7 +34,7 @@ Construir un backend capaz de operar un negocio de mostrador con:
 3. Aplica `02_ARQUITECTURA_GLOBAL.md` y `03_CONVENCIONES_TRANSVERSALES.md`.
 4. Antes de implementar cada módulo, lee todas las skills indicadas en el módulo.
 5. Ejecuta los módulos en el orden indicado por el orquestador.
-6. Cada agente debe entregar código, migraciones, pruebas y documentación Swagger.
+6. Cada agente debe entregar código, migraciones, pruebas y documentación OpenAPI.
 
 ## Archivos principales
 
@@ -55,7 +55,7 @@ Ningún material debe entrar, salir, venderse, devolverse, ajustarse o cancelars
 
 ## Implementación disponible
 
-La solución ejecutable se encuentra en `Distribuidora.slnx` y usa .NET 8, ASP.NET Core MVC Controllers, EF Core 8, Npgsql, PostgreSQL, JWT y Swagger.
+La solución ejecutable se encuentra en `Distribuidora.slnx` y usa .NET 8, ASP.NET Core MVC Controllers, EF Core 8, Npgsql, PostgreSQL, JWT y Scalar.
 
 ```bash
 dotnet restore
@@ -68,7 +68,7 @@ dotnet tool run dotnet-ef database update \
 dotnet run --project src/Distribuidora.Api
 ```
 
-Swagger queda disponible en `/swagger`. La migración automática está desactivada por defecto. Para un ambiente local controlado puede habilitarse con `Database__AutoMigrate=true`.
+Scalar queda disponible en `/scalar/v1` y el contrato OpenAPI en `/openapi/v1.json`. La migración automática está desactivada por defecto. Para un ambiente local controlado puede habilitarse con `Database__AutoMigrate=true`.
 
 Antes de iniciar en cualquier ambiente:
 
@@ -121,9 +121,28 @@ esquemas de PostgreSQL se mantienen estables.
 ## Contrato para frontend
 
 La documentación de integración del frontend está en
-[`docs/frontend-api/README.md`](docs/frontend-api/README.md). Incluye los 109
+[`docs/frontend-api/README.md`](docs/frontend-api/README.md). Incluye los 111
 endpoints agrupados por funcionalidad, autenticación, parámetros, ejemplos de
-body, códigos de respuesta y modelos TypeScript derivados de Swagger.
+body, códigos de respuesta y modelos TypeScript derivados de OpenAPI.
+
+## Mercado Pago Point Smart 2
+
+El cobro con tarjeta usa Orders API de Mercado Pago Point. Configura la Smart 2 en
+modo PDV, copia su `terminal_id` y define en `.env` las variables
+`MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`,
+`MERCADO_PAGO_APPLICATION_ID` y `MERCADO_PAGO_TERMINAL_ID`.
+
+En Mercado Pago Developers registra una URL HTTPS pública con el evento
+**Order (Mercado Pago)**:
+
+```text
+https://TU-DOMINIO/api/v1/payments/mercado-pago/webhook
+```
+
+El Access Token y la clave del webhook viven solamente en el backend. El frontend
+envía la venta a la terminal mediante `POST /api/v1/counter-sales/{id}/card-payment`
+y consulta el estado local con el `GET` equivalente. La venta solo registra el pago
+y se confirma cuando el webhook firmado reporta `processed/accredited`.
 
 ## Ejecución con Docker
 
@@ -143,7 +162,7 @@ En PowerShell, usar `Copy-Item .env.example .env` en lugar de `cp`.
 Servicios locales:
 
 - API: `http://localhost:8080`
-- Swagger: `http://localhost:8080/swagger`
+- Scalar: `http://localhost:8080/scalar/v1`
 - Salud: `http://localhost:8080/api/v1/health`
 - PostgreSQL: `localhost:5432`
 

@@ -9,19 +9,30 @@ export class ApiClientService {
 
   get<T>(path: string, options?: ApiRequestOptions): Observable<T> {
     return this.http
-      .get<ApiEnvelope<T>>(path, { params: this.toParams(options?.query) })
+      .get<ApiEnvelope<T>>(path, {
+        params: this.toParams(options?.query),
+        context: options?.context,
+      })
       .pipe(map((response) => this.unwrap(response)));
   }
 
-  post<TResponse, TBody = unknown>(path: string, body?: TBody): Observable<TResponse> {
+  post<TResponse, TBody = unknown>(
+    path: string,
+    body?: TBody,
+    options?: ApiRequestOptions,
+  ): Observable<TResponse> {
     return this.http
-      .post<ApiEnvelope<TResponse>>(path, body ?? {})
+      .post<ApiEnvelope<TResponse>>(path, body ?? {}, { context: options?.context })
       .pipe(map((response) => this.unwrap(response)));
   }
 
-  put<TResponse, TBody = unknown>(path: string, body: TBody): Observable<TResponse> {
+  put<TResponse, TBody = unknown>(
+    path: string,
+    body: TBody,
+    options?: ApiRequestOptions,
+  ): Observable<TResponse> {
     return this.http
-      .put<ApiEnvelope<TResponse>>(path, body)
+      .put<ApiEnvelope<TResponse>>(path, body, { context: options?.context })
       .pipe(map((response) => this.unwrap(response)));
   }
 
@@ -30,13 +41,17 @@ export class ApiClientService {
       return undefined as T;
     }
     if (response.success === false) {
-      throw new Error(response.message ?? response.errors?.join(', ') ?? 'La operación no se completó.');
+      throw new Error(
+        response.message ?? response.errors?.join(', ') ?? 'La operación no se completó.',
+      );
     }
 
     return response.data as T;
   }
 
-  private toParams(query?: Readonly<Record<string, string | number | boolean | null | undefined>>): HttpParams {
+  private toParams(
+    query?: Readonly<Record<string, string | number | boolean | null | undefined>>,
+  ): HttpParams {
     let params = new HttpParams();
     if (!query) {
       return params;

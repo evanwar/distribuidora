@@ -26,7 +26,12 @@ import { DashboardStore } from '../data-access/dashboard.store';
         title="Centro de operación"
         subtitle="Una lectura rápida de ventas, inventario y cobranza."
       >
-        <app-ui-button label="Actualizar" variant="outlined" icon="refresh" (pressed)="store.load()" />
+        <app-ui-button
+          label="Actualizar"
+          variant="outlined"
+          icon="refresh"
+          (pressed)="store.load()"
+        />
       </app-ui-page-header>
 
       @if (store.loading()) {
@@ -43,6 +48,7 @@ import { DashboardStore } from '../data-access/dashboard.store';
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
+          [operationId]="store.error()!.operationId"
           actionLabel="Reintentar"
           (action)="store.load()"
         />
@@ -100,10 +106,22 @@ import { DashboardStore } from '../data-access/dashboard.store';
       background: var(--app-surface-muted);
       color: var(--app-primary);
     }
-    .metric__icon app-ui-icon { width: 1.5rem; height: 1.5rem; }
-    .metric div { display: grid; gap: var(--space-2); min-width: 0; }
-    .metric div span { color: var(--app-text-muted); }
-    .metric strong { font-size: clamp(1.55rem, 5vw, 2.2rem); font-variant-numeric: tabular-nums; }
+    .metric__icon app-ui-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+    .metric div {
+      display: grid;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+    .metric div span {
+      color: var(--app-text-muted);
+    }
+    .metric strong {
+      font-size: clamp(1.55rem, 5vw, 2.2rem);
+      font-variant-numeric: tabular-nums;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

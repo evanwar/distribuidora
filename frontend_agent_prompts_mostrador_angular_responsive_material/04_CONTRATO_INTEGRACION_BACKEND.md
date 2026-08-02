@@ -10,7 +10,7 @@ backend_contract: ASP.NET Core Web API + PostgreSQL, paquete backend MVP Mostrad
 
 ## Inventario ejecutable
 
-La cobertura funcional exacta se controla en `06_MATRIZ_ENDPOINTS_FRONTEND.md`: 109 operaciones distribuidas entre F0 y F01-F09. Los contratos detallados de request, response, parámetros y errores están en `../Distribuidora/docs/frontend-api/`; la colección de apoyo está en `../Distribuidora/postman/Distribuidora.Api.postman_collection.json`.
+La cobertura funcional exacta se controla en `06_MATRIZ_ENDPOINTS_FRONTEND.md`: 111 operaciones distribuidas entre F0 y F01-F09. Los contratos detallados de request, response, parámetros y errores están en `../Distribuidora/docs/frontend-api/`; la colección de apoyo está en `../Distribuidora/postman/Distribuidora.Api.postman_collection.json`.
 
 Cada slice debe declarar los IDs de operación que integra. “Cliente generado compila” no equivale a endpoint integrado: se exige adapter, consumidor, estados y pruebas.
 

@@ -28,6 +28,7 @@ public sealed class PurchaseService(
 
     public async Task<PurchaseOrder> CreatePurchaseAsync(CreatePurchaseRequest request, Guid actorId, CancellationToken cancellationToken)
     {
+        if (request.Tax < 0) throw new ArgumentException("Purchase tax cannot be negative.");
         EnsureActiveSupplier(request.SupplierId);
         ValidateItems(request.Items);
         var purchase = new PurchaseOrder
@@ -58,6 +59,7 @@ public sealed class PurchaseService(
         var purchase = GetPurchase(id);
         if (purchase.Status != DocumentStatus.Draft)
             throw new ConflictException("Only draft purchases can be edited.");
+        if (request.Tax < 0) throw new ArgumentException("Purchase tax cannot be negative.");
         ValidateItems(request.Items);
         purchase.SupplierId = request.SupplierId;
         purchase.Tax = request.Tax;
@@ -103,6 +105,13 @@ public sealed class PurchaseService(
 
     public async Task<GoodsReceipt> CreateReceiptAsync(CreateReceiptRequest request, Guid actorId, CancellationToken cancellationToken)
     {
+        if (!request.PurchaseOrderId.HasValue)
+            throw new ArgumentException("A confirmed purchase order is required for every goods receipt.");
+        var purchase = GetPurchase(request.PurchaseOrderId.Value);
+        if (purchase.Status != DocumentStatus.Confirmed)
+            throw new ConflictException("Only a confirmed purchase order can be received.");
+        if (purchase.SupplierId != request.SupplierId)
+            throw new ArgumentException("Receipt supplier does not match the purchase order.");
         EnsureActiveSupplier(request.SupplierId);
         if (!db.Query(Specification.Create<Warehouse>(x => x.Id == request.DestinationWarehouseId && x.Active)).Any())
             throw new ArgumentException("Warehouse is inactive or does not exist.");
@@ -113,6 +122,7 @@ public sealed class PurchaseService(
         if (request.Items.Any(item => !db.Query(Specification.Create<Product>(
                 product => product.Id == item.ProductId && product.Active)).Any()))
             throw new ArgumentException("Receipt contains an inactive or missing product.");
+        ValidateReceiptAgainstPurchase(request.Items, purchase, request.PurchaseOrderId.Value, null);
         var receipt = new GoodsReceipt
         {
             Folio = await folios.NextAsync("goods_receipt", "GR-", cancellationToken),
@@ -140,11 +150,22 @@ public sealed class PurchaseService(
         db.ExecuteAtomicAsync(async token =>
         {
             var receipt = GetReceipt(id);
+            if (!receipt.PurchaseOrderId.HasValue)
+                throw new ConflictException("The receipt is not linked to a purchase order.");
+            var purchase = GetPurchase(receipt.PurchaseOrderId.Value);
+            if (purchase.Status != DocumentStatus.Confirmed || purchase.SupplierId != receipt.SupplierId)
+                throw new ConflictException("The linked purchase order is no longer eligible for receipt.");
+            var receiptItems = receipt.Items.Select(x => new ReceiptItemRequest(
+                x.ProductId, x.ReceivedQuantity, x.UnitCost)).ToArray();
+            ValidateReceiptAgainstPurchase(receiptItems, purchase, purchase.Id, receipt.Id);
             receipt.Close(datetimeProvider.UtcNow);
             foreach (var item in receipt.Items)
                 inventory.Post(item.ProductId, receipt.DestinationWarehouseId, item.ReceivedQuantity,
                     item.UnitCost, MovementType.PurchaseReceipt, nameof(GoodsReceipt), receipt.Id, actorId);
             audit.Add("Close", "purchases", nameof(GoodsReceipt), id, actorId, correlationId);
+            // Touch the order so concurrent receipts for the same order contend on its RowVersion.
+            purchase.UpdatedAt = datetimeProvider.UtcNow;
+            purchase.UpdatedBy = actorId;
             await db.SaveChangesAsync(token);
             return receipt;
         }, cancellationToken);
@@ -167,7 +188,36 @@ public sealed class PurchaseService(
 
     private static void ValidateItems(IReadOnlyCollection<PurchaseItemRequest> items)
     {
-        if (items.Count == 0 || items.Any(x => x.Quantity <= 0 || x.UnitCost < 0))
+        if (items.Count == 0 || items.Any(x => x.Quantity <= 0 || x.UnitCost < 0 ||
+                x.Discount < 0 || x.Discount > x.Quantity * x.UnitCost))
             throw new ArgumentException("Purchase requires valid items.");
+        if (items.Select(x => x.ProductId).Distinct().Count() != items.Count)
+            throw new ArgumentException("A product cannot be repeated in the same purchase.");
+    }
+
+    private void ValidateReceiptAgainstPurchase(
+        IReadOnlyCollection<ReceiptItemRequest> items,
+        PurchaseOrder purchase,
+        Guid purchaseOrderId,
+        Guid? excludedReceiptId)
+    {
+        var ordered = purchase.Items.ToDictionary(x => x.ProductId);
+        var alreadyReceived = db.Query(Specification.Create<GoodsReceipt>(x =>
+                x.PurchaseOrderId == purchaseOrderId && x.Status == DocumentStatus.Closed &&
+                (!excludedReceiptId.HasValue || x.Id != excludedReceiptId.Value)))
+            .SelectMany(x => x.Items)
+            .GroupBy(x => x.ProductId)
+            .ToDictionary(x => x.Key, x => x.Sum(i => i.ReceivedQuantity));
+
+        foreach (var item in items)
+        {
+            if (!ordered.TryGetValue(item.ProductId, out var orderLine))
+                throw new DomainRuleException("Receipt contains a product not present in the purchase order.");
+            if (item.UnitCost != orderLine.UnitCost)
+                throw new DomainRuleException("Receipt unit cost must match the purchase order.");
+            var prior = alreadyReceived.GetValueOrDefault(item.ProductId);
+            if (prior + item.Quantity > orderLine.Quantity)
+                throw new DomainRuleException("Receipt quantity exceeds the outstanding purchase order quantity.");
+        }
     }
 }

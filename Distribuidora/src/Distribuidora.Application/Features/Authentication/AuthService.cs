@@ -34,7 +34,8 @@ public sealed class AuthService(
         return new AuthResult(tokens.CreateAccessToken(user, permissions), refresh, expires);
     }
 
-    public async Task<AuthResult> RefreshAsync(string refreshToken, string ip, CancellationToken ct)
+    public Task<AuthResult> RefreshAsync(string refreshToken, string ip, CancellationToken ct) =>
+        db.ExecuteAtomicAsync(async token =>
     {
         var hash = tokens.HashRefreshToken(refreshToken);
         var stored = db.Query(Specification.Create<RefreshToken>(x => x.TokenHash == hash)).SingleOrDefault();
@@ -44,19 +45,13 @@ public sealed class AuthService(
         var user = db.Query(Specification.Create<User>(x => x.Id == stored.UserId)).Single();
         if (!user.Active) throw new UnauthorizedException("User is inactive.");
         stored.RevokedAt = utcNow;
-        await db.SaveChangesAsync(ct);
-        return await LoginFromRefreshAsync(user, ip, ct);
-    }
-
-    private async Task<AuthResult> LoginFromRefreshAsync(User user, string ip, CancellationToken ct)
-    {
         var raw = tokens.CreateRefreshToken();
         var expires = datetimeProvider.UtcNow.AddDays(7);
         db.Add(new RefreshToken { UserId = user.Id, TokenHash = tokens.HashRefreshToken(raw), ExpiresAt = expires, CreatedByIp = ip });
-        await db.SaveChangesAsync(ct);
-        var permissions = user.Roles.SelectMany(x => x.Permissions).Select(x => x.Key).Distinct();
+        await db.SaveChangesAsync(token);
+        var permissions = user.Roles.Where(x => x.Active).SelectMany(x => x.Permissions).Select(x => x.Key).Distinct();
         return new AuthResult(tokens.CreateAccessToken(user, permissions), raw, expires);
-    }
+    }, ct);
 
     public async Task LogoutAsync(string refreshToken, CancellationToken ct)
     {

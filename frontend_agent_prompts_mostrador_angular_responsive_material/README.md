@@ -31,6 +31,6 @@ La aplicación debe usar Angular Material 3 + CDK como único sistema visual y s
 
 ## Cobertura e integración
 
-El plan clasifica las **109 operaciones** del backend en `06_MATRIZ_ENDPOINTS_FRONTEND.md`. Cada slice debe marcar operaciones, adapters, superficies UI y pruebas; tener el método en el cliente generado no cuenta como integración.
+El plan clasifica las **111 operaciones** consumidas por el frontend en `06_MATRIZ_ENDPOINTS_FRONTEND.md`. Cada slice debe marcar operaciones, adapters, superficies UI y pruebas; tener el método en el cliente generado no cuenta como integración.
 
 El contrato de composición está en `07_ARQUITECTURA_COMPONENTES_UX.md`: las primitivas visuales se configuran con inputs tipados y tokens semánticos. No se duplican botones, estados, listados o patrones solo para cambiar texto, color o distribución.

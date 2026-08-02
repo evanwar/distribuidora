@@ -9,7 +9,7 @@
 - Mapear DTO a ViewModel.
 - Detectar breaking changes en CI.
 - Asignar cada operación a un ID y estado en `06_MATRIZ_ENDPOINTS_FRONTEND.md`.
-- Verificar que las 109 operaciones sigan clasificadas después de regenerar.
+- Verificar que las 111 operaciones sigan clasificadas después de regenerar.
 
 ## Prohibido
 

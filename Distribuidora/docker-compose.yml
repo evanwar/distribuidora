@@ -44,6 +44,10 @@ services:
       Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@local.test}
       Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
       Seed__SyncAdminCredentials: ${SEED_SYNC_ADMIN_CREDENTIALS:-true}
+      MercadoPago__Point__AccessToken: ${MERCADO_PAGO_ACCESS_TOKEN:-}
+      MercadoPago__Point__WebhookSecret: ${MERCADO_PAGO_WEBHOOK_SECRET:-}
+      MercadoPago__Point__ApplicationId: ${MERCADO_PAGO_APPLICATION_ID:-}
+      MercadoPago__Point__TerminalId: ${MERCADO_PAGO_TERMINAL_ID:-}
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:

@@ -163,7 +163,13 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("customer_payments", "receivables");
+                    b.HasIndex("Method", "Reference")
+                        .IsUnique();
+
+                    b.ToTable("customer_payments", "receivables", t =>
+                        {
+                            t.HasCheckConstraint("CK_customer_payments_positive", "\"Amount\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.AccountsReceivable.PaymentAllocation", b =>
@@ -191,7 +197,10 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomerPaymentId");
 
-                    b.ToTable("payment_allocations", "receivables");
+                    b.ToTable("payment_allocations", "receivables", t =>
+                        {
+                            t.HasCheckConstraint("CK_payment_allocations_positive", "\"AmountApplied\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Administration.CreditPolicy", b =>
@@ -1762,7 +1771,10 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("GoodsReceiptId");
 
-                    b.ToTable("goods_receipt_items", "purchases");
+                    b.ToTable("goods_receipt_items", "purchases", t =>
+                        {
+                            t.HasCheckConstraint("CK_goods_receipt_items_integrity", "\"ReceivedQuantity\" > 0 AND \"UnitCost\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Purchases.PurchaseOrder", b =>
@@ -1858,7 +1870,10 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PurchaseOrderId");
 
-                    b.ToTable("purchase_order_items", "purchases");
+                    b.ToTable("purchase_order_items", "purchases", t =>
+                        {
+                            t.HasCheckConstraint("CK_purchase_order_items_integrity", "\"Quantity\" > 0 AND \"UnitCost\" >= 0 AND \"Discount\" >= 0 AND \"Discount\" <= \"Quantity\" * \"UnitCost\"");
+                        });
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Sales.CounterSale", b =>
@@ -1973,7 +1988,106 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SaleId");
 
-                    b.ToTable("counter_sale_items", "sales");
+                    b.ToTable("counter_sale_items", "sales", t =>
+                        {
+                            t.HasCheckConstraint("CK_counter_sale_items_integrity", "\"Quantity\" > 0 AND \"UnitPrice\" >= 0 AND \"Discount\" >= 0 AND \"Discount\" <= \"Quantity\" * \"UnitPrice\"");
+                        });
+                });
+
+            modelBuilder.Entity("Distribuidora.Domain.Sales.PointPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalReference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("InitiatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Installments")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OrderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentMethodId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentMethodType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<long>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SaleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StatusDetail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TerminalId")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalReference")
+                        .IsUnique();
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.HasIndex("SaleId", "Status");
+
+                    b.ToTable("point_payments", "sales");
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Sales.SaleCancellation", b =>
@@ -2037,9 +2151,13 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SaleId");
+                    b.HasIndex("SaleId", "Reference")
+                        .IsUnique();
 
-                    b.ToTable("sale_payments", "sales");
+                    b.ToTable("sale_payments", "sales", t =>
+                        {
+                            t.HasCheckConstraint("CK_sale_payments_positive", "\"Amount\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Security.Permission", b =>
@@ -2082,6 +2200,10 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
@@ -2332,6 +2454,15 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
                         .WithMany("Items")
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Distribuidora.Domain.Sales.PointPayment", b =>
+                {
+                    b.HasOne("Distribuidora.Domain.Sales.CounterSale", null)
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

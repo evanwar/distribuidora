@@ -516,6 +516,22 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "moduleLabel": "Punto de venta"
   },
   {
+    "id": "SAL-10",
+    "method": "POST",
+    "path": "/api/v1/counter-sales/{id}/card-payment",
+    "description": "enviar el saldo autoritativo a la terminal Mercado Pago Point; sin reintento automático",
+    "module": "F05",
+    "moduleLabel": "Punto de venta"
+  },
+  {
+    "id": "SAL-11",
+    "method": "GET",
+    "path": "/api/v1/counter-sales/{id}/card-payment",
+    "description": "consultar el estado local sincronizado por webhook hasta aprobación, rechazo o conciliación",
+    "module": "F05",
+    "moduleLabel": "Punto de venta"
+  },
+  {
     "id": "ACR-01",
     "method": "GET",
     "path": "/api/v1/accounts-receivable",

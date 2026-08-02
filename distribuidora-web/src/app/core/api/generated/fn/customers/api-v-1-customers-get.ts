@@ -9,11 +9,15 @@ import { RequestBuilder } from '../../request-builder';
 
 
 export interface ApiV1CustomersGet$Params {
+  search?: string;
+  limit?: number;
 }
 
 export function apiV1CustomersGet(http: HttpClient, rootUrl: string, params?: ApiV1CustomersGet$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
   const rb = new RequestBuilder(rootUrl, apiV1CustomersGet.PATH, 'get');
   if (params) {
+    rb.query('search', params.search, {"style":"form"});
+    rb.query('limit', params.limit, {"style":"form"});
   }
 
   return http.request(

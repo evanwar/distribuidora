@@ -103,6 +103,8 @@ export type { ApiV1LogsEventsGet$Params as ApiV1LogsEventsGet$Params } from './f
 export { apiV1LogsEventsGet as apiV1LogsEventsGet } from './fn/logs/api-v-1-logs-events-get';
 export type { ApiV1LogsEventsEventIdGet$Params as ApiV1LogsEventsEventIdGet$Params } from './fn/logs/api-v-1-logs-events-event-id-get';
 export { apiV1LogsEventsEventIdGet as apiV1LogsEventsEventIdGet } from './fn/logs/api-v-1-logs-events-event-id-get';
+export type { ApiV1PaymentsMercadoPagoWebhookPost$Params as ApiV1PaymentsMercadoPagoWebhookPost$Params } from './fn/mercado-pago-webhooks/api-v-1-payments-mercado-pago-webhook-post';
+export { apiV1PaymentsMercadoPagoWebhookPost as apiV1PaymentsMercadoPagoWebhookPost } from './fn/mercado-pago-webhooks/api-v-1-payments-mercado-pago-webhook-post';
 export type { ApiV1OperationalNotesPost$Params as ApiV1OperationalNotesPost$Params } from './fn/operational-notes/api-v-1-operational-notes-post';
 export { apiV1OperationalNotesPost as apiV1OperationalNotesPost } from './fn/operational-notes/api-v-1-operational-notes-post';
 export type { ApiV1AdminPaymentMethodsGet$Params as ApiV1AdminPaymentMethodsGet$Params } from './fn/payment-methods/api-v-1-admin-payment-methods-get';
@@ -185,6 +187,10 @@ export type { ApiV1CounterSalesIdSummaryGet$Params as ApiV1CounterSalesIdSummary
 export { apiV1CounterSalesIdSummaryGet as apiV1CounterSalesIdSummaryGet } from './fn/sales/api-v-1-counter-sales-id-summary-get';
 export type { ApiV1CounterSalesIdPrintGet$Params as ApiV1CounterSalesIdPrintGet$Params } from './fn/sales/api-v-1-counter-sales-id-print-get';
 export { apiV1CounterSalesIdPrintGet as apiV1CounterSalesIdPrintGet } from './fn/sales/api-v-1-counter-sales-id-print-get';
+export type { ApiV1CounterSalesIdCardPaymentGet$Params as ApiV1CounterSalesIdCardPaymentGet$Params } from './fn/sales/api-v-1-counter-sales-id-card-payment-get';
+export { apiV1CounterSalesIdCardPaymentGet as apiV1CounterSalesIdCardPaymentGet } from './fn/sales/api-v-1-counter-sales-id-card-payment-get';
+export type { ApiV1CounterSalesIdCardPaymentPost$Params as ApiV1CounterSalesIdCardPaymentPost$Params } from './fn/sales/api-v-1-counter-sales-id-card-payment-post';
+export { apiV1CounterSalesIdCardPaymentPost as apiV1CounterSalesIdCardPaymentPost } from './fn/sales/api-v-1-counter-sales-id-card-payment-post';
 export type { ApiV1AdminSettingsGet$Params as ApiV1AdminSettingsGet$Params } from './fn/settings/api-v-1-admin-settings-get';
 export { apiV1AdminSettingsGet as apiV1AdminSettingsGet } from './fn/settings/api-v-1-admin-settings-get';
 export type { ApiV1AdminSettingsKeyPut$Params as ApiV1AdminSettingsKeyPut$Params } from './fn/settings/api-v-1-admin-settings-key-put';

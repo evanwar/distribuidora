@@ -44,6 +44,7 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
+          [operationId]="store.error()!.operationId"
           actionLabel="Recargar"
           (action)="store.load()"
         />
@@ -80,7 +81,11 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
 
       @if (store.loading()) {
         <section class="surface">
-          <app-ui-feedback kind="loading" title="Cargando clientes" message="Consultando el catálogo." />
+          <app-ui-feedback
+            kind="loading"
+            title="Cargando clientes"
+            message="Consultando el catálogo."
+          />
         </section>
       } @else if (store.customers().length === 0) {
         <section class="surface">
@@ -103,8 +108,12 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
     </div>
   `,
   styles: `
-    mat-card { border-radius: var(--app-radius-md); }
-    mat-card-content { padding-top: var(--space-5); }
+    mat-card {
+      border-radius: var(--app-radius-md);
+    }
+    mat-card-content {
+      padding-top: var(--space-5);
+    }
     .list-controls {
       display: flex;
       flex-wrap: wrap;
@@ -112,8 +121,12 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
       justify-content: space-between;
       gap: var(--space-3);
     }
-    .list-controls mat-form-field { width: min(100%, 30rem); }
-    .list-controls span { color: var(--app-text-muted); }
+    .list-controls mat-form-field {
+      width: min(100%, 30rem);
+    }
+    .list-controls span {
+      color: var(--app-text-muted);
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

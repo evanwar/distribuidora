@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Threading.RateLimiting;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -61,7 +63,26 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "development-only-key-change-before-production-123456";
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    if (!builder.Environment.IsDevelopment())
+        throw new InvalidOperationException("Jwt:Key must be supplied by a secret provider outside Development.");
+    jwtKey = "local-development-key-not-for-production-123456789";
+}
+if (!builder.Environment.IsDevelopment() && jwtKey.Contains("development", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("A development JWT key cannot be used outside Development.");
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("authentication", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+});
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -102,13 +123,23 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 app.UseMiddleware<CorrelationAndOperationMiddleware>();
 app.UseMiddleware<UserActivityLoggingMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
-app.UseSwagger();
-app.UseSwaggerUI();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
+app.MapScalarApiReference(options =>
+{
+    options.Title = "Distribuidora Counter Sales API";
+    options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
+});
 app.MapControllers();
 
 if (app.Configuration.GetValue("Database:AutoMigrate", false))

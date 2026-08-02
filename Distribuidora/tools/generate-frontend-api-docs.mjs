@@ -1,4 +1,4 @@
-const openApiUrl = process.argv[2] ?? "http://localhost:8080/swagger/v1/swagger.json";
+const openApiUrl = process.argv[2] ?? "http://localhost:8080/openapi/v1.json";
 const response = await fetch(openApiUrl);
 
 if (!response.ok) {
@@ -276,7 +276,7 @@ function renderModels() {
     "",
     "[← Índice](./README.md)",
     "",
-    "Tipos generados desde `components.schemas` del contrato OpenAPI. Los campos marcados con `?` no aparecen como obligatorios en Swagger.",
+    "Tipos generados desde `components.schemas` del contrato OpenAPI. Los campos marcados con `?` no aparecen como obligatorios en el contrato.",
     ""
   ];
 
@@ -312,10 +312,10 @@ const indexedFeatures = orderedFeatures.map((name, index) => ({
 const totalEndpoints = indexedFeatures.reduce((total, feature) => total + feature.endpoints.length, 0);
 const readme = `# Contrato del API para frontend
 
-Documentación generada desde Swagger para implementar la integración del frontend con Distribuidora API.
+Documentación generada desde OpenAPI para implementar la integración del frontend con Distribuidora API.
 
 - Base URL local: \`http://localhost:8080\`
-- Swagger: \`http://localhost:8080/swagger\`
+- Scalar: \`http://localhost:8080/scalar/v1\`
 - Endpoints: **${totalEndpoints}**
 - Funcionalidades: **${indexedFeatures.length}**
 - Modelos: [MODELS.md](./MODELS.md)

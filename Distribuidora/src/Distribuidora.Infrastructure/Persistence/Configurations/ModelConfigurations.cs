@@ -58,6 +58,7 @@ public sealed class SecurityConfiguration :
     public void Configure(EntityTypeBuilder<RefreshToken> b)
     {
         b.ToTable("refresh_tokens", "security"); b.Entity();
+        b.Property(x => x.RowVersion).IsConcurrencyToken();
         b.Property(x => x.TokenHash).HasMaxLength(200).IsRequired(); b.HasIndex(x => x.TokenHash).IsUnique();
         b.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
     }
@@ -107,7 +108,7 @@ public sealed class PurchaseConfiguration :
     }
     public void Configure(EntityTypeBuilder<PurchaseOrderItem> b)
     {
-        b.ToTable("purchase_order_items", "purchases"); b.Entity();
+        b.ToTable("purchase_order_items", "purchases", t => t.HasCheckConstraint("CK_purchase_order_items_integrity", "\"Quantity\" > 0 AND \"UnitCost\" >= 0 AND \"Discount\" >= 0 AND \"Discount\" <= \"Quantity\" * \"UnitCost\"")); b.Entity();
         b.Property(x => x.Quantity).HasPrecision(18, 4); b.Property(x => x.UnitCost).HasPrecision(18, 2); b.Property(x => x.Discount).HasPrecision(18, 2); b.Ignore(x => x.Total);
     }
     public void Configure(EntityTypeBuilder<GoodsReceipt> b)
@@ -117,14 +118,15 @@ public sealed class PurchaseConfiguration :
     }
     public void Configure(EntityTypeBuilder<GoodsReceiptItem> b)
     {
-        b.ToTable("goods_receipt_items", "purchases"); b.Entity();
+        b.ToTable("goods_receipt_items", "purchases", t => t.HasCheckConstraint("CK_goods_receipt_items_integrity", "\"ReceivedQuantity\" > 0 AND \"UnitCost\" >= 0")); b.Entity();
         b.Property(x => x.ReceivedQuantity).HasPrecision(18, 4); b.Property(x => x.UnitCost).HasPrecision(18, 2); b.Ignore(x => x.Total);
     }
 }
 
 public sealed class SalesConfiguration :
     IEntityTypeConfiguration<CounterSale>, IEntityTypeConfiguration<CounterSaleItem>,
-    IEntityTypeConfiguration<SalePayment>, IEntityTypeConfiguration<SaleCancellation>
+    IEntityTypeConfiguration<SalePayment>, IEntityTypeConfiguration<SaleCancellation>,
+    IEntityTypeConfiguration<PointPayment>
 {
     public void Configure(EntityTypeBuilder<CounterSale> b)
     {
@@ -138,9 +140,28 @@ public sealed class SalesConfiguration :
     {
         b.ToTable("counter_sale_items", "sales"); b.Entity(); b.Property(x => x.Quantity).HasPrecision(18, 4);
         b.Property(x => x.UnitPrice).HasPrecision(18, 2); b.Property(x => x.Discount).HasPrecision(18, 2); b.Ignore(x => x.Total); b.Property(x => x.HistoricalUnitCost).HasPrecision(18, 2);
+        b.ToTable(t => t.HasCheckConstraint("CK_counter_sale_items_integrity", "\"Quantity\" > 0 AND \"UnitPrice\" >= 0 AND \"Discount\" >= 0 AND \"Discount\" <= \"Quantity\" * \"UnitPrice\""));
     }
-    public void Configure(EntityTypeBuilder<SalePayment> b) { b.ToTable("sale_payments", "sales"); b.Entity(); b.Property(x => x.Amount).HasPrecision(18, 2); }
+    public void Configure(EntityTypeBuilder<SalePayment> b) { b.ToTable("sale_payments", "sales", t => t.HasCheckConstraint("CK_sale_payments_positive", "\"Amount\" > 0")); b.Entity(); b.Property(x => x.Amount).HasPrecision(18, 2); b.HasIndex(x => new { x.SaleId, x.Reference }).IsUnique(); }
     public void Configure(EntityTypeBuilder<SaleCancellation> b) { b.ToTable("sale_cancellations", "sales"); b.Entity(); }
+    public void Configure(EntityTypeBuilder<PointPayment> b)
+    {
+        b.ToTable("point_payments", "sales"); b.Audit();
+        b.Property(x => x.ExternalReference).HasMaxLength(64).IsRequired();
+        b.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
+        b.Property(x => x.TerminalId).HasMaxLength(150).IsRequired();
+        b.Property(x => x.OrderId).HasMaxLength(100);
+        b.Property(x => x.PaymentId).HasMaxLength(100);
+        b.Property(x => x.StatusDetail).HasMaxLength(100).IsRequired();
+        b.Property(x => x.PaymentMethodType).HasMaxLength(50);
+        b.Property(x => x.PaymentMethodId).HasMaxLength(100);
+        b.Property(x => x.Amount).HasPrecision(18, 2);
+        b.HasIndex(x => x.ExternalReference).IsUnique();
+        b.HasIndex(x => x.IdempotencyKey).IsUnique();
+        b.HasIndex(x => x.OrderId).IsUnique();
+        b.HasIndex(x => new { x.SaleId, x.Status });
+        b.HasOne<CounterSale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+    }
 }
 
 public sealed class ReceivableConfiguration :
@@ -155,11 +176,12 @@ public sealed class ReceivableConfiguration :
     }
     public void Configure(EntityTypeBuilder<CustomerPayment> b)
     {
-        b.ToTable("customer_payments", "receivables"); b.Audit(); b.Property(x => x.Amount).HasPrecision(18, 2);
+        b.ToTable("customer_payments", "receivables", t => t.HasCheckConstraint("CK_customer_payments_positive", "\"Amount\" > 0")); b.Audit(); b.Property(x => x.Amount).HasPrecision(18, 2);
         b.HasMany(x => x.Allocations).WithOne().HasForeignKey(x => x.CustomerPaymentId); b.Navigation(x => x.Allocations).AutoInclude();
+        b.HasIndex(x => new { x.Method, x.Reference }).IsUnique();
         b.Ignore(x => x.AvailableAmount);
     }
-    public void Configure(EntityTypeBuilder<PaymentAllocation> b) { b.ToTable("payment_allocations", "receivables"); b.Entity(); b.Property(x => x.AmountApplied).HasPrecision(18, 2); }
+    public void Configure(EntityTypeBuilder<PaymentAllocation> b) { b.ToTable("payment_allocations", "receivables", t => t.HasCheckConstraint("CK_payment_allocations_positive", "\"AmountApplied\" > 0")); b.Entity(); b.Property(x => x.AmountApplied).HasPrecision(18, 2); }
     public void Configure(EntityTypeBuilder<CreditLimitHistory> b) { b.ToTable("credit_limit_history", "receivables"); b.Entity(); b.Property(x => x.PreviousLimit).HasPrecision(18, 2); b.Property(x => x.NewLimit).HasPrecision(18, 2); }
 }
 

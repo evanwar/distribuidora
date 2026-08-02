@@ -83,6 +83,7 @@ type SaleAction = 'payment' | 'cancel' | null;
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
+          [operationId]="store.error()!.operationId"
           actionLabel="Reintentar"
           (action)="store.load()"
         />
@@ -200,6 +201,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                       [available]="store.availableStock(product.id)"
                       [canAdd]="store.canAdd(product.id)"
                       (add)="store.add(product)"
+                      (addAll)="store.addAll(product)"
                     />
                   }
                 </div>
@@ -344,11 +346,19 @@ type SaleAction = 'payment' | 'cancel' | null;
               </mat-form-field>
             </form>
 
+            @if (store.cardPayment()) {
+              <app-ui-alert
+                title="Terminal Mercado Pago"
+                [message]="pointPaymentMessage()"
+                [tone]="pointPaymentTone()"
+              />
+            }
+
             <div class="checkout-actions">
               <app-ui-button
-                label="Cobrar y confirmar"
+                [label]="isPointCardSelected() ? 'Cobrar en terminal' : 'Cobrar y confirmar'"
                 loadingLabel="Procesando venta…"
-                icon="check"
+                [icon]="isPointCardSelected() ? 'point-of-sale' : 'check'"
                 [fullWidth]="true"
                 [loading]="store.saving()"
                 [disabled]="!canSave()"
@@ -534,12 +544,7 @@ type SaleAction = 'payment' | 'cancel' | null;
             </div>
           </dl>
           <footer class="ticket__actions">
-            <app-ui-button
-              label="Cerrar"
-              variant="text"
-              tone="neutral"
-              (pressed)="closeTicket()"
-            />
+            <app-ui-button label="Cerrar" variant="text" tone="neutral" (pressed)="closeTicket()" />
             <app-ui-button label="Imprimir" icon="print" (pressed)="printTicket()" />
           </footer>
         </article>
@@ -678,6 +683,7 @@ export class CounterSalesPage implements OnInit {
 
   protected selectedMethodRequiresReference(): boolean {
     const code = this.paymentForm.controls.method.value;
+    if (code.trim().toLowerCase() === 'card') return false;
     return (
       this.store.paymentMethods().find((method) => method.code === code)?.requiresReference ?? false
     );
@@ -699,7 +705,8 @@ export class CounterSalesPage implements OnInit {
   protected save(confirm: boolean): void {
     if (!this.canSave()) return;
     const condition = this.saleForm.controls.paymentCondition.value;
-    const paymentAmount = condition === 1 ? 0 : this.total();
+    const pointCard = confirm && condition !== 1 && this.isPointCardSelected();
+    const paymentAmount = condition === 1 || pointCard ? 0 : this.total();
     const request: CreateCounterSale = {
       customerId: this.saleForm.controls.customerId.value || null,
       sourceWarehouseId: this.saleForm.controls.sourceWarehouseId.value,
@@ -723,7 +730,37 @@ export class CounterSalesPage implements OnInit {
             ]
           : [],
     };
+    if (pointCard) {
+      this.store.saveCard(request, this.showTicket);
+      return;
+    }
     this.store.save(request, confirm, this.showTicket);
+  }
+
+  protected isPointCardSelected(): boolean {
+    return this.paymentForm.controls.method.value.trim().toLowerCase() === 'card';
+  }
+
+  protected pointPaymentMessage(): string {
+    const status = this.store.cardPayment()?.status.toLocaleLowerCase('en');
+    if (status === 'approved') return 'Pago aprobado. La venta quedó confirmada.';
+    if (status === 'atterminal')
+      return 'La terminal recibió el cobro. Solicita al cliente insertar, acercar o deslizar su tarjeta.';
+    if (status === 'actionrequired') return 'Revisa la terminal para confirmar el resultado del cobro.';
+    if (status === 'failed') return 'El pago fue rechazado. El carrito permanece disponible.';
+    if (status === 'cancelled') return 'El cobro fue cancelado en la terminal.';
+    if (status === 'expired') return 'La orden expiró sin completar el pago.';
+    if (status === 'reconciliationrequired')
+      return 'El cobro requiere conciliación administrativa. No vuelvas a cobrar.';
+    return 'Orden enviada. Esperando que el cliente pague en la terminal.';
+  }
+
+  protected pointPaymentTone(): 'success' | 'warning' | 'danger' | 'info' {
+    const status = this.store.cardPayment()?.status.toLocaleLowerCase('en');
+    if (status === 'approved') return 'success';
+    if (status === 'failed' || status === 'cancelled' || status === 'expired') return 'danger';
+    if (status === 'actionrequired' || status === 'reconciliationrequired') return 'warning';
+    return 'info';
   }
 
   protected resume(sale: CounterSale): void {

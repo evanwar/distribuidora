@@ -30,10 +30,22 @@ public sealed class CounterSale : AuditableEntity
         Balance = Total - PaidAmount;
     }
 
+    public void ValidateCommercialIntegrity()
+    {
+        if (TaxTotal < 0) throw new DomainRuleException("Sale tax cannot be negative.");
+        if (Items.Any(x => x.Quantity <= 0 || x.UnitPrice < 0 || x.Discount < 0 ||
+                           x.Discount > x.Quantity * x.UnitPrice))
+            throw new DomainRuleException("Sale lines contain an invalid quantity, price or discount.");
+        if (Payments.Any(x => x.Amount <= 0))
+            throw new DomainRuleException("Sale payments must be positive.");
+        Recalculate();
+        if (Total < 0) throw new DomainRuleException("Sale total cannot be negative.");
+    }
+
     public void Confirm(DateTimeOffset occurredAt)
     {
         if (Status != DocumentStatus.Draft || Items.Count == 0) throw new DomainRuleException("Only a non-empty draft sale can be confirmed.");
-        Recalculate();
+        ValidateCommercialIntegrity();
         if (PaymentCondition == PaymentCondition.Cash && Balance != 0) throw new DomainRuleException("Cash sales require full payment.");
         if (PaymentCondition != PaymentCondition.Cash && CustomerId is null) throw new DomainRuleException("Credit and mixed sales require a customer.");
         if (Balance < 0) throw new DomainRuleException("Payments cannot exceed sale total.");
@@ -94,4 +106,35 @@ public sealed class SaleCancellation : Entity
     public DateTimeOffset CancelledAt { get; set; }
     public bool InventoryReverted { get; set; }
     public bool PaymentsReverted { get; set; }
+}
+
+public enum PointPaymentStatus
+{
+    Creating,
+    Pending,
+    AtTerminal,
+    ActionRequired,
+    Approved,
+    Failed,
+    Cancelled,
+    Expired,
+    ReconciliationRequired
+}
+
+public sealed class PointPayment : AuditableEntity
+{
+    public Guid SaleId { get; set; }
+    public Guid InitiatedBy { get; set; }
+    public string ExternalReference { get; set; } = "";
+    public string IdempotencyKey { get; set; } = "";
+    public string TerminalId { get; set; } = "";
+    public string? OrderId { get; set; }
+    public string? PaymentId { get; set; }
+    public decimal Amount { get; set; }
+    public PointPaymentStatus Status { get; set; } = PointPaymentStatus.Creating;
+    public string StatusDetail { get; set; } = "creating";
+    public string? PaymentMethodType { get; set; }
+    public string? PaymentMethodId { get; set; }
+    public int? Installments { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
 }
