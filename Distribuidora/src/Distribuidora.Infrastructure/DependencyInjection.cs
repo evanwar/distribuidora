@@ -3,6 +3,8 @@ using Distribuidora.Infrastructure.Persistence;
 using Distribuidora.Infrastructure.Observability;
 using Distribuidora.Infrastructure.Security;
 using Distribuidora.Infrastructure.Payments;
+using Distribuidora.Infrastructure.Invoicing;
+using FiscalApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +42,22 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(20);
         });
         services.AddSingleton<IMercadoPagoWebhookValidator, MercadoPagoWebhookValidator>();
+        services.AddFiscalApi(settings =>
+        {
+            settings.ApiUrl = configuration["ElectronicInvoicing:FiscalApi:ApiUrl"] ?? "https://test.fiscalapi.com";
+            settings.ApiKey = configuration["ElectronicInvoicing:FiscalApi:ApiKey"] ?? "";
+            settings.Tenant = configuration["ElectronicInvoicing:FiscalApi:Tenant"] ?? "";
+            settings.ApiVersion = "v4";
+            settings.TimeZone = configuration["ElectronicInvoicing:FiscalApi:TimeZone"] ?? "America/Mexico_City";
+        });
+        var providerName = configuration["ElectronicInvoicing:Provider"] ?? "FiscalApi";
+        if (!string.Equals(providerName, "FiscalApi", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Electronic invoicing provider '{providerName}' is not registered.");
+        services.AddSingleton<IElectronicInvoicingProfile>(new ElectronicInvoicingProfile(
+            configuration["ElectronicInvoicing:IssuerProviderId"] ?? "",
+            configuration["ElectronicInvoicing:ExpeditionZipCode"] ?? "",
+            configuration["ElectronicInvoicing:Series"] ?? "F"));
+        services.AddScoped<IElectronicInvoicingProvider, FiscalApiElectronicInvoicingProvider>();
         return services;
     }
 }

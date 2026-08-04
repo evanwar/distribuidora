@@ -8,6 +8,7 @@ export type UiIconName =
   | 'check'
   | 'close'
   | 'customers'
+  | 'download'
   | 'edit'
   | 'empty'
   | 'home'
@@ -23,6 +24,7 @@ export type UiIconName =
   | 'products'
   | 'purchases'
   | 'receivables'
+  | 'receipt'
   | 'refresh'
   | 'reports'
   | 'search'
@@ -44,6 +46,8 @@ const ICON_PATHS: Record<UiIconName, readonly string[]> = {
   search: ['M10.75 17.5a6.75 6.75 0 1 0 0-13.5 6.75 6.75 0 0 0 0 13.5Z', 'm16 16 4.5 4.5'],
   history: ['M4 12a8 8 0 1 0 2.25-5.55L4 8.75', 'M4 4.5v4.25h4.25', 'M12 7.5V12l3 2'],
   print: ['M7 9V4h10v5', 'M7 17H4V9h16v8h-3', 'M7 14h10v6H7z', 'M17 11h.01'],
+  download: ['M12 3v12', 'm7.5 10.5 4.5 4.5 4.5-4.5', 'M5 20h14'],
+  receipt: ['M6 3.5h12v17l-3-2-3 2-3-2-3 2z', 'M9 8h6', 'M9 12h6', 'M9 16h3'],
   empty: ['m12 3.25 8 4.25v9L12 20.75l-8-4.25v-9z', 'm4.25 7.5 7.75 4 7.75-4', 'M12 11.5v9'],
   warning: ['M12 4 21 20H3L12 4Z', 'M12 9v5', 'M12 17h.01'],
   category: ['M4 5h6v6H4z', 'M14 5h6v6h-6z', 'M4 15h6v4H4z', 'M14 15h6v4h-6z'],

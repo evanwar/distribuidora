@@ -36,6 +36,14 @@ export class ApiClientService {
       .pipe(map((response) => this.unwrap(response)));
   }
 
+  download(path: string, options?: ApiRequestOptions): Observable<Blob> {
+    return this.http.get(path, {
+      params: this.toParams(options?.query),
+      context: options?.context,
+      responseType: 'blob',
+    });
+  }
+
   private unwrap<T>(response: ApiEnvelope<T> | null): T {
     if (response === null) {
       return undefined as T;

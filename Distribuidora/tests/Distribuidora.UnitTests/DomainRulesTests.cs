@@ -135,6 +135,27 @@ public sealed class DomainRulesTests
         Assert.Throws<DomainRuleException>(() => sequence.SetCurrentNumber(1));
     }
 
+    [Fact]
+    public void Electronic_invoice_has_a_strict_lifecycle()
+    {
+        var invoice = new ElectronicInvoice { SaleId = Guid.NewGuid(), Provider = "test", IdempotencyKey = "sale:1" };
+
+        invoice.MarkIssued("provider-1", "83f8fead-70fe-4f6d-82ba-8af6abdd8343", OccurredAt);
+        invoice.MarkCancelled("02", OccurredAt.AddMinutes(1));
+
+        Assert.Equal(ElectronicInvoiceStatus.Cancelled, invoice.Status);
+        Assert.Equal("83f8fead-70fe-4f6d-82ba-8af6abdd8343", invoice.FiscalUuid);
+        Assert.Throws<DomainRuleException>(() => invoice.MarkIssued("provider-2", "other", OccurredAt));
+    }
+
+    [Fact]
+    public void Failed_electronic_invoice_cannot_be_marked_as_issued_without_reconciliation()
+    {
+        var invoice = new ElectronicInvoice { SaleId = Guid.NewGuid(), Provider = "test", IdempotencyKey = "sale:2" };
+        invoice.MarkFailed("timeout", "Unknown provider outcome");
+        Assert.Throws<DomainRuleException>(() => invoice.MarkIssued("provider-1", "uuid", OccurredAt));
+    }
+
     private static CounterSale Sale(PaymentCondition condition)
     {
         var sale = new CounterSale { PaymentCondition = condition, CustomerId = condition == PaymentCondition.Cash ? null : Guid.NewGuid() };

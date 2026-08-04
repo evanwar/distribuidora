@@ -145,6 +145,11 @@ type FieldValue =
                             @if (!field.required && field.type === 'select') {
                               <mat-option value="">Todos</mat-option>
                             }
+                            @if (store.lookupLoading()) {
+                              <mat-option disabled>Cargando opciones…</mat-option>
+                            } @else if (store.optionsFor(field).length === 0) {
+                              <mat-option disabled>No hay registros disponibles</mat-option>
+                            }
                             @for (option of store.optionsFor(field); track option.value) {
                               <mat-option [value]="option.value">{{ option.label }}</mat-option>
                             }
@@ -169,9 +174,7 @@ type FieldValue =
                         @if (field.hint) {
                           <mat-hint>{{ field.hint }}</mat-hint>
                         } @else if (field.type === 'select') {
-                          <mat-hint
-                            >Escribe las primeras letras para localizar una opción.</mat-hint
-                          >
+                          <mat-hint>{{ lookupHint(field) }}</mat-hint>
                         }
                       </mat-form-field>
                     }
@@ -288,6 +291,16 @@ type FieldValue =
                   />
                 </div>
               </form>
+
+              @if (emptyRequiredLookup()) {
+                <app-ui-feedback
+                  kind="empty"
+                  [title]="emptyLookupTitle()"
+                  [message]="emptyLookupMessage()"
+                  [actionLabel]="emptyLookupActionLabel()"
+                  (action)="resolveEmptyLookup()"
+                />
+              }
             } @else {
               <div class="task-panel__actions">
                 <app-ui-button
@@ -387,6 +400,16 @@ export class BusinessWorkspacePage {
   protected readonly lineFields = computed(() =>
     this.fields().filter((field) => field.type === 'lines'),
   );
+  protected readonly emptyRequiredLookup = computed(() => {
+    if (this.store.lookupLoading()) return undefined;
+    return this.scalarFields().find(
+      (field) =>
+        field.required &&
+        (field.type === 'select' || field.type === 'multi-select') &&
+        Boolean(field.optionsEndpoint) &&
+        this.store.optionsFor(field).length === 0,
+    );
+  });
   protected readonly resultRows = computed(() => toResultRows(this.store.result()));
 
   constructor() {
@@ -407,6 +430,10 @@ export class BusinessWorkspacePage {
         this.values.update((current) => ({ ...current, ...changes }));
       }
     });
+
+    const requestedOperation = this.route.snapshot.queryParamMap.get('operation');
+    const operation = this.operations().find((item) => item.id === requestedOperation);
+    if (operation) this.select(operation);
   }
 
   protected operationsFor(group: string): readonly EndpointDefinition[] {
@@ -505,6 +532,64 @@ export class BusinessWorkspacePage {
 
   protected inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  protected lookupHint(field: BusinessField): string {
+    if (this.store.lookupLoading()) return 'Cargando opciones…';
+    if (this.store.optionsFor(field).length === 0) {
+      return 'No hay registros disponibles para seleccionar.';
+    }
+    return 'Abre la lista; con ella abierta puedes escribir para localizar una opción.';
+  }
+
+  protected emptyLookupTitle(): string {
+    const operationId = this.selected()?.id ?? '';
+    if (operationId.startsWith('PUR-')) return 'Todavía no hay compras';
+    if (operationId.startsWith('GRC-')) return 'Todavía no hay recepciones';
+    if (operationId === 'INV-05' || operationId === 'INV-06') {
+      return 'Todavía no hay ajustes disponibles';
+    }
+    return 'No hay registros disponibles';
+  }
+
+  protected emptyLookupMessage(): string {
+    const operationId = this.selected()?.id ?? '';
+    if (operationId.startsWith('PUR-')) {
+      return 'Primero registra una orden de compra. Después podrás consultarla, editarla, confirmarla o cancelarla desde aquí.';
+    }
+    if (operationId.startsWith('GRC-')) {
+      return 'Primero registra una recepción de mercancía para poder consultarla o cerrarla.';
+    }
+    if (operationId === 'INV-05' || operationId === 'INV-06') {
+      return 'Primero registra un ajuste de inventario para poder confirmarlo o cancelarlo.';
+    }
+    return 'Crea el registro requerido y vuelve a intentar esta tarea.';
+  }
+
+  protected emptyLookupActionLabel(): string | undefined {
+    return this.emptyLookupTargetId() ? this.emptyLookupActionText() : undefined;
+  }
+
+  protected resolveEmptyLookup(): void {
+    const targetId = this.emptyLookupTargetId();
+    const operation = this.operations().find((item) => item.id === targetId);
+    if (operation) this.select(operation);
+  }
+
+  private emptyLookupTargetId(): string {
+    const operationId = this.selected()?.id ?? '';
+    if (operationId.startsWith('PUR-') && operationId !== 'PUR-02') return 'PUR-02';
+    if (operationId.startsWith('GRC-') && operationId !== 'GRC-02') return 'GRC-02';
+    if (operationId === 'INV-05' || operationId === 'INV-06') return 'INV-04';
+    return '';
+  }
+
+  private emptyLookupActionText(): string {
+    const targetId = this.emptyLookupTargetId();
+    if (targetId === 'PUR-02') return 'Registrar una compra';
+    if (targetId === 'GRC-02') return 'Registrar una recepción';
+    if (targetId === 'INV-04') return 'Registrar un ajuste';
+    return '';
   }
 
   protected linesFor(field: BusinessField): readonly Record<string, string | number>[] {

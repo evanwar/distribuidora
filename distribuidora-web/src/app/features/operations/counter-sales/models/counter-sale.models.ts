@@ -97,3 +97,41 @@ export interface PointCardPayment {
   installments: number | null;
   completedAt: string | null;
 }
+
+export interface ElectronicInvoice {
+  id: string;
+  saleId: string;
+  provider: string;
+  status: string;
+  providerInvoiceId: string | null;
+  fiscalUuid: string | null;
+  issuedAt: string | null;
+  cancelledAt: string | null;
+  cancellationReasonCode: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export interface IssueElectronicInvoice {
+  paymentFormCode: string;
+  recipient: {
+    taxId: string;
+    legalName: string;
+    zipCode: string;
+    taxRegimeCode: string;
+    cfdiUseCode: string;
+    email: string | null;
+  };
+  items: readonly {
+    productId: string;
+    satProductCode: string;
+    satUnitCode: string;
+    taxObjectCode: string;
+    taxes: readonly {
+      taxCode: string;
+      taxTypeCode: string;
+      rate: number;
+      taxFlagCode: string;
+    }[];
+  }[];
+}

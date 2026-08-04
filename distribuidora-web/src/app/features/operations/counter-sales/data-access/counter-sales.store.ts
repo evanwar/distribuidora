@@ -23,6 +23,8 @@ import {
   PosCustomer,
   PosPaymentMethod,
   PointCardPayment,
+  ElectronicInvoice,
+  IssueElectronicInvoice,
   PosProduct,
   PosStockBalance,
   PosWarehouse,
@@ -52,6 +54,7 @@ export class CounterSalesStore {
   private readonly noticeState = signal<string | null>(null);
   private readonly stockNoticeState = signal<string | null>(null);
   private readonly cardPaymentState = signal<PointCardPayment | null>(null);
+  private readonly electronicInvoiceState = signal<ElectronicInvoice | null>(null);
   private editingSaleIdState = signal<string | null>(null);
 
   readonly customers = this.customersState.asReadonly();
@@ -77,6 +80,7 @@ export class CounterSalesStore {
   readonly notice = this.noticeState.asReadonly();
   readonly stockNotice = this.stockNoticeState.asReadonly();
   readonly cardPayment = this.cardPaymentState.asReadonly();
+  readonly electronicInvoice = this.electronicInvoiceState.asReadonly();
   readonly editingSaleId = this.editingSaleIdState.asReadonly();
   readonly subtotal = computed(() =>
     this.linesState().reduce((total, line) => total + line.quantity * line.unitPrice, 0),
@@ -84,6 +88,8 @@ export class CounterSalesStore {
   readonly discount = computed(() =>
     this.linesState().reduce((total, line) => total + line.discount, 0),
   );
+
+  resetElectronicInvoice(): void { this.electronicInvoiceState.set(null); }
 
   constructor() {
     this.customerSearchRequests
@@ -382,6 +388,58 @@ export class CounterSalesStore {
         next: completed,
         error: (error: ApiError) => this.errorState.set(error),
       });
+  }
+
+  loadElectronicInvoice(sale: CounterSale, completed: (invoice: ElectronicInvoice | null) => void): void {
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.getElectronicInvoice(sale.id, this.requestContext()).pipe(
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({
+      next: (invoice) => { this.electronicInvoiceState.set(invoice); completed(invoice); },
+      error: (error: ApiError) => {
+        if (error.status === 404) { this.electronicInvoiceState.set(null); completed(null); return; }
+        this.errorState.set(error);
+      },
+    });
+  }
+
+  issueElectronicInvoice(sale: CounterSale, request: IssueElectronicInvoice, completed: (invoice: ElectronicInvoice) => void): void {
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.issueElectronicInvoice(sale.id, request, this.requestContext()).pipe(
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({
+      next: (invoice) => {
+        this.electronicInvoiceState.set(invoice);
+        this.noticeState.set(`Factura ${invoice.fiscalUuid ?? sale.folio} emitida correctamente.`);
+        completed(invoice);
+      },
+      error: (error: ApiError) => this.errorState.set(error),
+    });
+  }
+
+  cancelElectronicInvoice(sale: CounterSale, reasonCode: string, replacementUuid: string | null, completed: (invoice: ElectronicInvoice) => void): void {
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.cancelElectronicInvoice(sale.id, reasonCode, replacementUuid, this.requestContext()).pipe(
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({
+      next: (invoice) => {
+        this.electronicInvoiceState.set(invoice);
+        this.noticeState.set(`La cancelación fiscal de ${sale.folio} fue solicitada correctamente.`);
+        completed(invoice);
+      },
+      error: (error: ApiError) => this.errorState.set(error),
+    });
+  }
+
+  downloadElectronicInvoice(sale: CounterSale, format: 'xml' | 'pdf', completed: (blob: Blob) => void): void {
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.downloadElectronicInvoice(sale.id, format, this.requestContext()).pipe(
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({ next: completed, error: (error: ApiError) => this.errorState.set(error) });
   }
 
   private requestContext() {

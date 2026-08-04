@@ -449,7 +449,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales",
     "description": "historial/listado de ventas",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-02",
@@ -457,7 +457,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales",
     "description": "creación de venta",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-03",
@@ -465,7 +465,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}",
     "description": "recuperación/detalle",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-04",
@@ -473,7 +473,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}",
     "description": "actualización del documento abierto",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-05",
@@ -481,7 +481,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/confirm",
     "description": "confirmación única y no reintentable automáticamente",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-06",
@@ -489,7 +489,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/payments",
     "description": "registro de pagos de la venta",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-07",
@@ -497,7 +497,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/cancel",
     "description": "cancelación con motivo",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-08",
@@ -505,7 +505,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/summary",
     "description": "resumen autoritativo posventa",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-09",
@@ -513,7 +513,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/print",
     "description": "obtención del comprobante imprimible",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-10",
@@ -521,7 +521,7 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/card-payment",
     "description": "enviar el saldo autoritativo a la terminal Mercado Pago Point; sin reintento automático",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "SAL-11",
@@ -529,7 +529,47 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "path": "/api/v1/counter-sales/{id}/card-payment",
     "description": "consultar el estado local sincronizado por webhook hasta aprobación, rechazo o conciliación",
     "module": "F05",
-    "moduleLabel": "Punto de venta"
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-12",
+    "method": "GET",
+    "path": "/api/v1/sales/{saleId}/electronic-invoice",
+    "description": "consultar estado y UUID del CFDI desde el historial de ventas",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-13",
+    "method": "POST",
+    "path": "/api/v1/sales/{saleId}/electronic-invoice",
+    "description": "emitir CFDI 4.0; mutación no reintentable automáticamente",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-14",
+    "method": "GET",
+    "path": "/api/v1/sales/{saleId}/electronic-invoice/files/xml",
+    "description": "descargar XML fiscal",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-15",
+    "method": "GET",
+    "path": "/api/v1/sales/{saleId}/electronic-invoice/files/pdf",
+    "description": "descargar representación PDF",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-16",
+    "method": "POST",
+    "path": "/api/v1/sales/{saleId}/electronic-invoice/cancel",
+    "description": "solicitar cancelación con motivo SAT y sustitución cuando corresponda",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
   },
   {
     "id": "ACR-01",

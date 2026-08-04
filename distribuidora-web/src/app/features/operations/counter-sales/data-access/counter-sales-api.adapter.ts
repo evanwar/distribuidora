@@ -8,6 +8,8 @@ import {
   PosCustomer,
   PosPaymentMethod,
   PointCardPayment,
+  ElectronicInvoice,
+  IssueElectronicInvoice,
   PosProduct,
   PosStockBalance,
   PosWarehouse,
@@ -144,6 +146,31 @@ export class CounterSalesApiAdapter {
       .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/print`, { context })
       .pipe(map(toSale));
   }
+
+  getElectronicInvoice(id: string, context?: HttpContext): Observable<ElectronicInvoice> {
+    return this.api
+      .get<unknown>(`/api/v1/sales/${encodeURIComponent(id)}/electronic-invoice`, { context })
+      .pipe(map(toElectronicInvoice));
+  }
+
+  issueElectronicInvoice(id: string, request: IssueElectronicInvoice, context?: HttpContext): Observable<ElectronicInvoice> {
+    return this.api
+      .post<unknown, IssueElectronicInvoice>(`/api/v1/sales/${encodeURIComponent(id)}/electronic-invoice`, request, { context })
+      .pipe(map(toElectronicInvoice));
+  }
+
+  cancelElectronicInvoice(id: string, reasonCode: string, replacementUuid: string | null, context?: HttpContext): Observable<ElectronicInvoice> {
+    return this.api
+      .post<unknown, { reasonCode: string; replacementUuid: string | null }>(
+        `/api/v1/sales/${encodeURIComponent(id)}/electronic-invoice/cancel`,
+        { reasonCode, replacementUuid }, { context },
+      )
+      .pipe(map(toElectronicInvoice));
+  }
+
+  downloadElectronicInvoice(id: string, format: 'xml' | 'pdf', context?: HttpContext): Observable<Blob> {
+    return this.api.download(`/api/v1/sales/${encodeURIComponent(id)}/electronic-invoice/files/${format}`, { context });
+  }
 }
 
 function asRecords(value: unknown): Record<string, unknown>[] {
@@ -208,6 +235,18 @@ function toPointCardPayment(value: unknown): PointCardPayment {
     paymentMethodId: text(item, 'paymentMethodId') || null,
     installments: nullableNumber(item, 'installments'),
     completedAt: text(item, 'completedAt') || null,
+  };
+}
+
+function toElectronicInvoice(value: unknown): ElectronicInvoice {
+  const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    id: text(item, 'id'), saleId: text(item, 'saleId'), provider: text(item, 'provider'),
+    status: text(item, 'status', 'Pending'), providerInvoiceId: text(item, 'providerInvoiceId') || null,
+    fiscalUuid: text(item, 'fiscalUuid') || null, issuedAt: text(item, 'issuedAt') || null,
+    cancelledAt: text(item, 'cancelledAt') || null,
+    cancellationReasonCode: text(item, 'cancellationReasonCode') || null,
+    errorCode: text(item, 'errorCode') || null, errorMessage: text(item, 'errorMessage') || null,
   };
 }
 

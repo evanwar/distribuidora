@@ -1,5 +1,6 @@
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { RouterLink, type Params } from '@angular/router';
 import { UiAlertComponent } from '../../../shared/ui/alert/ui-alert.component';
 import { UiButtonComponent } from '../../../shared/ui/button/ui-button.component';
 import { UiFeedbackComponent } from '../../../shared/ui/feedback/ui-feedback.component';
@@ -17,6 +18,7 @@ import { DashboardStore } from '../data-access/dashboard.store';
     UiFeedbackComponent,
     UiIconComponent,
     UiPageHeaderComponent,
+    RouterLink,
   ],
   providers: [DashboardStore],
   template: `
@@ -63,9 +65,14 @@ import { DashboardStore } from '../data-access/dashboard.store';
       } @else {
         <section class="metrics" aria-label="Indicadores">
           @for (metric of store.metrics(); track metric.key) {
-            <article class="surface metric">
+            <a
+              class="surface metric"
+              [routerLink]="destinationFor(metric.key)"
+              [queryParams]="queryParamsFor(metric.key)"
+              [attr.aria-label]="actionLabelFor(metric.key) + ': ' + metric.value"
+            >
               <span class="metric__icon"><app-ui-icon [name]="metric.icon" /></span>
-              <div>
+              <div class="metric__content">
                 <span>{{ metric.label }}</span>
                 <strong>
                   @if (metric.format === 'currency' && isNumber(metric.value)) {
@@ -76,8 +83,12 @@ import { DashboardStore } from '../data-access/dashboard.store';
                     {{ metric.value }}
                   }
                 </strong>
+                <span class="metric__action">
+                  {{ actionLabelFor(metric.key) }}
+                  <app-ui-icon name="open" />
+                </span>
               </div>
-            </article>
+            </a>
           }
         </section>
       }
@@ -96,6 +107,21 @@ import { DashboardStore } from '../data-access/dashboard.store';
       gap: var(--space-4);
       min-height: 7.5rem;
       padding: var(--space-5);
+      color: inherit;
+      text-decoration: none;
+      transition:
+        border-color 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease;
+    }
+    .metric:hover {
+      border-color: color-mix(in srgb, var(--app-primary) 35%, var(--app-border));
+      box-shadow: var(--app-shadow-navigation);
+      transform: translateY(-2px);
+    }
+    .metric:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--app-primary) 38%, transparent);
+      outline-offset: 3px;
     }
     .metric__icon {
       display: grid;
@@ -110,23 +136,42 @@ import { DashboardStore } from '../data-access/dashboard.store';
       width: 1.5rem;
       height: 1.5rem;
     }
-    .metric div {
+    .metric__content {
       display: grid;
       gap: var(--space-2);
       min-width: 0;
     }
-    .metric div span {
+    .metric__content > span:first-child {
       color: var(--app-text-muted);
     }
     .metric strong {
       font-size: clamp(1.55rem, 5vw, 2.2rem);
       font-variant-numeric: tabular-nums;
     }
+    .metric__action {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      color: var(--app-primary-strong);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .metric__action app-ui-icon {
+      width: 1rem;
+      height: 1rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .metric {
+        transition: none;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardPage implements OnInit {
   protected readonly store = inject(DashboardStore);
+  private readonly today = localDate(new Date());
+
   ngOnInit(): void {
     this.store.load();
   }
@@ -134,4 +179,43 @@ export class DashboardPage implements OnInit {
   protected isNumber(value: string | number): value is number {
     return typeof value === 'number';
   }
+
+  protected destinationFor(key: string): string {
+    if (key === 'todaySales' || key === 'todayTransactions') {
+      return '/operations/counter-sales';
+    }
+    if (key === 'inventoryUnits' || key === 'lowStockProducts') {
+      return '/operations/inventory';
+    }
+    if (key === 'receivables') return '/operations/receivables';
+    return '/operations/reports';
+  }
+
+  protected queryParamsFor(key: string): Params | null {
+    if (key === 'todaySales' || key === 'todayTransactions') {
+      return { view: 'history', from: this.today, to: this.today };
+    }
+    if (key === 'inventoryUnits') return { operation: 'INV-01' };
+    if (key === 'lowStockProducts') return { operation: 'INV-03' };
+    if (key === 'receivables') return { operation: 'ACR-01' };
+    return null;
+  }
+
+  protected actionLabelFor(key: string): string {
+    const labels: Record<string, string> = {
+      todaySales: 'Consultar ventas de hoy',
+      todayTransactions: 'Ver operaciones de hoy',
+      inventoryUnits: 'Consultar existencias',
+      lowStockProducts: 'Revisar stock bajo',
+      receivables: 'Consultar cartera',
+    };
+    return labels[key] ?? 'Abrir reporte';
+  }
+}
+
+function localDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

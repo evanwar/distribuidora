@@ -10,7 +10,7 @@ import {
   TemplateRef,
   ViewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   MatAutocompleteModule,
@@ -23,6 +23,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
+import { ActivatedRoute } from '@angular/router';
+import { startWith } from 'rxjs';
 import { UiAlertComponent } from '../../../../shared/ui/alert/ui-alert.component';
 import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.component';
 import { UiIconButtonComponent } from '../../../../shared/ui/button/ui-icon-button.component';
@@ -32,7 +34,7 @@ import { UiPageHeaderComponent } from '../../../../shared/ui/page-header/ui-page
 import { UiStatusChipComponent } from '../../../../shared/ui/status-chip/ui-status-chip.component';
 import { CounterSalesApiAdapter } from '../data-access/counter-sales-api.adapter';
 import { CounterSalesStore } from '../data-access/counter-sales.store';
-import { CounterSale, CreateCounterSale, PosCustomer } from '../models/counter-sale.models';
+import { CounterSale, CreateCounterSale, IssueElectronicInvoice, PosCustomer } from '../models/counter-sale.models';
 import { ProductTileComponent } from '../ui/product-tile/product-tile.component';
 
 type SaleAction = 'payment' | 'cancel' | null;
@@ -263,7 +265,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                         <button
                           matIconButton
                           type="button"
-                          [attr.aria-label]="'Agregar una unidad de ' + line.name"
+                          [attr.aria-label]="'Aumentar cantidad de ' + line.name"
                           [disabled]="!store.canAdd(line.productId)"
                           (click)="store.changeQuantity(line.productId, line.quantity + 1)"
                         >
@@ -389,6 +391,57 @@ type SaleAction = 'payment' | 'cancel' | null;
             />
           </div>
 
+          <form class="history-filters" [formGroup]="historyForm">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="history-filters__search">
+              <mat-label>Buscar ventas</mat-label>
+              <input
+                matInput
+                type="search"
+                autocomplete="off"
+                formControlName="query"
+                placeholder="Folio, cliente, producto o nota"
+              />
+              <mat-hint>No necesitas conocer el ID de la venta.</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Estado</mat-label>
+              <mat-select formControlName="status">
+                <mat-option value="">Todos</mat-option>
+                <mat-option value="draft">Borrador</mat-option>
+                <mat-option value="confirmed">Confirmada</mat-option>
+                <mat-option value="partiallypaid">Pago parcial</mat-option>
+                <mat-option value="paid">Pagada</mat-option>
+                <mat-option value="cancelled">Cancelada</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Desde</mat-label>
+              <input matInput type="date" formControlName="from" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Hasta</mat-label>
+              <input matInput type="date" formControlName="to" />
+            </mat-form-field>
+            <app-ui-button
+              label="Limpiar filtros"
+              variant="text"
+              tone="neutral"
+              [disabled]="activeHistoryFilterCount() === 0"
+              (pressed)="clearHistoryFilters()"
+            />
+          </form>
+
+          <p class="history-summary" aria-live="polite">
+            {{ filteredSales().length }}
+            {{ filteredSales().length === 1 ? 'venta encontrada' : 'ventas encontradas' }}
+            @if (activeHistoryFilterCount() > 0) {
+              <span>
+                · {{ activeHistoryFilterCount() }}
+                {{ activeHistoryFilterCount() === 1 ? 'filtro activo' : 'filtros activos' }}
+              </span>
+            }
+          </p>
+
           @if (store.sales().length === 0) {
             <app-ui-feedback
               kind="empty"
@@ -397,13 +450,22 @@ type SaleAction = 'payment' | 'cancel' | null;
               actionLabel="Crear venta"
               (action)="view.set('sale')"
             />
+          } @else if (filteredSales().length === 0) {
+            <app-ui-feedback
+              kind="empty"
+              title="No encontramos ventas"
+              message="Prueba otro folio, cliente, producto, estado o periodo."
+              actionLabel="Limpiar filtros"
+              (action)="clearHistoryFilters()"
+            />
           } @else {
             <div class="sales-list">
-              @for (sale of store.sales(); track sale.id) {
+              @for (sale of filteredSales(); track sale.id) {
                 <article class="sale-row">
                   <div>
                     <strong>{{ sale.folio }}</strong>
                     <span>{{ sale.saleDate | date: 'dd MMM yyyy, HH:mm' }}</span>
+                    <span>{{ customerName(sale.customerId) }}</span>
                   </div>
                   <app-ui-status-chip
                     [label]="statusLabel(sale.status)"
@@ -414,6 +476,15 @@ type SaleAction = 'payment' | 'cancel' | null;
                     <span>Saldo {{ sale.balance | currency: 'MXN' }}</span>
                   </div>
                   <div class="sale-row__actions">
+                    <button
+                      matButton
+                      type="button"
+                      [attr.aria-label]="'Ver detalle de ' + sale.folio"
+                      [attr.aria-expanded]="expandedSaleId() === sale.id"
+                      (click)="toggleSaleDetails(sale.id)"
+                    >
+                      {{ expandedSaleId() === sale.id ? 'Ocultar detalle' : 'Ver detalle' }}
+                    </button>
                     @if (isDraft(sale)) {
                       <button matButton type="button" (click)="resume(sale)">Continuar</button>
                       <button matButton="filled" type="button" (click)="store.confirmSale(sale)">
@@ -425,6 +496,16 @@ type SaleAction = 'payment' | 'cancel' | null;
                       </button>
                     }
                     @if (!isCancelled(sale)) {
+                      @if (!isDraft(sale) && sale.customerId) {
+                        <app-ui-button
+                          label="Factura"
+                          icon="receipt"
+                          variant="text"
+                          permission="sales.invoice"
+                          [disabled]="store.saving()"
+                          (pressed)="openInvoice(sale)"
+                        />
+                      }
                       <button matButton type="button" (click)="store.print(sale, showTicket)">
                         Comprobante
                       </button>
@@ -438,6 +519,31 @@ type SaleAction = 'payment' | 'cancel' | null;
                       </button>
                     }
                   </div>
+                  @if (expandedSaleId() === sale.id) {
+                    <section class="sale-detail" [attr.aria-label]="'Detalle de ' + sale.folio">
+                      <h3>Detalle de {{ sale.folio }}</h3>
+                      <dl class="sale-detail__summary">
+                        <div><dt>Cliente</dt><dd>{{ customerName(sale.customerId) }}</dd></div>
+                        <div><dt>Condición</dt><dd>{{ paymentConditionLabel(sale.paymentCondition) }}</dd></div>
+                        <div><dt>Subtotal</dt><dd>{{ sale.subtotal | currency: 'MXN' }}</dd></div>
+                        <div><dt>Impuestos</dt><dd>{{ sale.taxTotal | currency: 'MXN' }}</dd></div>
+                        <div><dt>Pagado</dt><dd>{{ sale.paidAmount | currency: 'MXN' }}</dd></div>
+                        <div><dt>Saldo</dt><dd>{{ sale.balance | currency: 'MXN' }}</dd></div>
+                      </dl>
+                      <div class="sale-detail__items">
+                        @for (item of sale.items; track item.productId) {
+                          <div>
+                            <span>{{ productLabel(item.productId) }}</span>
+                            <span>{{ item.quantity | number: '1.0-4' }} × {{ item.unitPrice | currency: 'MXN' }}</span>
+                            <strong>{{ item.quantity * item.unitPrice - item.discount | currency: 'MXN' }}</strong>
+                          </div>
+                        }
+                      </div>
+                      @if (sale.notes) {
+                        <p><strong>Notas:</strong> {{ sale.notes }}</p>
+                      }
+                    </section>
+                  }
                 </article>
               }
             </div>
@@ -505,6 +611,88 @@ type SaleAction = 'payment' | 'cancel' | null;
       }
     </ng-template>
 
+    <ng-template #invoiceDialog>
+      @if (invoiceSale()) {
+        <section class="modal invoice-modal" aria-labelledby="invoice-title">
+          <div class="modal__header">
+            <div>
+              <span>{{ invoiceSale()!.folio }}</span>
+              <h2 id="invoice-title">Factura electrónica</h2>
+            </div>
+            <app-ui-icon-button icon="close" ariaLabel="Cerrar factura" (pressed)="closeInvoice()" />
+          </div>
+
+          @if (store.electronicInvoice(); as invoice) {
+            <div class="invoice-result">
+              <app-ui-status-chip [label]="invoiceStatusLabel(invoice.status)" [tone]="invoiceStatusTone(invoice.status)" />
+              @if (invoice.fiscalUuid) {
+                <div class="invoice-uuid"><span>Folio fiscal</span><strong>{{ invoice.fiscalUuid }}</strong></div>
+              }
+              @if (invoice.errorMessage) {
+                <app-ui-alert title="Requiere revisión" [message]="invoice.errorMessage" tone="warning" />
+              }
+              @if (canDownloadInvoice(invoice.status)) {
+                <div class="invoice-file-actions">
+                  <app-ui-button label="Descargar XML" icon="download" variant="outlined" [loading]="store.saving()" (pressed)="downloadInvoice('xml')" />
+                  <app-ui-button label="Descargar PDF" icon="download" variant="outlined" [loading]="store.saving()" (pressed)="downloadInvoice('pdf')" />
+                </div>
+              }
+              @if (invoice.status.toLowerCase() === 'issued') {
+                <div class="invoice-cancel" [formGroup]="invoiceCancelForm">
+                  <h3>Cancelar factura</h3>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Motivo SAT</mat-label>
+                    <mat-select formControlName="reasonCode">
+                      <mat-option value="01">01 · Comprobante emitido con errores con relación</mat-option>
+                      <mat-option value="02">02 · Comprobante emitido con errores sin relación</mat-option>
+                      <mat-option value="03">03 · No se llevó a cabo la operación</mat-option>
+                      <mat-option value="04">04 · Operación nominativa relacionada en factura global</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  @if (invoiceCancelForm.controls.reasonCode.value === '01') {
+                    <mat-form-field appearance="outline">
+                      <mat-label>UUID de la factura sustituta</mat-label>
+                      <input matInput formControlName="replacementUuid" autocomplete="off" />
+                    </mat-form-field>
+                  }
+                  <app-ui-button label="Cancelar CFDI" tone="danger" variant="outlined" permission="sales.cancel_invoice" [disabled]="invoiceCancellationInvalid()" [loading]="store.saving()" (pressed)="cancelInvoice()" />
+                </div>
+              }
+            </div>
+          } @else {
+            <form [formGroup]="invoiceForm" class="invoice-form">
+              <p class="form-intro">Captura los datos tal como aparecen en la constancia de situación fiscal.</p>
+              <div class="invoice-form__grid">
+                <mat-form-field appearance="outline"><mat-label>RFC</mat-label><input matInput formControlName="taxId" autocomplete="off" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>Nombre o razón social</mat-label><input matInput formControlName="legalName" autocomplete="name" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>Código postal fiscal</mat-label><input matInput formControlName="zipCode" inputmode="numeric" maxlength="5" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>Régimen fiscal</mat-label><input matInput formControlName="taxRegimeCode" maxlength="3" placeholder="Ej. 612" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>Uso CFDI</mat-label><input matInput formControlName="cfdiUseCode" maxlength="4" placeholder="Ej. G03" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>Forma de pago SAT</mat-label><input matInput formControlName="paymentFormCode" maxlength="2" placeholder="Ej. 01" /></mat-form-field>
+                <mat-form-field appearance="outline" class="span-two"><mat-label>Correo para la factura (opcional)</mat-label><input matInput type="email" formControlName="email" autocomplete="email" /></mat-form-field>
+              </div>
+              <div class="fiscal-product-card">
+                <div><h3>Datos SAT de los productos</h3><p>Se aplicarán a todos los conceptos de esta venta.</p></div>
+                <div class="invoice-form__grid">
+                  <mat-form-field appearance="outline"><mat-label>Clave producto/servicio</mat-label><input matInput formControlName="satProductCode" maxlength="8" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>Clave unidad</mat-label><input matInput formControlName="satUnitCode" maxlength="3" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>Objeto de impuesto</mat-label><mat-select formControlName="taxObjectCode"><mat-option value="02">02 · Sí objeto de impuesto</mat-option><mat-option value="01">01 · No objeto de impuesto</mat-option></mat-select></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>Tasa IVA</mat-label><mat-select formControlName="taxRate"><mat-option [value]="0.16">16%</mat-option><mat-option [value]="0.08">8%</mat-option><mat-option [value]="0">0%</mat-option></mat-select></mat-form-field>
+                </div>
+              </div>
+              <app-ui-alert title="Revisa antes de timbrar" message="La emisión fiscal no se reintenta automáticamente. Verifica RFC, razón social y régimen." tone="info" />
+            </form>
+          }
+          <div class="modal__actions">
+            <app-ui-button label="Cerrar" variant="text" tone="neutral" (pressed)="closeInvoice()" />
+            @if (!store.electronicInvoice()) {
+              <app-ui-button label="Emitir factura" icon="receipt" permission="sales.invoice" [loading]="store.saving()" loadingLabel="Timbrando…" [disabled]="invoiceForm.invalid" (pressed)="issueInvoice()" />
+            }
+          </div>
+        </section>
+      }
+    </ng-template>
+
     <ng-template #ticketDialog>
       @if (ticket()) {
         <article class="ticket" aria-label="Comprobante de venta">
@@ -557,15 +745,20 @@ type SaleAction = 'payment' | 'cancel' | null;
 export class CounterSalesPage implements OnInit {
   @ViewChild('actionDialog') private actionDialogTemplate!: TemplateRef<unknown>;
   @ViewChild('ticketDialog') private ticketDialogTemplate!: TemplateRef<unknown>;
+  @ViewChild('invoiceDialog') private invoiceDialogTemplate!: TemplateRef<unknown>;
 
   private readonly dialog = inject(MatDialog);
+  private readonly route = inject(ActivatedRoute);
   private actionDialogRef: MatDialogRef<unknown> | null = null;
   private ticketDialogRef: MatDialogRef<unknown> | null = null;
+  private invoiceDialogRef: MatDialogRef<unknown> | null = null;
   protected readonly store = inject(CounterSalesStore);
   protected readonly view = signal<'sale' | 'history'>('sale');
   protected readonly activeSale = signal<CounterSale | null>(null);
   protected readonly activeAction = signal<SaleAction>(null);
+  protected readonly expandedSaleId = signal<string | null>(null);
   protected readonly ticket = signal<CounterSale | null>(null);
+  protected readonly invoiceSale = signal<CounterSale | null>(null);
   protected readonly tax = signal(0);
   protected readonly saleForm = new FormGroup({
     sourceWarehouseId: new FormControl('', {
@@ -590,9 +783,64 @@ export class CounterSalesPage implements OnInit {
     }),
     reference: new FormControl('', { nonNullable: true }),
   });
+  protected readonly historyForm = new FormGroup({
+    query: new FormControl('', { nonNullable: true }),
+    status: new FormControl('', { nonNullable: true }),
+    from: new FormControl('', { nonNullable: true }),
+    to: new FormControl('', { nonNullable: true }),
+  });
+  private readonly historyFilters = toSignal(
+    this.historyForm.valueChanges.pipe(startWith(this.historyForm.getRawValue())),
+    { initialValue: this.historyForm.getRawValue() },
+  );
+  protected readonly activeHistoryFilterCount = computed(() =>
+    Object.values(this.historyFilters()).filter((value) => Boolean(value?.trim())).length,
+  );
+  protected readonly filteredSales = computed(() => {
+    const filters = this.historyFilters();
+    const query = filters.query?.trim().toLocaleLowerCase('es-MX') ?? '';
+    const status = filters.status?.trim().toLocaleLowerCase('en').replace(/\s/g, '') ?? '';
+    return this.store.sales().filter((sale) => {
+      const saleDay = sale.saleDate.slice(0, 10);
+      if (filters.from && saleDay < filters.from) return false;
+      if (filters.to && saleDay > filters.to) return false;
+      if (status && sale.status.toLocaleLowerCase('en').replace(/\s/g, '') !== status) return false;
+      if (!query) return true;
+      const searchable = [
+        sale.folio,
+        this.statusLabel(sale.status),
+        this.customerName(sale.customerId),
+        sale.notes ?? '',
+        ...sale.items.flatMap((item) => [
+          this.productLabel(item.productId),
+          String(item.quantity),
+        ]),
+      ]
+        .join(' ')
+        .toLocaleLowerCase('es-MX');
+      return searchable.includes(query);
+    });
+  });
   protected readonly cancelReason = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.minLength(3)],
+  });
+  protected readonly invoiceForm = new FormGroup({
+    taxId: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i)] }),
+    legalName: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(254)] }),
+    zipCode: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\d{5}$/)] }),
+    taxRegimeCode: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\d{3}$/)] }),
+    cfdiUseCode: new FormControl('G03', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^[A-Z0-9]{3,4}$/)] }),
+    paymentFormCode: new FormControl('01', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\d{2}$/)] }),
+    email: new FormControl('', { nonNullable: true, validators: [Validators.email] }),
+    satProductCode: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\d{8}$/)] }),
+    satUnitCode: new FormControl('H87', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^[A-Z0-9]{2,3}$/)] }),
+    taxObjectCode: new FormControl('02', { nonNullable: true, validators: [Validators.required] }),
+    taxRate: new FormControl(0.16, { nonNullable: true, validators: [Validators.required, Validators.min(0), Validators.max(1)] }),
+  });
+  protected readonly invoiceCancelForm = new FormGroup({
+    reasonCode: new FormControl('02', { nonNullable: true, validators: [Validators.required] }),
+    replacementUuid: new FormControl('', { nonNullable: true }),
   });
   protected readonly total = computed(() =>
     Math.max(
@@ -621,6 +869,16 @@ export class CounterSalesPage implements OnInit {
   };
 
   constructor() {
+    const queryParams = this.route.snapshot.queryParamMap;
+    if (queryParams.get('view') === 'history') {
+      this.view.set('history');
+      this.historyForm.patchValue({
+        query: queryParams.get('query') ?? '',
+        status: queryParams.get('status') ?? '',
+        from: validDateParam(queryParams.get('from')),
+        to: validDateParam(queryParams.get('to')),
+      });
+    }
     this.saleForm.controls.sourceWarehouseId.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((warehouseId) => this.store.selectWarehouse(warehouseId));
@@ -645,6 +903,29 @@ export class CounterSalesPage implements OnInit {
 
   protected switchView(): void {
     this.view.update((current) => (current === 'sale' ? 'history' : 'sale'));
+  }
+
+  protected clearHistoryFilters(): void {
+    this.historyForm.reset({ query: '', status: '', from: '', to: '' });
+  }
+
+  protected toggleSaleDetails(id: string): void {
+    this.expandedSaleId.update((current) => (current === id ? null : id));
+  }
+
+  protected customerName(customerId?: string | null): string {
+    if (!customerId) return 'Venta al público';
+    return this.store.customers().find((customer) => customer.id === customerId)?.name ?? 'Cliente';
+  }
+
+  protected paymentConditionLabel(condition: string): string {
+    const labels: Record<string, string> = { cash: 'Contado', credit: 'Crédito', mixed: 'Mixto' };
+    return labels[condition.toLocaleLowerCase('en')] ?? condition;
+  }
+
+  protected productLabel(productId: string): string {
+    const product = this.store.products().find((item) => item.id === productId);
+    return product ? `${product.sku} · ${product.name}` : 'Producto';
   }
 
   protected inputValue(event: Event): string {
@@ -804,6 +1085,83 @@ export class CounterSalesPage implements OnInit {
     this.activeAction.set(null);
   }
 
+  protected openInvoice(sale: CounterSale): void {
+    this.invoiceSale.set(sale);
+    this.store.resetElectronicInvoice();
+    this.invoiceForm.reset({
+      taxId: '', legalName: '', zipCode: '', taxRegimeCode: '', cfdiUseCode: 'G03',
+      paymentFormCode: '01', email: '', satProductCode: '', satUnitCode: 'H87',
+      taxObjectCode: '02', taxRate: 0.16,
+    });
+    this.invoiceCancelForm.reset({ reasonCode: '02', replacementUuid: '' });
+    this.invoiceDialogRef = this.dialog.open(this.invoiceDialogTemplate, {
+      width: '48rem', maxWidth: 'calc(100vw - 1rem)', maxHeight: 'calc(100dvh - 1rem)',
+      autoFocus: 'first-tabbable', restoreFocus: true, panelClass: 'invoice-dialog-panel',
+    });
+    this.store.loadElectronicInvoice(sale, () => undefined);
+    this.invoiceDialogRef.afterClosed().subscribe(() => {
+      this.invoiceSale.set(null); this.invoiceDialogRef = null; this.store.resetElectronicInvoice();
+    });
+  }
+
+  protected closeInvoice(): void { this.invoiceDialogRef?.close(); }
+
+  protected issueInvoice(): void {
+    const sale = this.invoiceSale();
+    if (!sale || this.invoiceForm.invalid) { this.invoiceForm.markAllAsTouched(); return; }
+    const value = this.invoiceForm.getRawValue();
+    const taxable = value.taxObjectCode === '02';
+    const request: IssueElectronicInvoice = {
+      paymentFormCode: value.paymentFormCode.trim(),
+      recipient: {
+        taxId: value.taxId.trim().toUpperCase(), legalName: value.legalName.trim().toUpperCase(),
+        zipCode: value.zipCode.trim(), taxRegimeCode: value.taxRegimeCode.trim(),
+        cfdiUseCode: value.cfdiUseCode.trim().toUpperCase(), email: value.email.trim() || null,
+      },
+      items: sale.items.map((item) => ({
+        productId: item.productId, satProductCode: value.satProductCode.trim(),
+        satUnitCode: value.satUnitCode.trim().toUpperCase(), taxObjectCode: value.taxObjectCode,
+        taxes: taxable ? [{ taxCode: '002', taxTypeCode: 'Tasa', rate: value.taxRate, taxFlagCode: 'T' }] : [],
+      })),
+    };
+    this.store.issueElectronicInvoice(sale, request, () => undefined);
+  }
+
+  protected downloadInvoice(format: 'xml' | 'pdf'): void {
+    const sale = this.invoiceSale();
+    if (!sale) return;
+    this.store.downloadElectronicInvoice(sale, format, (blob) => {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url; anchor.download = `${sale.folio}.${format}`; anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    });
+  }
+
+  protected invoiceCancellationInvalid(): boolean {
+    const value = this.invoiceCancelForm.getRawValue();
+    return this.invoiceCancelForm.invalid || (value.reasonCode === '01' && !/^[0-9a-f-]{36}$/i.test(value.replacementUuid.trim()));
+  }
+
+  protected cancelInvoice(): void {
+    const sale = this.invoiceSale();
+    if (!sale || this.invoiceCancellationInvalid()) return;
+    const value = this.invoiceCancelForm.getRawValue();
+    this.store.cancelElectronicInvoice(sale, value.reasonCode, value.replacementUuid.trim() || null, () => undefined);
+  }
+
+  protected canDownloadInvoice(status: string): boolean { return ['issued', 'cancelled'].includes(status.toLowerCase()); }
+  protected invoiceStatusLabel(status: string): string {
+    return ({ pending: 'Procesando', issued: 'Emitida', failed: 'Requiere revisión', cancelled: 'Cancelada' } as Record<string, string>)[status.toLowerCase()] ?? status;
+  }
+  protected invoiceStatusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
+    const value = status.toLowerCase();
+    if (value === 'issued') return 'success';
+    if (value === 'failed' || value === 'pending') return 'warning';
+    if (value === 'cancelled') return 'danger';
+    return 'neutral';
+  }
+
   protected closeTicket(): void {
     this.ticketDialogRef?.close();
   }
@@ -885,6 +1243,10 @@ function paymentConditionValue(value: string): number {
   if (normalized === 'credit') return 1;
   if (normalized === 'mixed') return 2;
   return 0;
+}
+
+function validDateParam(value: string | null): string {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
 }
 
 function storeNumber(value: number): number {

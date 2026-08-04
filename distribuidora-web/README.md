@@ -31,7 +31,7 @@ npm run api:catalog
 ```
 
 - `api:generate` genera 56 modelos y 30 servicios en `src/app/core/api/generated`.
-- `api:catalog` valida y genera el inventario de 111 operaciones desde la matriz del plan.
+- `api:catalog` valida y genera el inventario de 116 operaciones desde la matriz del plan.
 - Nunca se modifica manualmente `core/api/generated`.
 - Los adapters de feature aíslan pages/stores del código generado.
 

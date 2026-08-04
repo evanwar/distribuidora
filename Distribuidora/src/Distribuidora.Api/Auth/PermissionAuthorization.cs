@@ -51,6 +51,8 @@ public static class Permissions
         public const string Confirm = "sales.confirm";
         public const string RegisterPayment = "sales.register_payment";
         public const string Cancel = "sales.cancel";
+        public const string Invoice = "sales.invoice";
+        public const string CancelInvoice = "sales.cancel_invoice";
     }
     public static class Receivables
     {
@@ -95,7 +97,7 @@ public static class Permissions
         "catalogs.view", "catalogs.create", "catalogs.edit", "catalogs.deactivate",
         "inventory.view", "inventory.adjust", "inventory.transfer", "inventory.cancel_adjustment",
         "purchases.view", "purchases.create", "purchases.confirm", "purchases.cancel", "goods_receipts.close",
-        "sales.view", "sales.create", "sales.edit_draft", "sales.confirm", "sales.register_payment", "sales.cancel",
+        "sales.view", "sales.create", "sales.edit_draft", "sales.confirm", "sales.register_payment", "sales.cancel", "sales.invoice", "sales.cancel_invoice",
         "receivables.view", "receivables.register_payment", "receivables.apply_payment", "receivables.cancel_payment", "receivables.change_credit_limit",
         "audit.view", "audit.export", "admin.manage_cancellation_reasons",
         "logs.activity.read", "logs.audit.read", "logs.errors.read", "logs.errors.resolve", "logs.events.read", "logs.trace.read", "logs.export",
