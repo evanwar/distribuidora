@@ -43,6 +43,11 @@ public interface IMercadoPagoPointClient
         decimal amount,
         CancellationToken cancellationToken);
     Task<MercadoPagoPointOrder> GetOrderAsync(string orderId, CancellationToken cancellationToken);
+    Task<MercadoPagoPointOrder> CancelOrderAsync(
+        string orderId,
+        string idempotencyKey,
+        bool allowAtTerminal,
+        CancellationToken cancellationToken);
 }
 
 public interface IMercadoPagoWebhookValidator

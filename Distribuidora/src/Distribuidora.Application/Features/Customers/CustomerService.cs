@@ -50,7 +50,7 @@ public sealed class CustomerService(
               ?? throw new NotFoundException("Customer not found.");
 
         customer.Name = request.Name.Trim();
-        customer.TaxId = request.TaxId;
+        customer.TaxId = NullIfWhiteSpace(request.TaxId)?.ToUpperInvariant();
         customer.Phone = request.Phone;
         customer.Email = request.Email;
         customer.Address = request.Address;
@@ -59,9 +59,40 @@ public sealed class CustomerService(
         customer.CreditBlocked = request.CreditBlocked;
         customer.Active = request.Active;
 
+        var hasFiscalProfileData = new[]
+        {
+            request.FiscalLegalName, request.FiscalZipCode,
+            request.TaxRegimeCode, request.DefaultCfdiUseCode, request.InvoiceEmail
+        }.Any(x => !string.IsNullOrWhiteSpace(x));
+        if (hasFiscalProfileData)
+        {
+            if (string.IsNullOrWhiteSpace(request.TaxId) || string.IsNullOrWhiteSpace(request.FiscalLegalName) ||
+                request.FiscalZipCode?.Length != 5 || !request.FiscalZipCode.All(char.IsDigit) ||
+                request.TaxRegimeCode?.Length != 3 || !request.TaxRegimeCode.All(char.IsDigit))
+                throw new ArgumentException("RFC, fiscal legal name, five-digit fiscal ZIP code and three-digit tax regime are required for a fiscal profile.");
+
+            var profile = customer.FiscalProfile ?? new CustomerFiscalProfile
+            {
+                CustomerId = customer.Id,
+                CreatedBy = actorId
+            };
+            profile.TaxId = request.TaxId.Trim().ToUpperInvariant();
+            profile.LegalName = request.FiscalLegalName.Trim().ToUpperInvariant();
+            profile.FiscalZipCode = request.FiscalZipCode;
+            profile.TaxRegimeCode = request.TaxRegimeCode;
+            profile.DefaultCfdiUseCode = NullIfWhiteSpace(request.DefaultCfdiUseCode)?.ToUpperInvariant();
+            profile.InvoiceEmail = NullIfWhiteSpace(request.InvoiceEmail);
+            if (!profile.IsComplete())
+                throw new ArgumentException("The fiscal profile contains an invalid RFC, ZIP code, tax regime or CFDI use code.");
+            profile.UpdatedBy = actorId;
+            customer.FiscalProfile = profile;
+        }
+
         if (id is null) db.Add(customer);
         audit.Add(id is null ? "Create" : "Update", "catalogs", nameof(Customer), customer.Id, actorId, correlationId);
         await db.SaveChangesAsync(cancellationToken);
         return customer;
     }
+
+    private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -8,6 +8,11 @@ export interface CustomerRequest {
   creditLimit: number;
   creditBlocked: boolean;
   active: boolean;
+  fiscalLegalName: string;
+  fiscalZipCode: string;
+  taxRegimeCode: string;
+  defaultCfdiUseCode: string;
+  invoiceEmail: string;
 }
 
 export interface CustomerVm extends CustomerRequest {
@@ -27,6 +32,11 @@ export function toCustomerVm(value: unknown): CustomerVm {
     creditLimit: Number(source['creditLimit'] ?? 0),
     creditBlocked: Boolean(source['creditBlocked']),
     active: source['active'] !== false,
+    fiscalLegalName: String(source['fiscalLegalName'] ?? ''),
+    fiscalZipCode: String(source['fiscalZipCode'] ?? ''),
+    taxRegimeCode: String(source['taxRegimeCode'] ?? ''),
+    defaultCfdiUseCode: String(source['defaultCfdiUseCode'] ?? ''),
+    invoiceEmail: String(source['invoiceEmail'] ?? ''),
   };
 }
 

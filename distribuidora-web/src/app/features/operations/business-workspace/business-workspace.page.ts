@@ -18,6 +18,7 @@ import { UiAlertComponent } from '../../../shared/ui/alert/ui-alert.component';
 import { UiButtonComponent } from '../../../shared/ui/button/ui-button.component';
 import { UiIconButtonComponent } from '../../../shared/ui/button/ui-icon-button.component';
 import { UiFeedbackComponent } from '../../../shared/ui/feedback/ui-feedback.component';
+import { UiDateFieldComponent } from '../../../shared/ui/date-field/ui-date-field.component';
 import { UiIconComponent, UiIconName } from '../../../shared/ui/icon/ui-icon.component';
 import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-header.component';
 import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-chip.component';
@@ -40,6 +41,7 @@ type FieldValue =
     UiAlertComponent,
     UiButtonComponent,
     UiFeedbackComponent,
+    UiDateFieldComponent,
     UiIconComponent,
     UiIconButtonComponent,
     UiPageHeaderComponent,
@@ -123,6 +125,14 @@ type FieldValue =
                       >
                         {{ field.label }}
                       </mat-checkbox>
+                    } @else if (field.type === 'date') {
+                      <app-ui-date-field
+                        [label]="field.label"
+                        [hint]="field.hint ?? ''"
+                        [required]="field.required ?? false"
+                        [value]="dateValue(field)"
+                        (valueChange)="setValue(field.key, $event)"
+                      />
                     } @else {
                       <mat-form-field
                         appearance="outline"
@@ -505,6 +515,11 @@ export class BusinessWorkspacePage {
   protected stringValue(field: BusinessField): string | number {
     const value = this.values()[field.key];
     return typeof value === 'string' || typeof value === 'number' ? value : '';
+  }
+
+  protected dateValue(field: BusinessField): string {
+    const value = this.values()[field.key];
+    return typeof value === 'string' ? value : '';
   }
 
   protected booleanValue(field: BusinessField): boolean {

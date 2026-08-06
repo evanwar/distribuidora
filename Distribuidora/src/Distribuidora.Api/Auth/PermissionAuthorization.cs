@@ -53,6 +53,11 @@ public static class Permissions
         public const string Cancel = "sales.cancel";
         public const string Invoice = "sales.invoice";
         public const string CancelInvoice = "sales.cancel_invoice";
+        public const string ViewBillingEligibility = "sales.view_billing_eligibility";
+        public const string AssignBillingRecipient = "sales.assign_billing_recipient";
+        public const string ReplaceBillingRecipient = "sales.replace_billing_recipient";
+        public const string ReconcileInvoice = "sales.reconcile_invoice";
+        public const string ManageGlobalInvoiceReplacement = "sales.manage_global_invoice_replacement";
     }
     public static class Receivables
     {
@@ -98,6 +103,7 @@ public static class Permissions
         "inventory.view", "inventory.adjust", "inventory.transfer", "inventory.cancel_adjustment",
         "purchases.view", "purchases.create", "purchases.confirm", "purchases.cancel", "goods_receipts.close",
         "sales.view", "sales.create", "sales.edit_draft", "sales.confirm", "sales.register_payment", "sales.cancel", "sales.invoice", "sales.cancel_invoice",
+        "sales.view_billing_eligibility", "sales.assign_billing_recipient", "sales.replace_billing_recipient", "sales.reconcile_invoice", "sales.manage_global_invoice_replacement",
         "receivables.view", "receivables.register_payment", "receivables.apply_payment", "receivables.cancel_payment", "receivables.change_credit_limit",
         "audit.view", "audit.export", "admin.manage_cancellation_reasons",
         "logs.activity.read", "logs.audit.read", "logs.errors.read", "logs.errors.resolve", "logs.events.read", "logs.trace.read", "logs.export",

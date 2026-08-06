@@ -157,7 +157,7 @@ sales.print
 
 ## Endpoints obligatorios y cobertura
 
-Integrar las 11 operaciones `SAL-01..SAL-11` de `../06_MATRIZ_ENDPOINTS_FRONTEND.md`.
+Integrar las 21 operaciones `SAL-01..SAL-21` de `../06_MATRIZ_ENDPOINTS_FRONTEND.md`, incluidas facturación electrónica, receptor fiscal posterior, conciliación de cobertura y cancelación de cobro pendiente en terminal.
 
 El workspace consume además `PRD-01`, `CUS-01`, `WHS-01` y `PMT-01` mediante contratos públicos. La confirmación (`SAL-05`) y los pagos (`SAL-06`) nunca se reintentan automáticamente. Resumen e impresión usan `SAL-08` y `SAL-09`; no se reconstruye un comprobante autoritativo desde el carrito local.
 

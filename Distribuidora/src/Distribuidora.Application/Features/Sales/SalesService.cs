@@ -76,6 +76,13 @@ public sealed class SalesService(
             var sale = GetById(id);
             EnsureStockAvailable(sale);
             sale.Confirm(datetimeProvider.UtcNow);
+            if (!sale.CustomerId.HasValue &&
+                !db.Query(Specification.Create<SaleFiscalStatus>(x => x.SaleId == sale.Id)).Any())
+                db.Add(new SaleFiscalStatus
+                {
+                    SaleId = sale.Id,
+                    CreatedBy = actorId
+                });
             if (sale.PaymentCondition != PaymentCondition.Cash)
             {
                 var customer = db.Query(Specification.Create<Customer>(x => x.Id == sale.CustomerId)).Single();

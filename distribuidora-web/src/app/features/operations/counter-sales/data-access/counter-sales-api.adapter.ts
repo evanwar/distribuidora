@@ -10,6 +10,9 @@ import {
   PointCardPayment,
   ElectronicInvoice,
   IssueElectronicInvoice,
+  SaleBillingEligibility,
+  SaleBillingRecipient,
+  SaleFiscalStatus,
   PosProduct,
   PosStockBalance,
   PosWarehouse,
@@ -121,6 +124,16 @@ export class CounterSalesApiAdapter {
       .pipe(map(toPointCardPayment));
   }
 
+  cancelCardPayment(id: string, context?: HttpContext): Observable<PointCardPayment> {
+    return this.api
+      .post<unknown>(
+        `/api/v1/counter-sales/${encodeURIComponent(id)}/card-payment/cancel`,
+        undefined,
+        { context },
+      )
+      .pipe(map(toPointCardPayment));
+  }
+
   addPayment(
     id: string,
     request: { method: string; amount: number; reference: string | null },
@@ -171,6 +184,42 @@ export class CounterSalesApiAdapter {
   downloadElectronicInvoice(id: string, format: 'xml' | 'pdf', context?: HttpContext): Observable<Blob> {
     return this.api.download(`/api/v1/sales/${encodeURIComponent(id)}/electronic-invoice/files/${format}`, { context });
   }
+
+  getBillingEligibility(id: string, context?: HttpContext): Observable<SaleBillingEligibility> {
+    return this.api
+      .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/billing-eligibility`, { context })
+      .pipe(map(toBillingEligibility));
+  }
+
+  assignBillingRecipient(
+    id: string,
+    request: { customerId: string; reason: string; rowVersion: number },
+    context?: HttpContext,
+  ): Observable<SaleBillingRecipient> {
+    return this.api
+      .put<unknown, typeof request>(
+        `/api/v1/counter-sales/${encodeURIComponent(id)}/billing-recipient`, request, { context },
+      )
+      .pipe(map(toBillingRecipient));
+  }
+
+  getFiscalStatus(id: string, context?: HttpContext): Observable<SaleFiscalStatus> {
+    return this.api
+      .get<unknown>(`/api/v1/counter-sales/${encodeURIComponent(id)}/fiscal-status`, { context })
+      .pipe(map(toFiscalStatus));
+  }
+
+  reconcileFiscalCoverage(
+    id: string,
+    request: { coverageStatus: string; reason: string; globalInvoiceFiscalUuid: string | null; rowVersion: number },
+    context?: HttpContext,
+  ): Observable<SaleFiscalStatus> {
+    return this.api
+      .put<unknown, typeof request>(
+        `/api/v1/counter-sales/${encodeURIComponent(id)}/fiscal-coverage`, request, { context },
+      )
+      .pipe(map(toFiscalStatus));
+  }
 }
 
 function asRecords(value: unknown): Record<string, unknown>[] {
@@ -218,6 +267,49 @@ function toCustomer(item: Record<string, unknown>): PosCustomer {
     name: text(item, 'name', 'Cliente sin nombre'),
     phone: text(item, 'phone'),
     creditBlocked: bool(item, 'creditBlocked'),
+    taxId: text(item, 'taxId'),
+    fiscalLegalName: text(item, 'fiscalLegalName'),
+    fiscalZipCode: text(item, 'fiscalZipCode'),
+    taxRegimeCode: text(item, 'taxRegimeCode'),
+    defaultCfdiUseCode: text(item, 'defaultCfdiUseCode'),
+    invoiceEmail: text(item, 'invoiceEmail'),
+    hasCompleteFiscalProfile: bool(item, 'hasCompleteFiscalProfile'),
+  };
+}
+
+function toBillingEligibility(value: unknown): SaleBillingEligibility {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return {
+    eligible: bool(item, 'eligible'),
+    reasonCode: text(item, 'reasonCode'),
+    requiredAction: text(item, 'requiredAction'),
+    saleId: text(item, 'saleId'),
+    saleStatus: text(item, 'saleStatus'),
+    billingCustomerId: text(item, 'billingCustomerId') || null,
+    fiscalCoverageStatus: text(item, 'fiscalCoverageStatus'),
+    electronicInvoiceStatus: text(item, 'electronicInvoiceStatus') || null,
+    rowVersion: number(item, 'rowVersion'),
+  };
+}
+
+function toBillingRecipient(value: unknown): SaleBillingRecipient {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return {
+    id: text(item, 'id'), saleId: text(item, 'saleId'), customerId: text(item, 'customerId'),
+    status: text(item, 'status'), reason: text(item, 'reason'), assignedAt: text(item, 'assignedAt'),
+    assignedBy: text(item, 'assignedBy'), rowVersion: number(item, 'rowVersion'),
+  };
+}
+
+function toFiscalStatus(value: unknown): SaleFiscalStatus {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return {
+    saleId: text(item, 'saleId'), coverageStatus: text(item, 'coverageStatus'),
+    globalInvoiceFiscalUuid: text(item, 'globalInvoiceFiscalUuid') || null,
+    reconciliationReason: text(item, 'reconciliationReason') || null,
+    billingCustomerId: text(item, 'billingCustomerId') || null,
+    electronicInvoiceStatus: text(item, 'electronicInvoiceStatus') || null,
+    rowVersion: number(item, 'rowVersion'),
   };
 }
 

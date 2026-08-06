@@ -1,7 +1,7 @@
 ---
 project: Distribuidora Frontend - MVP Mostrador
 source_of_truth: ../Distribuidora/docs/frontend-api/README.md
-contract_snapshot: 116 frontend operations, 32 controllers
+contract_snapshot: 120 frontend operations, 33 controllers
 ---
 
 # 06 - Matriz de endpoints y cobertura frontend
@@ -33,7 +33,7 @@ Un endpoint se considera integrado únicamente cuando tiene:
 [ ] prueba de componente o E2E para el flujo de negocio
 ```
 
-El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `bloqueado` o `integrado`. La meta de alcance vigente es **116/116 operaciones clasificadas e integradas**. Los endpoints administrativos no deben mezclarse en navegación de catálogos.
+El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `bloqueado` o `integrado`. La meta de alcance vigente es **120/120 operaciones clasificadas e integradas**. Los endpoints administrativos no deben mezclarse en navegación de catálogos.
 
 ## Resumen por módulo
 
@@ -44,12 +44,12 @@ El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `
 | F02 | Customers, Suppliers, Products, ProductAliases, Categories, Brands, Units, Warehouses | 25 | maestros por dominio |
 | F03 | Inventory | 7 | existencias, kardex, ajustes y transferencias |
 | F04 | Purchases, GoodsReceipts | 10 | compras y recepción |
-| F05 | Sales | 16 | punto de venta y facturación electrónica |
+| F05 | Sales | 20 | punto de venta y facturación electrónica |
 | F06 | AccountsReceivable, CustomerPayments | 7 | cobranza |
 | F07 | Audit, CancellationReasons, OperationalNotes, Logs | 15 | auditoría, soporte y excepciones |
 | F08 | Reports, Dashboard | 8 | indicadores y reportes |
 | F09 | Settings, FolioSequences, PaymentMethods, Policies, Trace | 16 | administración y trazabilidad técnica |
-| **Total** | **32 recursos** | **116** | |
+| **Total** | **33 recursos** | **120** | |
 
 ## F0 - Bootstrap y diagnóstico (1)
 
@@ -132,7 +132,7 @@ Cada maestro debe tener ruta propia y nombre intuitivo: `/customers`, `/supplier
 | GRC-03 | `POST /api/v1/goods-receipts/{id}/close` | cierre de recepción |
 | GRC-04 | `POST /api/v1/goods-receipts/{id}/cancel` | cancelación de recepción |
 
-## F05 - Punto de venta y facturación (16)
+## F05 - Punto de venta y facturación (20)
 
 | ID | Endpoint | Integración requerida |
 |---|---|---|
@@ -152,6 +152,11 @@ Cada maestro debe tener ruta propia y nombre intuitivo: `/customers`, `/supplier
 | SAL-14 | `GET /api/v1/sales/{saleId}/electronic-invoice/files/xml` | descargar XML fiscal |
 | SAL-15 | `GET /api/v1/sales/{saleId}/electronic-invoice/files/pdf` | descargar representación PDF |
 | SAL-16 | `POST /api/v1/sales/{saleId}/electronic-invoice/cancel` | solicitar cancelación con motivo SAT y sustitución cuando corresponda |
+| SAL-17 | `GET /api/v1/counter-sales/{saleId}/billing-eligibility` | consultar elegibilidad y siguiente acción fiscal antes de abrir o emitir factura |
+| SAL-18 | `PUT /api/v1/counter-sales/{saleId}/billing-recipient` | asociar receptor fiscal posterior sin modificar el cliente comercial de la venta |
+| SAL-19 | `GET /api/v1/counter-sales/{saleId}/fiscal-status` | consultar cobertura global/nominativa y estado de conciliación |
+| SAL-20 | `PUT /api/v1/counter-sales/{saleId}/fiscal-coverage` | conciliación administrativa protegida; no disponible al cajero |
+| SAL-21 | `POST /api/v1/counter-sales/{id}/card-payment/cancel` | cancelar una orden pendiente o enviada y liberar la terminal; confirmación explícita, sin reintento automático |
 
 Dependencias de lectura del workspace POS: `PRD-01`, `CUS-01`, `WHS-01` y `PMT-01`. La feature usa contratos públicos/adapters; no importa stores internos de F02 o F09.
 

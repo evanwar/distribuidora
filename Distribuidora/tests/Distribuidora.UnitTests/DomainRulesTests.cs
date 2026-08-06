@@ -1,6 +1,7 @@
 using Distribuidora.Domain.AccountsReceivable;
 using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Common;
+using Distribuidora.Domain.Catalogs;
 using Distribuidora.Domain.Inventory;
 using Distribuidora.Domain.Purchases;
 using Distribuidora.Domain.Sales;
@@ -154,6 +155,66 @@ public sealed class DomainRulesTests
         var invoice = new ElectronicInvoice { SaleId = Guid.NewGuid(), Provider = "test", IdempotencyKey = "sale:2" };
         invoice.MarkFailed("timeout", "Unknown provider outcome");
         Assert.Throws<DomainRuleException>(() => invoice.MarkIssued("provider-1", "uuid", OccurredAt));
+    }
+
+    [Fact]
+    public void Public_sale_fiscal_status_reserves_and_completes_nominative_invoice_once()
+    {
+        var status = new SaleFiscalStatus { SaleId = Guid.NewGuid() };
+
+        status.ReserveForNominativeInvoice(OccurredAt);
+        status.MarkNominativeInvoicePending(OccurredAt.AddMinutes(1));
+        status.MarkNominativeInvoiceIssued(OccurredAt.AddMinutes(2));
+
+        Assert.Equal(FiscalCoverageStatus.NominativeInvoiceIssued, status.CoverageStatus);
+        Assert.Throws<DomainRuleException>(() => status.ReserveForNominativeInvoice(OccurredAt.AddMinutes(3)));
+    }
+
+    [Fact]
+    public void Sale_in_issued_global_invoice_cannot_be_reserved_directly()
+    {
+        var status = new SaleFiscalStatus { SaleId = Guid.NewGuid() };
+        status.Reconcile(
+            FiscalCoverageStatus.IncludedInIssuedGlobalInvoice,
+            "Verified against the fiscal provider.",
+            "83f8fead-70fe-4f6d-82ba-8af6abdd8343",
+            OccurredAt);
+
+        Assert.Throws<DomainRuleException>(() => status.ReserveForNominativeInvoice(OccurredAt.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void Billing_recipient_replacement_is_auditable_and_locks_on_invoice_attempt()
+    {
+        var firstCustomer = Guid.NewGuid();
+        var secondCustomer = Guid.NewGuid();
+        var recipient = new SaleBillingRecipient { SaleId = Guid.NewGuid() };
+
+        recipient.Assign(firstCustomer, "Buyer requested an invoice.", Guid.NewGuid(), OccurredAt);
+        recipient.Assign(secondCustomer, "Corrected before invoicing.", Guid.NewGuid(), OccurredAt.AddMinutes(1));
+        recipient.Lock(OccurredAt.AddMinutes(2));
+
+        Assert.Equal(secondCustomer, recipient.CustomerId);
+        Assert.Equal(BillingRecipientStatus.Locked, recipient.Status);
+        Assert.Throws<DomainRuleException>(() =>
+            recipient.Assign(firstCustomer, "Late change.", Guid.NewGuid(), OccurredAt.AddMinutes(3)));
+    }
+
+    [Fact]
+    public void Customer_fiscal_profile_requires_cfdi_4_recipient_data()
+    {
+        var profile = new CustomerFiscalProfile
+        {
+            TaxId = "XAXX010101000",
+            LegalName = "PUBLICO EN GENERAL",
+            FiscalZipCode = "06000",
+            TaxRegimeCode = "616",
+            DefaultCfdiUseCode = "S01"
+        };
+
+        Assert.True(profile.IsComplete());
+        profile.FiscalZipCode = "6000";
+        Assert.False(profile.IsComplete());
     }
 
     private static CounterSale Sale(PaymentCondition condition)

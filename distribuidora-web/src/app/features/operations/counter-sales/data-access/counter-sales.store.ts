@@ -11,6 +11,7 @@ import {
   Subject,
   switchMap,
   tap,
+  takeUntil,
   takeWhile,
   timer,
 } from 'rxjs';
@@ -25,6 +26,7 @@ import {
   PointCardPayment,
   ElectronicInvoice,
   IssueElectronicInvoice,
+  SaleBillingEligibility,
   PosProduct,
   PosStockBalance,
   PosWarehouse,
@@ -39,6 +41,7 @@ export class CounterSalesStore {
   private readonly operation = this.operations.restoreOrStart('POS', 'counter-sales');
   private readonly customersState = signal<readonly PosCustomer[]>([]);
   private readonly customerSearchRequests = new Subject<string>();
+  private readonly cardPaymentStopRequests = new Subject<void>();
   private readonly customersLoadingState = signal(false);
   private readonly productsState = signal<readonly PosProduct[]>([]);
   private readonly warehousesState = signal<readonly PosWarehouse[]>([]);
@@ -50,11 +53,13 @@ export class CounterSalesStore {
   private readonly queryState = signal('');
   private readonly loadingState = signal(false);
   private readonly savingState = signal(false);
+  private readonly terminalCancellingState = signal(false);
   private readonly errorState = signal<ApiError | null>(null);
   private readonly noticeState = signal<string | null>(null);
   private readonly stockNoticeState = signal<string | null>(null);
   private readonly cardPaymentState = signal<PointCardPayment | null>(null);
   private readonly electronicInvoiceState = signal<ElectronicInvoice | null>(null);
+  private readonly billingEligibilityState = signal<SaleBillingEligibility | null>(null);
   private editingSaleIdState = signal<string | null>(null);
 
   readonly customers = this.customersState.asReadonly();
@@ -76,11 +81,13 @@ export class CounterSalesStore {
   readonly lines = this.linesState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
   readonly saving = this.savingState.asReadonly();
+  readonly terminalCancelling = this.terminalCancellingState.asReadonly();
   readonly error = this.errorState.asReadonly();
   readonly notice = this.noticeState.asReadonly();
   readonly stockNotice = this.stockNoticeState.asReadonly();
   readonly cardPayment = this.cardPaymentState.asReadonly();
   readonly electronicInvoice = this.electronicInvoiceState.asReadonly();
+  readonly billingEligibility = this.billingEligibilityState.asReadonly();
   readonly editingSaleId = this.editingSaleIdState.asReadonly();
   readonly subtotal = computed(() =>
     this.linesState().reduce((total, line) => total + line.quantity * line.unitPrice, 0),
@@ -89,7 +96,10 @@ export class CounterSalesStore {
     this.linesState().reduce((total, line) => total + line.discount, 0),
   );
 
-  resetElectronicInvoice(): void { this.electronicInvoiceState.set(null); }
+  resetElectronicInvoice(): void {
+    this.electronicInvoiceState.set(null);
+    this.billingEligibilityState.set(null);
+  }
 
   constructor() {
     this.customerSearchRequests
@@ -297,6 +307,7 @@ export class CounterSalesStore {
                 tap((payment) => this.cardPaymentState.set(payment)),
                 takeWhile((payment) => !isTerminalPointStatus(payment.status), true),
                 last(),
+                takeUntil(this.cardPaymentStopRequests),
                 switchMap((payment) => {
                   this.cardPaymentState.set(payment);
                   return payment.status.toLocaleLowerCase('en') === 'approved'
@@ -321,6 +332,31 @@ export class CounterSalesStore {
             return;
           }
           this.noticeState.set(pointStatusMessage(this.cardPaymentState()));
+        },
+        error: (error: ApiError) => this.errorState.set(error),
+      });
+  }
+
+  cancelCardPayment(completed?: () => void): void {
+    const payment = this.cardPaymentState();
+    if (!payment || this.terminalCancellingState()) return;
+
+    this.cardPaymentStopRequests.next();
+    this.terminalCancellingState.set(true);
+    this.errorState.set(null);
+    this.api
+      .cancelCardPayment(payment.saleId, this.requestContext())
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.terminalCancellingState.set(false)),
+      )
+      .subscribe({
+        next: (cancelledPayment) => {
+          this.cardPaymentState.set(cancelledPayment);
+          this.noticeState.set(cancelledPayment.status.toLocaleLowerCase('en') === 'cancelled'
+            ? 'Cobro cancelado. La terminal está disponible y el carrito permanece abierto.'
+            : 'Cancelación enviada. Esperando que Mercado Pago confirme que la terminal quedó disponible.');
+          completed?.();
         },
         error: (error: ApiError) => this.errorState.set(error),
       });
@@ -401,6 +437,66 @@ export class CounterSalesStore {
         if (error.status === 404) { this.electronicInvoiceState.set(null); completed(null); return; }
         this.errorState.set(error);
       },
+    });
+  }
+
+  loadBillingEligibility(sale: CounterSale, completed: (eligibility: SaleBillingEligibility) => void): void {
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.getBillingEligibility(sale.id, this.requestContext()).pipe(
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({
+      next: (eligibility) => { this.billingEligibilityState.set(eligibility); completed(eligibility); },
+      error: (error: ApiError) => this.errorState.set(error),
+    });
+  }
+
+  assignBillingRecipient(
+    sale: CounterSale,
+    customerId: string,
+    reason: string,
+    completed: (eligibility: SaleBillingEligibility) => void,
+  ): void {
+    const eligibility = this.billingEligibilityState();
+    if (!eligibility) return;
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.assignBillingRecipient(sale.id, {
+      customerId, reason, rowVersion: eligibility.rowVersion,
+    }, this.requestContext()).pipe(
+      switchMap(() => this.api.getBillingEligibility(sale.id, this.requestContext())),
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({
+      next: (updated) => {
+        this.billingEligibilityState.set(updated);
+        this.noticeState.set(`Receptor fiscal asociado a ${sale.folio}.`);
+        completed(updated);
+      },
+      error: (error: ApiError) => this.errorState.set(error),
+    });
+  }
+
+  reconcileFiscalCoverage(
+    sale: CounterSale,
+    request: { coverageStatus: string; reason: string; globalInvoiceFiscalUuid: string | null },
+    completed: (eligibility: SaleBillingEligibility) => void,
+  ): void {
+    const eligibility = this.billingEligibilityState();
+    if (!eligibility) return;
+    this.savingState.set(true);
+    this.errorState.set(null);
+    this.api.reconcileFiscalCoverage(sale.id, {
+      ...request, rowVersion: eligibility.rowVersion,
+    }, this.requestContext()).pipe(
+      switchMap(() => this.api.getBillingEligibility(sale.id, this.requestContext())),
+      finalize(() => this.savingState.set(false)),
+    ).subscribe({
+      next: (updated) => {
+        this.billingEligibilityState.set(updated);
+        this.noticeState.set(`Cobertura fiscal de ${sale.folio} conciliada.`);
+        completed(updated);
+      },
+      error: (error: ApiError) => this.errorState.set(error),
     });
   }
 

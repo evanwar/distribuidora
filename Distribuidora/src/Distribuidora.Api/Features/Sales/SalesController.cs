@@ -73,9 +73,31 @@ public sealed class SalesController(SalesService service, PointPaymentService po
     }
 
     [HttpGet("{id:guid}/card-payment"), Authorize(Policy = Permissions.Sales.View)]
-    public ActionResult<ApiResponse<PointCardPaymentResponse>> GetCardPayment([FromRoute] Guid id) =>
+    public async Task<ActionResult<ApiResponse<PointCardPaymentResponse>>> GetCardPayment(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken) =>
         Ok(ApiResponse<PointCardPaymentResponse>.Ok(
-            HttpResponseMapper.Map(pointPayments.GetForSale(id)), HttpContext.TraceIdentifier));
+            HttpResponseMapper.Map(await pointPayments.RefreshForSaleAsync(
+                id, currentUser.Id, cancellationToken)),
+            HttpContext.TraceIdentifier));
+
+    /// <summary>Cancels an outstanding Mercado Pago Point order and releases the terminal.</summary>
+    [HttpPost("{id:guid}/card-payment/cancel"), Authorize(Policy = Permissions.Sales.RegisterPayment)]
+    [ProducesResponseType(typeof(ApiResponse<PointCardPaymentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApiResponse<PointCardPaymentResponse>>> CancelCardPayment(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken)
+    {
+        var payment = await pointPayments.CancelAsync(
+            id, currentUser.Id, HttpContext.TraceIdentifier, cancellationToken);
+        return Ok(ApiResponse<PointCardPaymentResponse>.Ok(
+            HttpResponseMapper.Map(payment), HttpContext.TraceIdentifier,
+            "Payment cancelled and Point terminal released."));
+    }
 }
 
 [ApiController, Route("api/v1/payments/mercado-pago"), Produces(MediaTypeNames.Application.Json)]

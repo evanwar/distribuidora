@@ -32,6 +32,8 @@ public sealed class ExceptionMiddleware(
                 UnauthorizedException => StatusCodes.Status401Unauthorized,
                 ConflictException => StatusCodes.Status409Conflict,
                 DomainRuleException => StatusCodes.Status422UnprocessableEntity,
+                ElectronicInvoicingProviderException { OutcomeUnknown: true } => StatusCodes.Status503ServiceUnavailable,
+                ElectronicInvoicingProviderException => StatusCodes.Status502BadGateway,
                 Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
                 ArgumentException => StatusCodes.Status400BadRequest,
                 _ => StatusCodes.Status500InternalServerError

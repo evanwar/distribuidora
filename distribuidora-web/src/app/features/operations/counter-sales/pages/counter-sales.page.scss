@@ -240,6 +240,32 @@ dd {
   gap: var(--space-3);
 }
 
+.terminal-status {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.terminal-cancel-modal__copy {
+  margin: 0;
+  color: var(--app-text-muted);
+  line-height: 1.55;
+}
+
+.terminal-cancel-modal__actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 599px) {
+  .terminal-cancel-modal__actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .terminal-cancel-modal__actions app-ui-button {
+    width: 100%;
+  }
+}
+
 .history {
   min-width: 0;
 }
@@ -275,10 +301,18 @@ dd {
 }
 
 .sale-row__actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  align-items: center;
   gap: var(--space-1);
 }
+
+.sale-action--detail { grid-area: detail; }
+.sale-action--continue { grid-area: continue; }
+.sale-action--confirm { grid-area: confirm; }
+.sale-action--invoice { grid-area: confirm; }
+.sale-action--receipt { grid-area: receipt; }
+.sale-action--cancel { grid-area: cancel; }
 
 .sale-detail {
   display: grid;
@@ -454,12 +488,23 @@ dd {
   }
 
   .sale-row {
-    grid-template-columns: minmax(10rem, 1fr) auto 8rem minmax(16rem, auto);
+    grid-template-columns: minmax(0, 1fr) 9rem 8rem 31rem;
     align-items: center;
   }
 
   .sale-row__amount {
     text-align: end;
+  }
+
+  .sale-row__actions {
+    grid-template-columns: 5.75rem 5rem 7.5rem 7.25rem 4.5rem;
+    grid-template-areas: 'detail continue confirm receipt cancel';
+    column-gap: var(--space-1);
+    justify-content: stretch;
+  }
+
+  .sale-row__actions > .sale-action {
+    justify-self: start;
   }
 
   .sale-detail {

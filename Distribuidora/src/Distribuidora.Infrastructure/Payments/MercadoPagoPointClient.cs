@@ -59,6 +59,22 @@ public sealed class MercadoPagoPointClient(HttpClient httpClient, IOptions<Merca
         return await SendAsync(request, cancellationToken);
     }
 
+    public async Task<MercadoPagoPointOrder> CancelOrderAsync(
+        string orderId,
+        string idempotencyKey,
+        bool allowAtTerminal,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/v1/orders/{Uri.EscapeDataString(orderId)}/cancel");
+        Authorize(request);
+        request.Headers.Add("X-Idempotency-Key", idempotencyKey);
+        if (allowAtTerminal)
+            request.Headers.Add("x-allow-cancelable-status", "at_terminal");
+        return await SendAsync(request, cancellationToken);
+    }
+
     private void Authorize(HttpRequestMessage request) =>
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Required(_options.AccessToken, "Mercado Pago access token"));
 

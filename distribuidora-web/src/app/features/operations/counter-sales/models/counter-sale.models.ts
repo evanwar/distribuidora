@@ -3,6 +3,46 @@ export interface PosCustomer {
   name: string;
   phone: string;
   creditBlocked: boolean;
+  taxId: string;
+  fiscalLegalName: string;
+  fiscalZipCode: string;
+  taxRegimeCode: string;
+  defaultCfdiUseCode: string;
+  invoiceEmail: string;
+  hasCompleteFiscalProfile: boolean;
+}
+
+export interface SaleBillingEligibility {
+  eligible: boolean;
+  reasonCode: string;
+  requiredAction: string;
+  saleId: string;
+  saleStatus: string;
+  billingCustomerId: string | null;
+  fiscalCoverageStatus: string;
+  electronicInvoiceStatus: string | null;
+  rowVersion: number;
+}
+
+export interface SaleBillingRecipient {
+  id: string;
+  saleId: string;
+  customerId: string;
+  status: string;
+  reason: string;
+  assignedAt: string;
+  assignedBy: string;
+  rowVersion: number;
+}
+
+export interface SaleFiscalStatus {
+  saleId: string;
+  coverageStatus: string;
+  globalInvoiceFiscalUuid: string | null;
+  reconciliationReason: string | null;
+  billingCustomerId: string | null;
+  electronicInvoiceStatus: string | null;
+  rowVersion: number;
 }
 
 export interface PosProduct {

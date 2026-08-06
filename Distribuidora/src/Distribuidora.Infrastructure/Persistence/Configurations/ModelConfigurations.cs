@@ -126,7 +126,8 @@ public sealed class PurchaseConfiguration :
 public sealed class SalesConfiguration :
     IEntityTypeConfiguration<CounterSale>, IEntityTypeConfiguration<CounterSaleItem>,
     IEntityTypeConfiguration<SalePayment>, IEntityTypeConfiguration<SaleCancellation>,
-    IEntityTypeConfiguration<PointPayment>, IEntityTypeConfiguration<ElectronicInvoice>
+    IEntityTypeConfiguration<PointPayment>, IEntityTypeConfiguration<ElectronicInvoice>,
+    IEntityTypeConfiguration<SaleFiscalStatus>, IEntityTypeConfiguration<SaleBillingRecipient>
 {
     public void Configure(EntityTypeBuilder<CounterSale> b)
     {
@@ -172,11 +173,38 @@ public sealed class SalesConfiguration :
         b.Property(x => x.CancellationReasonCode).HasMaxLength(2);
         b.Property(x => x.ErrorCode).HasMaxLength(100);
         b.Property(x => x.ErrorMessage).HasMaxLength(1000);
+        b.Property(x => x.RecipientTaxId).HasMaxLength(13).IsRequired();
+        b.Property(x => x.RecipientLegalName).HasMaxLength(254).IsRequired();
+        b.Property(x => x.RecipientFiscalZipCode).HasMaxLength(5).IsRequired();
+        b.Property(x => x.RecipientTaxRegimeCode).HasMaxLength(3).IsRequired();
+        b.Property(x => x.CfdiUseCode).HasMaxLength(4).IsRequired();
+        b.Property(x => x.PaymentFormCode).HasMaxLength(2).IsRequired();
+        b.Property(x => x.PaymentMethodCode).HasMaxLength(3).IsRequired();
+        b.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+        b.Property(x => x.ExpeditionZipCode).HasMaxLength(5).IsRequired();
         b.HasIndex(x => x.SaleId).IsUnique();
         b.HasIndex(x => x.IdempotencyKey).IsUnique();
         b.HasIndex(x => new { x.Provider, x.ProviderInvoiceId }).IsUnique();
         b.HasIndex(x => x.FiscalUuid).IsUnique();
         b.HasOne<CounterSale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+    }
+    public void Configure(EntityTypeBuilder<SaleFiscalStatus> b)
+    {
+        b.ToTable("sale_fiscal_statuses", "sales"); b.Audit();
+        b.Property(x => x.GlobalInvoiceFiscalUuid).HasMaxLength(36);
+        b.Property(x => x.ReconciliationReason).HasMaxLength(1000);
+        b.HasIndex(x => x.SaleId).IsUnique();
+        b.HasIndex(x => x.CoverageStatus);
+        b.HasOne<CounterSale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+    }
+    public void Configure(EntityTypeBuilder<SaleBillingRecipient> b)
+    {
+        b.ToTable("sale_billing_recipients", "sales"); b.Audit();
+        b.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+        b.HasIndex(x => x.SaleId).IsUnique();
+        b.HasIndex(x => x.CustomerId);
+        b.HasOne<CounterSale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

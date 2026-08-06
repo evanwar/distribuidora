@@ -27,7 +27,33 @@ import { CustomerRequest, CustomerVm } from '../../models/customer.models';
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>RFC</mat-label>
-          <input matInput formControlName="taxId" />
+          <input matInput formControlName="taxId" maxlength="13" />
+          @if (form.controls.taxId.hasError('pattern')) {
+            <mat-error>Captura un RFC vÃ¡lido.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre o razÃ³n social fiscal</mat-label>
+          <input matInput formControlName="fiscalLegalName" maxlength="254" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>CÃ³digo postal fiscal</mat-label>
+          <input matInput formControlName="fiscalZipCode" inputmode="numeric" maxlength="5" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>RÃ©gimen fiscal</mat-label>
+          <input matInput formControlName="taxRegimeCode" inputmode="numeric" maxlength="3" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Uso CFDI predeterminado</mat-label>
+          <input matInput formControlName="defaultCfdiUseCode" maxlength="4" placeholder="Ej. G03" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Correo de facturaciÃ³n</mat-label>
+          <input matInput formControlName="invoiceEmail" type="email" />
+          @if (form.controls.invoiceEmail.hasError('email')) {
+            <mat-error>Captura un correo vÃ¡lido.</mat-error>
+          }
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Teléfono</mat-label>
@@ -82,7 +108,12 @@ export class CustomerFormComponent implements OnChanges {
 
   protected readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    taxId: new FormControl('', { nonNullable: true }),
+    taxId: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^[A-Z&Ã‘]{3,4}\d{6}[A-Z0-9]{3}$/i)] }),
+    fiscalLegalName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(254)] }),
+    fiscalZipCode: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^$|^\d{5}$/)] }),
+    taxRegimeCode: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^$|^\d{3}$/)] }),
+    defaultCfdiUseCode: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^$|^[A-Z0-9]{3,4}$/i)] }),
+    invoiceEmail: new FormControl('', { nonNullable: true, validators: [Validators.email] }),
     phone: new FormControl('', { nonNullable: true }),
     email: new FormControl('', { nonNullable: true, validators: [Validators.email] }),
     address: new FormControl('', { nonNullable: true }),
@@ -105,6 +136,11 @@ export class CustomerFormComponent implements OnChanges {
         creditLimit: 0,
         creditBlocked: false,
         active: true,
+        fiscalLegalName: '',
+        fiscalZipCode: '',
+        taxRegimeCode: '',
+        defaultCfdiUseCode: '',
+        invoiceEmail: '',
       },
     );
   }

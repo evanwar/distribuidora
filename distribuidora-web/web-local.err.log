@@ -1,0 +1,42 @@
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read directory "../../../..": Access is denied.[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "C:\\Users\\evana\\OneDrive\\Pictures\\backend_agent_prompts_mostrador_netcore\\distribuidora-web\\src\\app\\app.scss"[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read directory "../../../..": Access is denied.[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "C:\\Users\\evana\\OneDrive\\Pictures\\backend_agent_prompts_mostrador_netcore\\distribuidora-web\\src\\app\\features\\operations\\business-workspace\\business-workspace.page.scss"[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read directory "../../../..": Access is denied.[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "C:\\Users\\evana\\OneDrive\\Pictures\\backend_agent_prompts_mostrador_netcore\\distribuidora-web\\src\\app\\features\\operations\\counter-sales\\ui\\product-tile\\product-tile.component.scss"[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read directory "../../../..": Access is denied.[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "C:\\Users\\evana\\OneDrive\\Pictures\\backend_agent_prompts_mostrador_netcore\\distribuidora-web\\src\\app\\features\\operations\\counter-sales\\pages\\counter-sales.page.scss"[0m [1m[35m[plugin angular-compiler][0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read directory "../../../..": Access is denied.[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "C:\\Users\\evana\\OneDrive\\Pictures\\backend_agent_prompts_mostrador_netcore\\distribuidora-web\\src\\main.ts"[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read directory "../../../..": Access is denied.[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "src/styles.scss"[0m
+
+    angular:styles/global:styles:1:8:
+[37m      1 │ @import [32m'src/styles.scss'[37m;
+        ╵         [32m~~~~~~~~~~~~~~~~~[0m
+
+  You can mark the path "src/styles.scss" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
+
+[39m[22m

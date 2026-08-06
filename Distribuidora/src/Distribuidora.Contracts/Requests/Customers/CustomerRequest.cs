@@ -9,4 +9,9 @@ public sealed record CustomerRequest(
     string? City,
     decimal CreditLimit,
     bool CreditBlocked,
-    bool Active = true);
+    bool Active = true,
+    string? FiscalLegalName = null,
+    string? FiscalZipCode = null,
+    string? TaxRegimeCode = null,
+    string? DefaultCfdiUseCode = null,
+    string? InvoiceEmail = null);

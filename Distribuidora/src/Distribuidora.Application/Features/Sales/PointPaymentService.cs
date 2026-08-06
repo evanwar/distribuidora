@@ -17,12 +17,50 @@ public sealed class PointPaymentService(
 {
     private static readonly PointPaymentStatus[] ActiveStatuses =
         [PointPaymentStatus.Creating, PointPaymentStatus.Pending, PointPaymentStatus.AtTerminal,
-            PointPaymentStatus.ActionRequired, PointPaymentStatus.Failed, PointPaymentStatus.ReconciliationRequired];
+            PointPaymentStatus.ActionRequired, PointPaymentStatus.ReconciliationRequired];
 
     public PointPayment GetForSale(Guid saleId) =>
         db.Query(Specification.Create<PointPayment>(x => x.SaleId == saleId))
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefault() ?? throw new NotFoundException("No Mercado Pago Point payment exists for this sale.");
+
+    public async Task<PointPayment> RefreshForSaleAsync(
+        Guid saleId,
+        Guid actorId,
+        CancellationToken cancellationToken)
+    {
+        var payment = GetForSale(saleId);
+        if (string.IsNullOrWhiteSpace(payment.OrderId) ||
+            payment.Status is PointPaymentStatus.Approved or PointPaymentStatus.Cancelled or
+                PointPaymentStatus.Failed or PointPaymentStatus.Expired)
+            return payment;
+
+        var order = await pointClient.GetOrderAsync(payment.OrderId, cancellationToken);
+        if (!string.Equals(order.Id, payment.OrderId, StringComparison.Ordinal) ||
+            !string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
+            throw new ConflictException("Mercado Pago returned a different Point order while refreshing its status.");
+
+        var previousStatus = payment.Status;
+        var previousStatusDetail = payment.StatusDetail;
+        var previousCompletedAt = payment.CompletedAt;
+        var cancellationRequested = string.Equals(
+            payment.StatusDetail, "cancellation_requested", StringComparison.Ordinal);
+        ApplyOrderState(payment, order);
+        if (cancellationRequested && payment.Status is PointPaymentStatus.Pending or
+                PointPaymentStatus.AtTerminal or PointPaymentStatus.ActionRequired)
+            payment.StatusDetail = "cancellation_requested";
+        if (payment.Status == PointPaymentStatus.Cancelled)
+            payment.CompletedAt ??= datetimeProvider.UtcNow;
+        if (payment.Status == previousStatus &&
+            string.Equals(payment.StatusDetail, previousStatusDetail, StringComparison.Ordinal) &&
+            payment.CompletedAt == previousCompletedAt)
+            return payment;
+
+        payment.UpdatedAt = datetimeProvider.UtcNow;
+        payment.UpdatedBy = actorId;
+        await db.SaveChangesAsync(cancellationToken);
+        return payment;
+    }
 
     public async Task<PointPayment> StartAsync(
         Guid saleId,
@@ -84,6 +122,48 @@ public sealed class PointPaymentService(
             await db.SaveChangesAsync(CancellationToken.None);
             throw;
         }
+    }
+
+    public async Task<PointPayment> CancelAsync(
+        Guid saleId,
+        Guid actorId,
+        string correlationId,
+        CancellationToken cancellationToken)
+    {
+        var payment = GetForSale(saleId);
+        if (payment.Status == PointPaymentStatus.Cancelled)
+            return payment;
+        if (payment.Status is PointPaymentStatus.Approved)
+            throw new ConflictException("An approved Point payment cannot be cancelled as a terminal order.");
+        if (payment.Status is PointPaymentStatus.Failed or PointPaymentStatus.Expired)
+            throw new ConflictException("The Point order is already finished and is not blocking the terminal.");
+        if (string.IsNullOrWhiteSpace(payment.OrderId))
+            throw new ConflictException("The Point order identifier is unavailable; manual reconciliation is required.");
+
+        var order = await pointClient.CancelOrderAsync(
+            payment.OrderId,
+            payment.Id.ToString(),
+            allowAtTerminal: true,
+            cancellationToken);
+        if (!string.Equals(order.Id, payment.OrderId, StringComparison.Ordinal) ||
+            !string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
+            throw new ConflictException("Mercado Pago returned a different Point order during cancellation.");
+
+        ApplyOrderState(payment, order);
+
+        if (payment.Status == PointPaymentStatus.Cancelled)
+            payment.CompletedAt = datetimeProvider.UtcNow;
+        else
+            payment.StatusDetail = "cancellation_requested";
+        payment.UpdatedAt = datetimeProvider.UtcNow;
+        payment.UpdatedBy = actorId;
+        audit.Add(payment.Status == PointPaymentStatus.Cancelled
+                ? "PointPaymentCancelled"
+                : "PointPaymentCancellationRequested",
+            "sales", nameof(PointPayment), payment.Id,
+            actorId, correlationId);
+        await db.SaveChangesAsync(cancellationToken);
+        return payment;
     }
 
     public async Task HandleWebhookAsync(
@@ -169,7 +249,7 @@ public sealed class PointPaymentService(
             "action_required" => PointPaymentStatus.ActionRequired,
             "processed" when order.StatusDetail is "accredited" or "processed" => PointPaymentStatus.Approved,
             "failed" => PointPaymentStatus.Failed,
-            "canceled" => PointPaymentStatus.Cancelled,
+            "canceled" or "cancelled" => PointPaymentStatus.Cancelled,
             "expired" => PointPaymentStatus.Expired,
             _ => payment.Status
         };

@@ -18,7 +18,11 @@ internal static class HttpResponseMapper
     public static ProductResponse Map(Product x) => new(x.Id, x.Sku, x.Name, x.Description, x.CategoryId, x.BrandId, x.UnitId, x.Barcode, x.Cost, x.BasePrice, x.MinimumStock, x.Active);
     public static NamedCatalogResponse Map(NamedCatalog x) => new(x.Id, x.Name, x.Description, x.Active);
     public static UnitResponse Map(Unit x) => new(x.Id, x.Name, x.Abbreviation, x.AllowsDecimals, x.Active);
-    public static CustomerResponse Map(Customer x) => new(x.Id, x.Name, x.TaxId, x.Phone, x.Email, x.Address, x.City, x.CreditLimit, x.CreditBlocked, x.Active);
+    public static CustomerResponse Map(Customer x) => new(
+        x.Id, x.Name, x.TaxId, x.Phone, x.Email, x.Address, x.City, x.CreditLimit, x.CreditBlocked, x.Active,
+        x.FiscalProfile?.LegalName, x.FiscalProfile?.FiscalZipCode, x.FiscalProfile?.TaxRegimeCode,
+        x.FiscalProfile?.DefaultCfdiUseCode, x.FiscalProfile?.InvoiceEmail,
+        x.FiscalProfile?.IsComplete() == true);
     public static SupplierResponse Map(Supplier x) => new(x.Id, x.Name, x.ContactName, x.Phone, x.Email, x.Address, x.Active);
     public static WarehouseResponse Map(Warehouse x) => new(x.Id, x.Name, x.Type.ToString(), x.Active);
     public static ProductAliasResponse Map(ProductAlias x) => new(x.Id, x.ProductId, x.Alias, x.Active);

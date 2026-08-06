@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { NEVER, of } from 'rxjs';
 import { CounterSalesApiAdapter } from './counter-sales-api.adapter';
 import { CounterSalesStore } from './counter-sales.store';
 
@@ -77,6 +77,47 @@ describe('CounterSalesStore inventory rules', () => {
     expect(store.cardPayment()?.status).toBe('Approved');
     vi.useRealTimers();
   });
+
+  it('cancels a pending Point order and preserves the sale draft', async () => {
+    vi.useFakeTimers();
+    const { store, api } = configureStoreWithApi();
+
+    api.getCardPayment.mockReturnValueOnce(NEVER);
+    store.saveCard(saleRequest, vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+
+    store.cancelCardPayment();
+
+    expect(api.cancelCardPayment).toHaveBeenCalledWith('sale-1', expect.anything());
+    expect(store.cardPayment()?.status).toBe('Cancelled');
+    expect(store.notice()).toContain('terminal está disponible');
+    vi.useRealTimers();
+  });
+
+  it('associates a fiscal recipient without changing the commercial sale customer', () => {
+    const { store, api } = configureStoreWithApi();
+    const confirmedPublicSale = {
+      ...draftSaleFixture,
+      status: 'Confirmed',
+      customerId: null,
+    };
+
+    store.loadBillingEligibility(confirmedPublicSale, () => undefined);
+    store.assignBillingRecipient(
+      confirmedPublicSale,
+      'customer-1',
+      'El comprador regresó para solicitar su factura.',
+      () => undefined,
+    );
+
+    expect(api.assignBillingRecipient).toHaveBeenCalledWith(
+      'sale-1',
+      expect.objectContaining({ customerId: 'customer-1', rowVersion: 0 }),
+      expect.anything(),
+    );
+    expect(confirmedPublicSale.customerId).toBeNull();
+    expect(store.billingEligibility()?.eligible).toBe(true);
+  });
 });
 
 const product = {
@@ -97,25 +138,13 @@ function configureStoreWithApi(): {
     loadWorkspace: ReturnType<typeof vi.fn>;
     searchCustomers: ReturnType<typeof vi.fn>;
     startCardPayment: ReturnType<typeof vi.fn>;
+    getCardPayment: ReturnType<typeof vi.fn>;
+    cancelCardPayment: ReturnType<typeof vi.fn>;
+    getBillingEligibility: ReturnType<typeof vi.fn>;
+    assignBillingRecipient: ReturnType<typeof vi.fn>;
   };
 } {
-  const draftSale = {
-    id: 'sale-1',
-    folio: 'CS-1',
-    saleDate: '2026-08-01T12:00:00Z',
-    customerId: null,
-    sourceWarehouseId: 'warehouse-1',
-    status: 'Draft',
-    paymentCondition: 'Cash',
-    subtotal: 45.5,
-    discountTotal: 0,
-    taxTotal: 0,
-    total: 45.5,
-    paidAmount: 0,
-    balance: 45.5,
-    notes: null,
-    items: [{ productId: product.id, quantity: 1, unitPrice: 45.5, discount: 0 }],
-  };
+  const draftSale = draftSaleFixture;
   const api = {
     loadWorkspace: vi.fn().mockReturnValue(
       of({
@@ -164,13 +193,55 @@ function configureStoreWithApi(): {
         completedAt: '2026-08-01T12:00:10Z',
       }),
     ),
+    cancelCardPayment: vi.fn().mockReturnValue(
+      of({
+        id: 'point-1', saleId: 'sale-1', orderId: 'ORD-1', amount: 45.5,
+        status: 'Cancelled', statusDetail: 'canceled_by_api', paymentId: null,
+        paymentMethodType: null, paymentMethodId: null, installments: null,
+        completedAt: '2026-08-01T12:00:05Z',
+      }),
+    ),
     getById: vi.fn().mockReturnValue(of({ ...draftSale, status: 'Confirmed', paidAmount: 45.5, balance: 0 })),
+    getBillingEligibility: vi.fn()
+      .mockReturnValueOnce(of({
+        eligible: false, reasonCode: 'billing_recipient_required', requiredAction: 'assign_billing_recipient',
+        saleId: 'sale-1', saleStatus: 'Confirmed', billingCustomerId: null,
+        fiscalCoverageStatus: 'Uncovered', electronicInvoiceStatus: null, rowVersion: 0,
+      }))
+      .mockReturnValue(of({
+        eligible: true, reasonCode: 'eligible', requiredAction: 'issue_invoice',
+        saleId: 'sale-1', saleStatus: 'Confirmed', billingCustomerId: 'customer-1',
+        fiscalCoverageStatus: 'ReservedForNominativeInvoice', electronicInvoiceStatus: null, rowVersion: 1,
+      })),
+    assignBillingRecipient: vi.fn().mockReturnValue(of({
+      id: 'recipient-1', saleId: 'sale-1', customerId: 'customer-1', status: 'Assigned',
+      reason: 'El comprador regresó para solicitar su factura.', assignedAt: '2026-08-01T12:10:00Z',
+      assignedBy: 'user-1', rowVersion: 0,
+    })),
   };
   TestBed.configureTestingModule({
     providers: [CounterSalesStore, { provide: CounterSalesApiAdapter, useValue: api }],
   });
   return { store: TestBed.inject(CounterSalesStore), api };
 }
+
+const draftSaleFixture = {
+  id: 'sale-1',
+  folio: 'CS-1',
+  saleDate: '2026-08-01T12:00:00Z',
+  customerId: null,
+  sourceWarehouseId: 'warehouse-1',
+  status: 'Draft',
+  paymentCondition: 'Cash',
+  subtotal: 45.5,
+  discountTotal: 0,
+  taxTotal: 0,
+  total: 45.5,
+  paidAmount: 0,
+  balance: 45.5,
+  notes: null,
+  items: [{ productId: product.id, quantity: 1, unitPrice: 45.5, discount: 0 }],
+};
 
 const saleRequest = {
   customerId: null,

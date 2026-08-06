@@ -65,6 +65,10 @@ Implementar creación, edición en borrador, confirmación, cancelación, consul
 - POST /api/counter-sales/{id}/cancel
 - GET /api/counter-sales/{id}/summary
 - GET /api/counter-sales/{id}/print
+- GET /api/v1/counter-sales/{id}/billing-eligibility
+- PUT /api/v1/counter-sales/{id}/billing-recipient
+- GET /api/v1/counter-sales/{id}/fiscal-status
+- PUT /api/v1/counter-sales/{id}/fiscal-coverage
 
 ## Reglas de negocio
 
@@ -75,6 +79,8 @@ Implementar creación, edición en borrador, confirmación, cancelación, consul
 - Venta mixta permite pago parcial y saldo a crédito.
 - Cancelación de venta confirmada genera movimiento inverso de inventario y revierte o marca pagos según política.
 - No editar venta confirmada; corregir con cancelación o nota posterior.
+- Asociar un receptor fiscal posterior no modifica `CounterSale.CustomerId`, inventario, pagos, cartera ni importes de la venta confirmada.
+- Una venta no puede quedar cubierta simultáneamente por CFDI global vigente y CFDI nominativo vigente.
 - El folio se genera desde configuración o servicio de folios.
 
 ## Validaciones mínimas
@@ -123,6 +129,7 @@ Implementar creación, edición en borrador, confirmación, cancelación, consul
 ## Seguridad y permisos
 
 - Permisos: sales.view, sales.create, sales.edit_draft, sales.confirm, sales.register_payment, sales.cancel.
+- Permisos fiscales: sales.view_billing_eligibility, sales.assign_billing_recipient, sales.replace_billing_recipient, sales.invoice, sales.cancel_invoice, sales.reconcile_invoice, sales.manage_global_invoice_replacement.
 - Auditar confirmación, cobro y cancelación.
 - Permiso especial para precio manual menor al precio mínimo si se configura.
 

@@ -32,6 +32,7 @@ public static class DependencyInjection
             .AddScoped<SalesService>()
             .AddScoped<PointPaymentService>()
             .AddScoped<ElectronicInvoiceService>()
+            .AddScoped<SaleBillingService>()
             .AddScoped<ReceivablesService>()
             .AddScoped<FolioNumberService>()
             .AddScoped<AuditService>()

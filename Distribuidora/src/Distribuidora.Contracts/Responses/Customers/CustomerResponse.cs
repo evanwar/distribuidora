@@ -10,4 +10,10 @@ public sealed record CustomerResponse(
     string? City,
     decimal CreditLimit,
     bool CreditBlocked,
-    bool Active);
+    bool Active,
+    string? FiscalLegalName,
+    string? FiscalZipCode,
+    string? TaxRegimeCode,
+    string? DefaultCfdiUseCode,
+    string? InvoiceEmail,
+    bool HasCompleteFiscalProfile);

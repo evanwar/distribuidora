@@ -29,6 +29,7 @@ import { UiAlertComponent } from '../../../../shared/ui/alert/ui-alert.component
 import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.component';
 import { UiIconButtonComponent } from '../../../../shared/ui/button/ui-icon-button.component';
 import { UiFeedbackComponent } from '../../../../shared/ui/feedback/ui-feedback.component';
+import { UiDateFieldComponent } from '../../../../shared/ui/date-field/ui-date-field.component';
 import { UiIconComponent } from '../../../../shared/ui/icon/ui-icon.component';
 import { UiPageHeaderComponent } from '../../../../shared/ui/page-header/ui-page-header.component';
 import { UiStatusChipComponent } from '../../../../shared/ui/status-chip/ui-status-chip.component';
@@ -58,6 +59,7 @@ type SaleAction = 'payment' | 'cancel' | null;
     UiButtonComponent,
     UiIconButtonComponent,
     UiFeedbackComponent,
+    UiDateFieldComponent,
     UiIconComponent,
     UiPageHeaderComponent,
     UiStatusChipComponent,
@@ -349,11 +351,27 @@ type SaleAction = 'payment' | 'cancel' | null;
             </form>
 
             @if (store.cardPayment()) {
-              <app-ui-alert
-                title="Terminal Mercado Pago"
-                [message]="pointPaymentMessage()"
-                [tone]="pointPaymentTone()"
-              />
+              <section class="terminal-status" aria-live="polite">
+                <app-ui-alert
+                  title="Terminal Mercado Pago"
+                  [message]="pointPaymentMessage()"
+                  [tone]="pointPaymentTone()"
+                />
+                @if (canCancelPointPayment()) {
+                  <app-ui-button
+                    label="Cancelar cobro en terminal"
+                    loadingLabel="Cancelando en terminal…"
+                    icon="close"
+                    variant="outlined"
+                    tone="danger"
+                    permission="sales.register_payment"
+                    [fullWidth]="true"
+                    [loading]="store.terminalCancelling()"
+                    ariaLabel="Cancelar el cobro pendiente y liberar la terminal"
+                    (pressed)="openTerminalCancellation()"
+                  />
+                }
+              </section>
             }
 
             <div class="checkout-actions">
@@ -414,14 +432,8 @@ type SaleAction = 'payment' | 'cancel' | null;
                 <mat-option value="cancelled">Cancelada</mat-option>
               </mat-select>
             </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Desde</mat-label>
-              <input matInput type="date" formControlName="from" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Hasta</mat-label>
-              <input matInput type="date" formControlName="to" />
-            </mat-form-field>
+            <app-ui-date-field label="Desde" formControlName="from" />
+            <app-ui-date-field label="Hasta" formControlName="to" />
             <app-ui-button
               label="Limpiar filtros"
               variant="text"
@@ -477,6 +489,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                   </div>
                   <div class="sale-row__actions">
                     <button
+                      class="sale-action sale-action--detail"
                       matButton
                       type="button"
                       [attr.aria-label]="'Ver detalle de ' + sale.folio"
@@ -486,18 +499,19 @@ type SaleAction = 'payment' | 'cancel' | null;
                       {{ expandedSaleId() === sale.id ? 'Ocultar detalle' : 'Ver detalle' }}
                     </button>
                     @if (isDraft(sale)) {
-                      <button matButton type="button" (click)="resume(sale)">Continuar</button>
-                      <button matButton="filled" type="button" (click)="store.confirmSale(sale)">
+                      <button class="sale-action sale-action--continue" matButton type="button" (click)="resume(sale)">Continuar</button>
+                      <button class="sale-action sale-action--confirm" matButton="filled" type="button" (click)="store.confirmSale(sale)">
                         Confirmar
                       </button>
                     } @else if (sale.balance > 0 && !isCancelled(sale)) {
-                      <button matButton type="button" (click)="openAction(sale, 'payment')">
+                      <button class="sale-action sale-action--continue" matButton type="button" (click)="openAction(sale, 'payment')">
                         Registrar pago
                       </button>
                     }
                     @if (!isCancelled(sale)) {
-                      @if (!isDraft(sale) && sale.customerId) {
+                      @if (!isDraft(sale)) {
                         <app-ui-button
+                          class="sale-action sale-action--invoice"
                           label="Factura"
                           icon="receipt"
                           variant="text"
@@ -506,11 +520,11 @@ type SaleAction = 'payment' | 'cancel' | null;
                           (pressed)="openInvoice(sale)"
                         />
                       }
-                      <button matButton type="button" (click)="store.print(sale, showTicket)">
+                      <button class="sale-action sale-action--receipt" matButton type="button" (click)="store.print(sale, showTicket)">
                         Comprobante
                       </button>
                       <button
-                        class="quiet-danger"
+                        class="quiet-danger sale-action sale-action--cancel"
                         matButton
                         type="button"
                         (click)="openAction(sale, 'cancel')"
@@ -611,6 +625,48 @@ type SaleAction = 'payment' | 'cancel' | null;
       }
     </ng-template>
 
+    <ng-template #terminalCancellationDialog>
+      <section class="modal terminal-cancel-modal" aria-labelledby="terminal-cancel-title">
+        <div class="modal__header">
+          <div>
+            <span>Terminal Mercado Pago</span>
+            <h2 id="terminal-cancel-title">¿Cancelar el cobro pendiente?</h2>
+          </div>
+          <app-ui-icon-button
+            icon="close"
+            ariaLabel="Mantener el cobro pendiente"
+            [disabled]="store.terminalCancelling()"
+            (pressed)="closeTerminalCancellation()"
+          />
+        </div>
+        <p class="terminal-cancel-modal__copy">
+          La orden se retirará de la terminal para permitir otro cobro. La venta seguirá como
+          borrador y los productos permanecerán en el carrito.
+        </p>
+        <app-ui-alert
+          title="Verifica la terminal antes de continuar"
+          message="Si el cliente ya presentó su tarjeta, espera el resultado para evitar un cobro duplicado."
+          tone="warning"
+        />
+        <div class="modal__actions terminal-cancel-modal__actions">
+          <app-ui-button
+            label="Mantener cobro"
+            variant="text"
+            tone="neutral"
+            [disabled]="store.terminalCancelling()"
+            (pressed)="closeTerminalCancellation()"
+          />
+          <app-ui-button
+            label="Sí, cancelar en terminal"
+            loadingLabel="Liberando terminal…"
+            tone="danger"
+            [loading]="store.terminalCancelling()"
+            (pressed)="confirmTerminalCancellation()"
+          />
+        </div>
+      </section>
+    </ng-template>
+
     <ng-template #invoiceDialog>
       @if (invoiceSale()) {
         <section class="modal invoice-modal" aria-labelledby="invoice-title">
@@ -621,6 +677,101 @@ type SaleAction = 'payment' | 'cancel' | null;
             </div>
             <app-ui-icon-button icon="close" ariaLabel="Cerrar factura" (pressed)="closeInvoice()" />
           </div>
+
+          @if (!invoiceSale()!.customerId) {
+            @if (store.billingEligibility(); as eligibility) {
+              @if (eligibility.requiredAction === 'assign_billing_recipient') {
+                <section class="fiscal-product-card" [formGroup]="billingRecipientForm">
+                  <div>
+                    <h3>Receptor fiscal</h3>
+                    <p>La venta original seguirá registrada como venta al público.</p>
+                  </div>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Buscar cliente</mat-label>
+                    <input matInput formControlName="search" autocomplete="off" (input)="searchBillingCustomers()" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Cliente que solicita la factura</mat-label>
+                    <mat-select formControlName="customerId" (selectionChange)="applyBillingCustomer()">
+                      @for (customer of store.customers(); track customer.id) {
+                        <mat-option [value]="customer.id">
+                          {{ customer.name }}{{ customer.taxId ? ' · ' + customer.taxId : '' }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  @if (selectedBillingCustomer() && !selectedBillingCustomer()!.hasCompleteFiscalProfile) {
+                    <app-ui-alert
+                      title="Perfil fiscal incompleto"
+                      message="Completa RFC, razón social, código postal y régimen en Clientes antes de asociarlo."
+                      tone="warning"
+                    />
+                  }
+                  <mat-form-field appearance="outline">
+                    <mat-label>Motivo de asociación</mat-label>
+                    <textarea matInput formControlName="reason" rows="2"></textarea>
+                  </mat-form-field>
+                  <app-ui-button
+                    label="Asociar receptor fiscal"
+                    icon="customers"
+                    permission="sales.assign_billing_recipient"
+                    [loading]="store.saving()"
+                    [disabled]="billingRecipientForm.invalid || !selectedBillingCustomer()?.hasCompleteFiscalProfile"
+                    (pressed)="assignBillingRecipient()"
+                  />
+                </section>
+              } @else if (!eligibility.eligible && eligibility.requiredAction !== 'view_invoice') {
+                <app-ui-alert
+                  title="La venta requiere revisión fiscal"
+                  [message]="billingEligibilityMessage(eligibility.reasonCode)"
+                  tone="warning"
+                />
+                @if (eligibility.requiredAction === 'reconcile_fiscal_coverage') {
+                  <section class="fiscal-product-card" [formGroup]="fiscalReconciliationForm">
+                    <div>
+                      <h3>Conciliación administrativa</h3>
+                      <p>Registra el resultado verificado contra la fuente fiscal externa.</p>
+                    </div>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Cobertura verificada</mat-label>
+                      <mat-select formControlName="coverageStatus">
+                        <mat-option value="Uncovered">No incluida en factura global</mat-option>
+                        <mat-option value="IncludedInOpenGlobalInvoice">Incluida en global abierta</mat-option>
+                        <mat-option value="IncludedInIssuedGlobalInvoice">Incluida en global emitida</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                    @if (fiscalReconciliationForm.controls.coverageStatus.value === 'IncludedInIssuedGlobalInvoice') {
+                      <mat-form-field appearance="outline">
+                        <mat-label>UUID de la factura global</mat-label>
+                        <input matInput formControlName="globalInvoiceFiscalUuid" autocomplete="off" />
+                      </mat-form-field>
+                    }
+                    <mat-form-field appearance="outline">
+                      <mat-label>Evidencia o motivo de conciliación</mat-label>
+                      <textarea matInput formControlName="reason" rows="3"></textarea>
+                    </mat-form-field>
+                    <app-ui-button
+                      label="Guardar conciliación"
+                      icon="audit"
+                      variant="outlined"
+                      permission="sales.manage_global_invoice_replacement"
+                      [loading]="store.saving()"
+                      [disabled]="fiscalReconciliationInvalid()"
+                      (pressed)="reconcileFiscalCoverage()"
+                    />
+                  </section>
+                }
+              } @else if (eligibility.billingCustomerId) {
+                <app-ui-alert
+                  title="Receptor fiscal asociado"
+                  [message]="'La factura se emitirá a ' + billingCustomerName(eligibility.billingCustomerId) + '. La venta original no se modificará.'"
+                  tone="info"
+                />
+              }
+            } @else {
+              <app-ui-alert title="Verificando cobertura fiscal" message="Consultando el estado autoritativo de la venta." tone="info" />
+            }
+          }
 
           @if (store.electronicInvoice(); as invoice) {
             <div class="invoice-result">
@@ -646,7 +797,6 @@ type SaleAction = 'payment' | 'cancel' | null;
                       <mat-option value="01">01 · Comprobante emitido con errores con relación</mat-option>
                       <mat-option value="02">02 · Comprobante emitido con errores sin relación</mat-option>
                       <mat-option value="03">03 · No se llevó a cabo la operación</mat-option>
-                      <mat-option value="04">04 · Operación nominativa relacionada en factura global</mat-option>
                     </mat-select>
                   </mat-form-field>
                   @if (invoiceCancelForm.controls.reasonCode.value === '01') {
@@ -686,7 +836,7 @@ type SaleAction = 'payment' | 'cancel' | null;
           <div class="modal__actions">
             <app-ui-button label="Cerrar" variant="text" tone="neutral" (pressed)="closeInvoice()" />
             @if (!store.electronicInvoice()) {
-              <app-ui-button label="Emitir factura" icon="receipt" permission="sales.invoice" [loading]="store.saving()" loadingLabel="Timbrando…" [disabled]="invoiceForm.invalid" (pressed)="issueInvoice()" />
+              <app-ui-button label="Emitir factura" icon="receipt" permission="sales.invoice" [loading]="store.saving()" loadingLabel="Timbrando…" [disabled]="invoiceIssueDisabled()" (pressed)="issueInvoice()" />
             }
           </div>
         </section>
@@ -746,12 +896,15 @@ export class CounterSalesPage implements OnInit {
   @ViewChild('actionDialog') private actionDialogTemplate!: TemplateRef<unknown>;
   @ViewChild('ticketDialog') private ticketDialogTemplate!: TemplateRef<unknown>;
   @ViewChild('invoiceDialog') private invoiceDialogTemplate!: TemplateRef<unknown>;
+  @ViewChild('terminalCancellationDialog')
+  private terminalCancellationDialogTemplate!: TemplateRef<unknown>;
 
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   private actionDialogRef: MatDialogRef<unknown> | null = null;
   private ticketDialogRef: MatDialogRef<unknown> | null = null;
   private invoiceDialogRef: MatDialogRef<unknown> | null = null;
+  private terminalCancellationDialogRef: MatDialogRef<unknown> | null = null;
   protected readonly store = inject(CounterSalesStore);
   protected readonly view = signal<'sale' | 'history'>('sale');
   protected readonly activeSale = signal<CounterSale | null>(null);
@@ -837,6 +990,22 @@ export class CounterSalesPage implements OnInit {
     satUnitCode: new FormControl('H87', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^[A-Z0-9]{2,3}$/)] }),
     taxObjectCode: new FormControl('02', { nonNullable: true, validators: [Validators.required] }),
     taxRate: new FormControl(0.16, { nonNullable: true, validators: [Validators.required, Validators.min(0), Validators.max(1)] }),
+  });
+  protected readonly billingRecipientForm = new FormGroup({
+    search: new FormControl('', { nonNullable: true }),
+    customerId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    reason: new FormControl('El comprador regresó para solicitar su factura.', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(10), Validators.maxLength(500)],
+    }),
+  });
+  protected readonly fiscalReconciliationForm = new FormGroup({
+    coverageStatus: new FormControl('Uncovered', { nonNullable: true, validators: [Validators.required] }),
+    globalInvoiceFiscalUuid: new FormControl('', { nonNullable: true }),
+    reason: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(10), Validators.maxLength(1000)],
+    }),
   });
   protected readonly invoiceCancelForm = new FormGroup({
     reasonCode: new FormControl('02', { nonNullable: true, validators: [Validators.required] }),
@@ -1023,7 +1192,10 @@ export class CounterSalesPage implements OnInit {
   }
 
   protected pointPaymentMessage(): string {
-    const status = this.store.cardPayment()?.status.toLocaleLowerCase('en');
+    const payment = this.store.cardPayment();
+    const status = payment?.status.toLocaleLowerCase('en');
+    if (payment?.statusDetail === 'cancellation_requested')
+      return 'Cancelación enviada. Esperando confirmación de Mercado Pago para liberar la terminal.';
     if (status === 'approved') return 'Pago aprobado. La venta quedó confirmada.';
     if (status === 'atterminal')
       return 'La terminal recibió el cobro. Solicita al cliente insertar, acercar o deslizar su tarjeta.';
@@ -1042,6 +1214,38 @@ export class CounterSalesPage implements OnInit {
     if (status === 'failed' || status === 'cancelled' || status === 'expired') return 'danger';
     if (status === 'actionrequired' || status === 'reconciliationrequired') return 'warning';
     return 'info';
+  }
+
+  protected canCancelPointPayment(): boolean {
+    const payment = this.store.cardPayment();
+    if (!payment?.orderId || payment.statusDetail === 'cancellation_requested') return false;
+    return ['pending', 'atterminal', 'actionrequired'].includes(
+      payment.status.toLocaleLowerCase('en'),
+    );
+  }
+
+  protected openTerminalCancellation(): void {
+    if (!this.canCancelPointPayment() || this.store.terminalCancelling()) return;
+    this.terminalCancellationDialogRef = this.dialog.open(
+      this.terminalCancellationDialogTemplate,
+      {
+        width: 'min(32rem, calc(100vw - 2rem))',
+        maxWidth: '100vw',
+        autoFocus: 'dialog',
+        restoreFocus: true,
+        disableClose: this.store.terminalCancelling(),
+      },
+    );
+  }
+
+  protected closeTerminalCancellation(): void {
+    if (this.store.terminalCancelling()) return;
+    this.terminalCancellationDialogRef?.close();
+    this.terminalCancellationDialogRef = null;
+  }
+
+  protected confirmTerminalCancellation(): void {
+    this.store.cancelCardPayment(() => this.closeTerminalCancellation());
   }
 
   protected resume(sale: CounterSale): void {
@@ -1094,11 +1298,21 @@ export class CounterSalesPage implements OnInit {
       taxObjectCode: '02', taxRate: 0.16,
     });
     this.invoiceCancelForm.reset({ reasonCode: '02', replacementUuid: '' });
+    this.billingRecipientForm.reset({
+      search: '', customerId: '', reason: 'El comprador regresó para solicitar su factura.',
+    });
+    this.fiscalReconciliationForm.reset({
+      coverageStatus: 'Uncovered', globalInvoiceFiscalUuid: '', reason: '',
+    });
+    this.applyFiscalCustomer(sale.customerId ?? null);
     this.invoiceDialogRef = this.dialog.open(this.invoiceDialogTemplate, {
       width: '48rem', maxWidth: 'calc(100vw - 1rem)', maxHeight: 'calc(100dvh - 1rem)',
       autoFocus: 'first-tabbable', restoreFocus: true, panelClass: 'invoice-dialog-panel',
     });
     this.store.loadElectronicInvoice(sale, () => undefined);
+    this.store.loadBillingEligibility(sale, (eligibility) => {
+      if (eligibility.billingCustomerId) this.applyFiscalCustomer(eligibility.billingCustomerId);
+    });
     this.invoiceDialogRef.afterClosed().subscribe(() => {
       this.invoiceSale.set(null); this.invoiceDialogRef = null; this.store.resetElectronicInvoice();
     });
@@ -1108,7 +1322,7 @@ export class CounterSalesPage implements OnInit {
 
   protected issueInvoice(): void {
     const sale = this.invoiceSale();
-    if (!sale || this.invoiceForm.invalid) { this.invoiceForm.markAllAsTouched(); return; }
+    if (!sale || this.invoiceIssueDisabled()) { this.invoiceForm.markAllAsTouched(); return; }
     const value = this.invoiceForm.getRawValue();
     const taxable = value.taxObjectCode === '02';
     const request: IssueElectronicInvoice = {
@@ -1125,6 +1339,92 @@ export class CounterSalesPage implements OnInit {
       })),
     };
     this.store.issueElectronicInvoice(sale, request, () => undefined);
+  }
+
+  protected selectedBillingCustomer(): PosCustomer | null {
+    const customerId = this.billingRecipientForm.controls.customerId.value;
+    return this.store.customers().find((customer) => customer.id === customerId) ?? null;
+  }
+
+  protected applyBillingCustomer(): void {
+    this.applyFiscalCustomer(this.billingRecipientForm.controls.customerId.value || null);
+  }
+
+  protected searchBillingCustomers(): void {
+    this.store.searchCustomers(this.billingRecipientForm.controls.search.value);
+  }
+
+  protected assignBillingRecipient(): void {
+    const sale = this.invoiceSale();
+    const customer = this.selectedBillingCustomer();
+    if (!sale || !customer?.hasCompleteFiscalProfile || this.billingRecipientForm.invalid) {
+      this.billingRecipientForm.markAllAsTouched();
+      return;
+    }
+    this.store.assignBillingRecipient(
+      sale,
+      customer.id,
+      this.billingRecipientForm.controls.reason.value,
+      () => this.applyFiscalCustomer(customer.id),
+    );
+  }
+
+  protected invoiceIssueDisabled(): boolean {
+    const sale = this.invoiceSale();
+    if (!sale || this.invoiceForm.invalid) return true;
+    return !sale.customerId && this.store.billingEligibility()?.eligible !== true;
+  }
+
+  protected fiscalReconciliationInvalid(): boolean {
+    const value = this.fiscalReconciliationForm.getRawValue();
+    if (this.fiscalReconciliationForm.invalid) return true;
+    return value.coverageStatus === 'IncludedInIssuedGlobalInvoice'
+      && !/^[0-9a-f-]{36}$/i.test(value.globalInvoiceFiscalUuid.trim());
+  }
+
+  protected reconcileFiscalCoverage(): void {
+    const sale = this.invoiceSale();
+    if (!sale || this.fiscalReconciliationInvalid()) {
+      this.fiscalReconciliationForm.markAllAsTouched();
+      return;
+    }
+    const value = this.fiscalReconciliationForm.getRawValue();
+    this.store.reconcileFiscalCoverage(sale, {
+      coverageStatus: value.coverageStatus,
+      reason: value.reason.trim(),
+      globalInvoiceFiscalUuid: value.globalInvoiceFiscalUuid.trim() || null,
+    }, () => undefined);
+  }
+
+  protected billingCustomerName(customerId: string): string {
+    return this.store.customers().find((customer) => customer.id === customerId)?.name
+      ?? 'el receptor seleccionado';
+  }
+
+  protected billingEligibilityMessage(reasonCode: string): string {
+    const messages: Record<string, string> = {
+      fiscal_coverage_unknown: 'La cobertura fiscal histórica no está conciliada. Un usuario fiscal debe revisarla antes de timbrar.',
+      fiscal_reconciliation_required: 'Existe un resultado fiscal pendiente de conciliación. No se puede reenviar automáticamente.',
+      included_in_open_global_invoice: 'La operación está incluida en una factura global abierta y debe excluirse primero.',
+      included_in_issued_global_invoice: 'La operación ya pertenece a una factura global emitida. Se requiere el procedimiento fiscal con motivo SAT 04.',
+      invoice_attempt_exists: 'Ya existe un intento de factura. Debe conciliarse antes de realizar otra emisión.',
+    };
+    return messages[reasonCode]
+      ?? 'El backend bloqueó la emisión hasta completar la revisión fiscal.';
+  }
+
+  private applyFiscalCustomer(customerId: string | null): void {
+    if (!customerId) return;
+    const customer = this.store.customers().find((item) => item.id === customerId);
+    if (!customer) return;
+    this.invoiceForm.patchValue({
+      taxId: customer.taxId,
+      legalName: customer.fiscalLegalName,
+      zipCode: customer.fiscalZipCode,
+      taxRegimeCode: customer.taxRegimeCode,
+      cfdiUseCode: customer.defaultCfdiUseCode || 'G03',
+      email: customer.invoiceEmail,
+    });
   }
 
   protected downloadInvoice(format: 'xml' | 'pdf'): void {
