@@ -23,6 +23,7 @@ backend_contract: ASP.NET Core Web API + PostgreSQL, paquete backend MVP Mostrad
 - No presenta overflow horizontal global.
 - Mantiene acciones y contenido críticos en móvil, tableta y escritorio.
 - Formularios, tablas y overlays se adaptan al viewport.
+- En cobros en efectivo, exige **Efectivo recibido**, bloquea importes insuficientes y muestra **Cambio a devolver** cuando existe excedente.
 
 ## E2E prioritarios
 
@@ -32,6 +33,7 @@ crear producto
 recepción de mercancía
 consulta de stock/kardex
 venta contado
+venta contado en efectivo con monto exacto, insuficiente y con cambio
 venta crédito
 registro de pago
 cancelación autorizada

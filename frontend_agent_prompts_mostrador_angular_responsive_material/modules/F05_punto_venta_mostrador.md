@@ -37,6 +37,7 @@ acciones: guardar borrador, cobrar/confirmar, cancelar
 - Aplicar precio/descuento solo con permiso y contrato.
 - Seleccionar contado, crédito o mixto.
 - Capturar uno o varios pagos si API lo permite.
+- En pago en efectivo, capturar el efectivo recibido y mostrar el cambio a devolver.
 - Confirmar venta.
 - Mostrar comprobante/resumen.
 - Imprimir.
@@ -50,6 +51,7 @@ productSearch
 cartLines
 selectedCustomer
 paymentDraft
+cashTendered
 quotePreview
 serverTotals
 submitting
@@ -57,6 +59,8 @@ lastConfirmedSale
 ```
 
 `quotePreview` es informativo. `serverTotals` y la venta confirmada son autoritativos.
+
+`cashTendered` es un dato de interacción local para calcular el cambio; no altera el total autoritativo ni se envía como importe pagado salvo que el contrato OpenAPI incluya expresamente ese campo.
 
 ## Atajos mínimos
 
@@ -81,6 +85,11 @@ No capturar atajos cuando el foco esté en un control donde puedan destruir entr
 - Nunca limpiar el carrito antes de recibir confirmación del backend.
 - Error de stock insuficiente identifica líneas afectadas y conserva el borrador.
 - Venta a crédito exige cliente.
+- Al seleccionar el método **Efectivo**, mostrar un `mat-form-field` monetario obligatorio con la etiqueta **Efectivo recibido**; ocultarlo y limpiar su valor al cambiar a un método que no sea efectivo.
+- El efectivo recibido debe aceptar únicamente importes finitos, positivos y con hasta dos decimales. Mientras sea menor al importe pendiente que cubre ese pago, mostrar **El efectivo recibido es menor al total a cobrar** y mantener deshabilitada la confirmación.
+- Calcular la vista previa con `cambio = max(efectivoRecibido - importeEfectivoACubrir, 0)` mediante estado derivado (`computed`), sin lógica aritmética en la plantilla y sin redondear nuevamente los totales autoritativos del backend.
+- Cuando el efectivo recibido supere el importe a cubrir, mostrar de forma inmediata y accesible **Cambio a devolver** con formato MXN y prominencia suficiente; si es igual, mostrar `$0.00` o no destacar el bloque de cambio, pero nunca presentar un valor negativo.
+- En pago mixto, `importeEfectivoACubrir` corresponde solo a la porción asignada a efectivo. El importe registrado como pago sigue siendo la deuda cubierta; el excedente entregado por el cliente es cambio, no un pago adicional.
 - Cancelación exige motivo y resumen del impacto.
 - El comprobante muestra folio y estado reales.
 
@@ -106,10 +115,16 @@ sales.print
 - confirmación bloquea doble click.
 - stock insuficiente conserva carrito.
 - permiso de descuento controla UI.
+- método efectivo exige efectivo recibido válido y bloquea confirmación cuando es insuficiente.
+- cambio se deriva correctamente para efectivo exacto, excedente y pago mixto, sin emitir valores negativos.
+- cambiar de efectivo a otro método limpia el efectivo recibido y elimina el bloque de cambio.
 
 ## E2E obligatorios
 
 - venta de contado completa.
+- venta de contado en efectivo: capturar monto exacto y confirmar con cambio `$0.00`.
+- venta de contado en efectivo con excedente: mostrar y conservar el cambio correcto hasta recibir la confirmación del backend.
+- efectivo insuficiente: mostrar validación y no invocar `SAL-06` ni la confirmación.
 - venta a crédito con cliente.
 - venta mixta si está habilitada.
 - cancelación autorizada.
@@ -123,6 +138,7 @@ sales.print
 - Tableta: carrito principal y resumen colapsable/drawer.
 - Móvil: una columna; buscador accesible, carrito en lista/cards y resumen/cobro mediante panel sticky o bottom sheet.
 - La acción **Cobrar** nunca desaparece y no queda tapada por el teclado virtual.
+- **Efectivo recibido**, su error y **Cambio a devolver** permanecen visibles, legibles y operables desde 320 px; el teclado numérico móvil no debe tapar la acción primaria ni el cambio.
 - Cliente, descuentos, métodos de pago y confirmación conservan funcionalidad completa en móvil.
 - Probar flujo táctil, teclado y escáner; no asumir que móvil carece de lector físico.
 - No usar scroll horizontal global para simular la estación de escritorio.

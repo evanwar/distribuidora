@@ -240,6 +240,24 @@ dd {
   gap: var(--space-3);
 }
 
+.cash-change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+}
+
+.cash-change span {
+  color: var(--app-text-muted);
+}
+
+.cash-change strong {
+  font-size: 1.35rem;
+}
+
 .terminal-status {
   display: grid;
   gap: var(--space-3);

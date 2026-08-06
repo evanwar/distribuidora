@@ -343,6 +343,28 @@ type SaleAction = 'payment' | 'cancel' | null;
                     <input matInput formControlName="reference" />
                   </mat-form-field>
                 }
+                @if (isCashSelected()) {
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Efectivo recibido</mat-label>
+                    <span matTextPrefix>$&nbsp;</span>
+                    <input
+                      matInput
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      inputmode="decimal"
+                      formControlName="cashTendered"
+                      (input)="setCashTendered($event)"
+                    />
+                    @if ((paymentForm.controls.cashTendered.dirty || paymentForm.controls.cashTendered.touched) && cashTendered() < total()) {
+                      <mat-error>El efectivo recibido es menor al total a cobrar.</mat-error>
+                    }
+                  </mat-form-field>
+                  <section class="cash-change" aria-live="polite">
+                    <span>Cambio a devolver</span>
+                    <strong class="money">{{ cashChange() | currency: 'MXN' }}</strong>
+                  </section>
+                }
               }
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>Notas</mat-label>
@@ -381,14 +403,14 @@ type SaleAction = 'payment' | 'cancel' | null;
                 [icon]="isPointCardSelected() ? 'point-of-sale' : 'check'"
                 [fullWidth]="true"
                 [loading]="store.saving()"
-                [disabled]="!canSave()"
+                [disabled]="!canSave(true)"
                 (pressed)="save(true)"
               />
               <app-ui-button
                 label="Guardar borrador"
                 variant="outlined"
                 [fullWidth]="true"
-                [disabled]="!canSave() || store.saving()"
+                [disabled]="!canSave(false) || store.saving()"
                 (pressed)="save(false)"
               />
             </div>
@@ -913,6 +935,7 @@ export class CounterSalesPage implements OnInit {
   protected readonly ticket = signal<CounterSale | null>(null);
   protected readonly invoiceSale = signal<CounterSale | null>(null);
   protected readonly tax = signal(0);
+  protected readonly cashTendered = signal(0);
   protected readonly saleForm = new FormGroup({
     sourceWarehouseId: new FormControl('', {
       nonNullable: true,
@@ -926,6 +949,10 @@ export class CounterSalesPage implements OnInit {
     tax: new FormControl(0, { nonNullable: true, validators: [Validators.min(0)] }),
     method: new FormControl('cash', { nonNullable: true }),
     reference: new FormControl('', { nonNullable: true }),
+    cashTendered: new FormControl(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0.01)],
+    }),
     notes: new FormControl('', { nonNullable: true }),
   });
   protected readonly actionForm = new FormGroup({
@@ -1017,6 +1044,9 @@ export class CounterSalesPage implements OnInit {
       storeNumber(this.store.subtotal()) - storeNumber(this.store.discount()) + this.tax(),
     ),
   );
+  protected readonly cashChange = computed(() =>
+    Math.max(0, this.cashTendered() - this.total()),
+  );
   protected readonly showTicket = (sale: CounterSale) => {
     this.ticket.set(sale);
     this.ticketDialogRef = this.dialog.open(this.ticketDialogTemplate, {
@@ -1051,6 +1081,14 @@ export class CounterSalesPage implements OnInit {
     this.saleForm.controls.sourceWarehouseId.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((warehouseId) => this.store.selectWarehouse(warehouseId));
+    this.paymentForm.controls.method.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (!this.isCashSelected()) {
+          this.paymentForm.controls.cashTendered.reset(0);
+          this.cashTendered.set(0);
+        }
+      });
     effect(() => {
       const warehouses = this.store.warehouses();
       if (!this.saleForm.controls.sourceWarehouseId.value && warehouses.length > 0) {
@@ -1131,6 +1169,20 @@ export class CounterSalesPage implements OnInit {
     this.tax.set(Math.max(0, this.numericValue(event)));
   }
 
+  protected setCashTendered(event: Event): void {
+    this.cashTendered.set(Math.max(0, this.numericValue(event)));
+  }
+
+  private resetCashPayment(): void {
+    this.paymentForm.controls.cashTendered.reset(0);
+    this.cashTendered.set(0);
+  }
+
+  private readonly completeConfirmedSale = (sale: CounterSale): void => {
+    this.resetCashPayment();
+    this.showTicket(sale);
+  };
+
   protected selectedMethodRequiresReference(): boolean {
     const code = this.paymentForm.controls.method.value;
     if (code.trim().toLowerCase() === 'card') return false;
@@ -1139,21 +1191,29 @@ export class CounterSalesPage implements OnInit {
     );
   }
 
-  protected canSave(): boolean {
+  protected canSave(confirm = false): boolean {
     const isCredit = this.saleForm.controls.paymentCondition.value === 1;
     const referenceMissing =
       this.selectedMethodRequiresReference() && !this.paymentForm.controls.reference.value.trim();
+    const cashInsufficient =
+      confirm && !isCredit && this.isCashSelected() && this.cashTendered() < this.total();
     return (
       this.saleForm.valid &&
       this.store.lines().length > 0 &&
       this.store.hasValidStock() &&
       (!isCredit || Boolean(this.saleForm.controls.customerId.value)) &&
-      (isCredit || !referenceMissing)
+      (isCredit || !referenceMissing) &&
+      !cashInsufficient
     );
   }
 
   protected save(confirm: boolean): void {
-    if (!this.canSave()) return;
+    if (!this.canSave(confirm)) {
+      if (confirm && this.isCashSelected()) {
+        this.paymentForm.controls.cashTendered.markAsTouched();
+      }
+      return;
+    }
     const condition = this.saleForm.controls.paymentCondition.value;
     const pointCard = confirm && condition !== 1 && this.isPointCardSelected();
     const paymentAmount = condition === 1 || pointCard ? 0 : this.total();
@@ -1181,14 +1241,21 @@ export class CounterSalesPage implements OnInit {
           : [],
     };
     if (pointCard) {
-      this.store.saveCard(request, this.showTicket);
+      this.store.saveCard(request, this.completeConfirmedSale);
       return;
     }
-    this.store.save(request, confirm, this.showTicket);
+    this.store.save(request, confirm, confirm ? this.completeConfirmedSale : this.showTicket);
   }
 
   protected isPointCardSelected(): boolean {
     return this.paymentForm.controls.method.value.trim().toLowerCase() === 'card';
+  }
+
+  protected isCashSelected(): boolean {
+    const code = this.paymentForm.controls.method.value.trim().toLowerCase();
+    const method = this.store.paymentMethods().find((item) => item.code === this.paymentForm.controls.method.value);
+    const name = method?.name.trim().toLocaleLowerCase('es-MX') ?? '';
+    return code === 'cash' || name === 'efectivo';
   }
 
   protected pointPaymentMessage(): string {
@@ -1255,7 +1322,8 @@ export class CounterSalesPage implements OnInit {
       customerId: sale.customerId ?? '',
       paymentCondition: paymentConditionValue(sale.paymentCondition),
     });
-    this.paymentForm.patchValue({ tax: sale.taxTotal, notes: sale.notes ?? '' });
+    this.paymentForm.patchValue({ tax: sale.taxTotal, cashTendered: 0, notes: sale.notes ?? '' });
+    this.cashTendered.set(0);
     this.customerSearchControl.setValue(sale.customerId ?? '');
     this.tax.set(sale.taxTotal);
     this.view.set('sale');

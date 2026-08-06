@@ -22,12 +22,17 @@ backend_contract: ASP.NET Core Web API + PostgreSQL, paquete backend MVP Mostrad
 3. Agregar y ajustar cantidad.
 4. Revisar total preliminar.
 5. Abrir cobro.
-6. Capturar pago completo.
-7. Confirmar una sola vez.
-8. Esperar respuesta.
-9. Mostrar folio, total y estado real.
-10. Ofrecer imprimir/nueva venta.
-11. Verificar stock actualizado en consulta posterior.
+6. Seleccionar el método de pago.
+7. Si es efectivo, capturar obligatoriamente el efectivo recibido.
+8. Si el efectivo recibido es menor al total a cobrar, mostrar validación y mantener bloqueada la confirmación.
+9. Si supera el total, mostrar antes de confirmar el **Cambio a devolver**, calculado como `efectivo recibido - total a cobrar`; nunca mostrar cambio negativo.
+10. Confirmar una sola vez. Registrar como pago el importe adeudado, no el excedente que se devuelve como cambio.
+11. Esperar respuesta.
+12. Mostrar folio, total y estado real, conservando visible el cambio a devolver durante el cierre del cobro.
+13. Ofrecer imprimir/nueva venta.
+14. Verificar stock actualizado en consulta posterior.
+
+En pago mixto, la suficiencia y el cambio del efectivo se calculan contra la porción de la deuda asignada a efectivo, después de considerar los otros medios de pago.
 
 ## Escenario crédito
 
@@ -46,6 +51,8 @@ backend_contract: ASP.NET Core Web API + PostgreSQL, paquete backend MVP Mostrad
 - 409 por concurrencia;
 - timeout sin certeza de resultado;
 - doble click;
+- efectivo menor al importe que debe cubrir;
+- cambio de método efectivo a no efectivo con un monto previamente capturado;
 - sesión expirada;
 - permiso revocado.
 
