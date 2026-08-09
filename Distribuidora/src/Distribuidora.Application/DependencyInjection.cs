@@ -47,5 +47,6 @@ public static class DependencyInjection
             .AddScoped<AuditEntryService>()
             .AddScoped<LogQueryService>()
             .AddScoped<ReportService>()
-            .AddScoped<AdministrationService>();
+            .AddScoped<AdministrationService>()
+            .AddScoped<PaymentTerminalService>();
 }

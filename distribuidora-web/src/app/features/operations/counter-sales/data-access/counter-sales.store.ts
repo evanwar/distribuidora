@@ -23,6 +23,7 @@ import {
   CreateCounterSale,
   PosCustomer,
   PosPaymentMethod,
+  PosPaymentTerminal,
   PointCardPayment,
   ElectronicInvoice,
   IssueElectronicInvoice,
@@ -48,6 +49,7 @@ export class CounterSalesStore {
   private readonly balancesState = signal<readonly PosStockBalance[]>([]);
   private readonly activeWarehouseIdState = signal('');
   private readonly paymentMethodsState = signal<readonly PosPaymentMethod[]>([]);
+  private readonly paymentTerminalsState = signal<readonly PosPaymentTerminal[]>([]);
   private readonly salesState = signal<readonly CounterSale[]>([]);
   private readonly linesState = signal<readonly SaleLine[]>([]);
   private readonly queryState = signal('');
@@ -77,6 +79,7 @@ export class CounterSalesStore {
   });
   readonly warehouses = this.warehousesState.asReadonly();
   readonly paymentMethods = this.paymentMethodsState.asReadonly();
+  readonly paymentTerminals = this.paymentTerminalsState.asReadonly();
   readonly sales = this.salesState.asReadonly();
   readonly lines = this.linesState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
@@ -136,6 +139,7 @@ export class CounterSalesStore {
           this.warehousesState.set(data.warehouses);
           this.balancesState.set(data.balances);
           this.paymentMethodsState.set(data.paymentMethods);
+          this.paymentTerminalsState.set(data.paymentTerminals);
           this.salesState.set(data.sales);
           this.reconcileLinesWithStock();
         },
@@ -285,7 +289,11 @@ export class CounterSalesStore {
     this.cardPaymentState.set(null);
   }
 
-  saveCard(request: CreateCounterSale, completed: (sale: CounterSale) => void): void {
+  saveCard(
+    request: CreateCounterSale,
+    paymentTerminalId: string,
+    completed: (sale: CounterSale) => void,
+  ): void {
     this.savingState.set(true);
     this.errorState.set(null);
     this.cardPaymentState.set(null);
@@ -296,7 +304,12 @@ export class CounterSalesStore {
     saveRequest
       .pipe(
         switchMap((sale) =>
-          this.api.startCardPayment(sale.id, sale.balance, this.requestContext()).pipe(
+          this.api.startCardPayment(
+            sale.id,
+            sale.balance,
+            paymentTerminalId,
+            this.requestContext(),
+          ).pipe(
             tap((payment) => {
               this.cardPaymentState.set(payment);
               this.noticeState.set('Cobro enviado a la terminal. Esperando la tarjeta del cliente.');

@@ -13,6 +13,7 @@ import {
 import { CustomersStore } from '../data-access/customers.store';
 import { CustomerVm } from '../models/customer.models';
 import { CustomerFormComponent } from '../ui/customer-form/customer-form.component';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-customers-page',
@@ -31,21 +32,21 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
   template: `
     <div class="page">
       <app-ui-page-header
-        eyebrow="F02 · Catálogos"
-        title="Clientes"
-        subtitle="Información comercial y condiciones de crédito de cada cliente."
+        [eyebrow]="text('F02 · Catálogos')"
+        [title]="text('Clientes')"
+        [subtitle]="text('Información comercial y condiciones de crédito de cada cliente.')"
       >
-        <app-ui-button label="Nuevo cliente" icon="add" (pressed)="openNew()" />
+        <app-ui-button [label]="text('Nuevo cliente')" icon="add" (pressed)="openNew()" />
       </app-ui-page-header>
 
       @if (store.error()) {
         <app-ui-alert
-          title="La operación no se completó"
+          [title]="text('La operación no se completó')"
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
           [operationId]="store.error()!.operationId"
-          actionLabel="Recargar"
+          [actionLabel]="text('Recargar')"
           (action)="store.load()"
         />
       }
@@ -53,7 +54,7 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
       @if (editorOpen()) {
         <mat-card appearance="outlined">
           <mat-card-header>
-            <mat-card-title>{{ selected() ? 'Editar cliente' : 'Nuevo cliente' }}</mat-card-title>
+            <mat-card-title>{{ text(selected() ? 'Editar cliente' : 'Nuevo cliente') }}</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <app-customer-form
@@ -68,32 +69,32 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
 
       <section class="list-controls">
         <mat-form-field appearance="outline">
-          <mat-label>Buscar clientes</mat-label>
+          <mat-label>{{ text('Buscar clientes') }}</mat-label>
           <input
             matInput
             [value]="store.query()"
-            placeholder="Nombre, RFC, teléfono o correo"
+            [placeholder]="text('Nombre, RFC, teléfono o correo')"
             (input)="store.search(searchValue($event))"
           />
         </mat-form-field>
-        <span>{{ store.customers().length }} resultados</span>
+        <span>{{ store.customers().length }} {{ text('resultados') }}</span>
       </section>
 
       @if (store.loading()) {
         <section class="surface">
           <app-ui-feedback
             kind="loading"
-            title="Cargando clientes"
-            message="Consultando el catálogo."
+            [title]="text('Cargando clientes')"
+            [message]="text('Consultando el catálogo.')"
           />
         </section>
       } @else if (store.customers().length === 0) {
         <section class="surface">
           <app-ui-feedback
             kind="empty"
-            title="No hay clientes para mostrar"
-            message="Cambia la búsqueda o registra el primer cliente."
-            actionLabel="Nuevo cliente"
+            [title]="text('No hay clientes para mostrar')"
+            [message]="text('Cambia la búsqueda o registra el primer cliente.')"
+            [actionLabel]="text('Nuevo cliente')"
             (action)="openNew()"
           />
         </section>
@@ -132,22 +133,23 @@ import { CustomerFormComponent } from '../ui/customer-form/customer-form.compone
 })
 export class CustomersPage implements OnInit {
   protected readonly store = inject(CustomersStore);
+  protected readonly language = inject(LanguageService);
   protected readonly editorOpen = signal(false);
   protected readonly selected = signal<CustomerVm | null>(null);
   protected readonly columns: readonly DataColumn<CustomerVm>[] = [
-    { key: 'name', label: 'Cliente', priority: 'primary' },
+    { key: 'name', label: this.text('Cliente'), priority: 'primary' },
     { key: 'taxId', label: 'RFC' },
-    { key: 'phone', label: 'Teléfono' },
-    { key: 'email', label: 'Correo' },
+    { key: 'phone', label: this.text('Teléfono') },
+    { key: 'email', label: this.text('Correo') },
     {
       key: 'creditLimit',
-      label: 'Límite',
+      label: this.text('Límite'),
       format: (value) =>
-        new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+        new Intl.NumberFormat(this.language.locale(), { style: 'currency', currency: 'MXN' }).format(
           Number(value ?? 0),
         ),
     },
-    { key: 'active', label: 'Estado', format: (value) => (value ? 'Activo' : 'Inactivo') },
+    { key: 'active', label: this.text('Estado'), format: (value) => this.text(value ? 'Activo' : 'Inactivo') },
   ];
   protected readonly closeEditor = (): void => {
     this.editorOpen.set(false);
@@ -156,6 +158,10 @@ export class CustomersPage implements OnInit {
 
   ngOnInit(): void {
     this.store.load();
+  }
+
+  protected text(value: string): string {
+    return this.language.text(value);
   }
 
   protected openNew(): void {

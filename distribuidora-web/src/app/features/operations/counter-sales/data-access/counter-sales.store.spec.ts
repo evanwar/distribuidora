@@ -69,10 +69,15 @@ describe('CounterSalesStore inventory rules', () => {
     const { store, api } = configureStoreWithApi();
     const completed = vi.fn();
 
-    store.saveCard(saleRequest, completed);
+    store.saveCard(saleRequest, 'terminal-1', completed);
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(api.startCardPayment).toHaveBeenCalledWith('sale-1', 45.5, expect.anything());
+    expect(api.startCardPayment).toHaveBeenCalledWith(
+      'sale-1',
+      45.5,
+      'terminal-1',
+      expect.anything(),
+    );
     expect(completed).toHaveBeenCalledWith(expect.objectContaining({ id: 'sale-1', status: 'Confirmed' }));
     expect(store.cardPayment()?.status).toBe('Approved');
     vi.useRealTimers();
@@ -83,7 +88,7 @@ describe('CounterSalesStore inventory rules', () => {
     const { store, api } = configureStoreWithApi();
 
     api.getCardPayment.mockReturnValueOnce(NEVER);
-    store.saveCard(saleRequest, vi.fn());
+    store.saveCard(saleRequest, 'terminal-1', vi.fn());
     await vi.advanceTimersByTimeAsync(0);
 
     store.cancelCardPayment();
@@ -155,6 +160,9 @@ function configureStoreWithApi(): {
           { id: 'warehouse-2', name: 'Secundario' },
         ],
         paymentMethods: [],
+        paymentTerminals: [
+          { id: 'terminal-1', name: 'Mostrador principal', externalId: 'PAX_MAIN', isDefault: true },
+        ],
         balances: [
           {
             warehouseId: 'warehouse-1',
@@ -180,14 +188,14 @@ function configureStoreWithApi(): {
     update: vi.fn().mockReturnValue(of(draftSale)),
     startCardPayment: vi.fn().mockReturnValue(
       of({
-        id: 'point-1', saleId: 'sale-1', orderId: 'ORD-1', amount: 45.5,
+        id: 'point-1', saleId: 'sale-1', paymentTerminalId: 'terminal-1', orderId: 'ORD-1', amount: 45.5,
         status: 'Pending', statusDetail: 'created', paymentId: null,
         paymentMethodType: null, paymentMethodId: null, installments: null, completedAt: null,
       }),
     ),
     getCardPayment: vi.fn().mockReturnValue(
       of({
-        id: 'point-1', saleId: 'sale-1', orderId: 'ORD-1', amount: 45.5,
+        id: 'point-1', saleId: 'sale-1', paymentTerminalId: 'terminal-1', orderId: 'ORD-1', amount: 45.5,
         status: 'Approved', statusDetail: 'accredited', paymentId: 'PAY-1',
         paymentMethodType: 'credit_card', paymentMethodId: 'visa', installments: 1,
         completedAt: '2026-08-01T12:00:10Z',
@@ -195,7 +203,7 @@ function configureStoreWithApi(): {
     ),
     cancelCardPayment: vi.fn().mockReturnValue(
       of({
-        id: 'point-1', saleId: 'sale-1', orderId: 'ORD-1', amount: 45.5,
+        id: 'point-1', saleId: 'sale-1', paymentTerminalId: 'terminal-1', orderId: 'ORD-1', amount: 45.5,
         status: 'Cancelled', statusDetail: 'canceled_by_api', paymentId: null,
         paymentMethodType: null, paymentMethodId: null, installments: null,
         completedAt: '2026-08-01T12:00:05Z',

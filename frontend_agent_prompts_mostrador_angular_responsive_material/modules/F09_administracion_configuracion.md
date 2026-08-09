@@ -90,7 +90,7 @@ settings.taxes.manage
 
 ## Endpoints obligatorios y cobertura
 
-Integrar las 16 operaciones `SET-01..SET-02`, `FOL-01..FOL-03`, `PMT-01..PMT-03`, `PLC-01..PLC-04` y `TRC-01..TRC-04` de `../06_MATRIZ_ENDPOINTS_FRONTEND.md`.
+Integrar las 23 operaciones `SET-01..SET-02`, `FOL-01..FOL-03`, `PMT-01..PMT-03`, `PTR-01..PTR-07`, `PLC-01..PLC-04` y `TRC-01..TRC-04` de `../06_MATRIZ_ENDPOINTS_FRONTEND.md`.
 
 Solo mostrar settings y políticas presentes en DTO/OpenAPI. Impuestos, moneda o almacén predeterminado no se inventan como almacenamiento local si el contrato no los entrega.
 
@@ -98,6 +98,7 @@ Solo mostrar settings y políticas presentes en DTO/OpenAPI. Impuestos, moneda o
 
 - `settings-list/editor`, `folio-sequence-list/editor`;
 - `payment-method-list/editor`;
+- `payment-terminal-list/editor` con alta, edición, baja lógica, reactivación y terminal predeterminada;
 - `credit-policy-editor`, `inventory-policy-editor`;
 - `trace-search`, `trace-timeline`, `trace-detail`;
 - `EntityListShell`, `EntityEditorShell`, `ui-status-chip`, `ui-alert`, `ui-action-bar`, `ui-date-time` y botones configurables.

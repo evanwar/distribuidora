@@ -7,6 +7,7 @@ import {
   CreateCounterSale,
   PosCustomer,
   PosPaymentMethod,
+  PosPaymentTerminal,
   PointCardPayment,
   ElectronicInvoice,
   IssueElectronicInvoice,
@@ -27,6 +28,7 @@ export class CounterSalesApiAdapter {
     products: readonly PosProduct[];
     warehouses: readonly PosWarehouse[];
     paymentMethods: readonly PosPaymentMethod[];
+    paymentTerminals: readonly PosPaymentTerminal[];
     balances: readonly PosStockBalance[];
     sales: readonly CounterSale[];
   }> {
@@ -36,9 +38,10 @@ export class CounterSalesApiAdapter {
       warehouses: this.api.get<unknown>('/api/v1/warehouses', { context }),
       balances: this.api.get<unknown>('/api/v1/inventory/balances', { context }),
       paymentMethods: this.api.get<unknown>('/api/v1/admin/payment-methods', { context }),
+      paymentTerminals: this.api.get<unknown>('/api/v1/admin/payment-terminals/available', { context }),
       sales: this.api.get<unknown>('/api/v1/counter-sales', { context }),
     }).pipe(
-      map(({ customers, products, warehouses, balances, paymentMethods, sales }) => ({
+      map(({ customers, products, warehouses, balances, paymentMethods, paymentTerminals, sales }) => ({
         customers: asRecords(customers).map(toCustomer),
         products: asRecords(products)
           .filter((item) => item['active'] !== false)
@@ -65,6 +68,12 @@ export class CounterSalesApiAdapter {
             name: text(item, 'name'),
             requiresReference: bool(item, 'requiresReference'),
           })),
+        paymentTerminals: asRecords(paymentTerminals).map((item) => ({
+          id: text(item, 'id'),
+          name: text(item, 'name'),
+          externalId: text(item, 'externalId'),
+          isDefault: bool(item, 'isDefault'),
+        })),
         sales: asRecords(sales).map(toSale),
       })),
     );
@@ -108,11 +117,16 @@ export class CounterSalesApiAdapter {
       .pipe(map(toSale));
   }
 
-  startCardPayment(id: string, amount: number, context?: HttpContext): Observable<PointCardPayment> {
+  startCardPayment(
+    id: string,
+    amount: number,
+    paymentTerminalId: string,
+    context?: HttpContext,
+  ): Observable<PointCardPayment> {
     return this.api
-      .post<unknown, { amount: number }>(
+      .post<unknown, { amount: number; paymentTerminalId: string }>(
         `/api/v1/counter-sales/${encodeURIComponent(id)}/card-payment`,
-        { amount },
+        { amount, paymentTerminalId },
         { context },
       )
       .pipe(map(toPointCardPayment));
@@ -318,6 +332,7 @@ function toPointCardPayment(value: unknown): PointCardPayment {
   return {
     id: text(item, 'id'),
     saleId: text(item, 'saleId'),
+    paymentTerminalId: text(item, 'paymentTerminalId') || null,
     orderId: text(item, 'orderId') || null,
     amount: number(item, 'amount'),
     status: text(item, 'status', 'Pending'),

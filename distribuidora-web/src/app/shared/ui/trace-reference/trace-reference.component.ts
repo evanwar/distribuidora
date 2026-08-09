@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { UiButtonComponent } from '../button/ui-button.component';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-trace-reference',
@@ -7,24 +8,24 @@ import { UiButtonComponent } from '../button/ui-button.component';
   template: `
     <div class="trace-reference">
       <div class="trace-reference__ids">
-        <span>Referencia de soporte</span>
+        <span>{{ language.language() === 'en' ? 'Support reference' : 'Referencia de soporte' }}</span>
         <code>{{ correlationId() }}</code>
         @if (operationId()) {
           <small
-            >Operación: <code>{{ operationId() }}</code></small
+            >{{ language.language() === 'en' ? 'Operation:' : 'Operación:' }} <code>{{ operationId() }}</code></small
           >
         }
       </div>
       <div class="trace-reference__actions">
         <app-ui-button
-          [label]="copied() ? 'Copiada' : 'Copiar referencia'"
+          [label]="language.language() === 'en' ? (copied() ? 'Copied' : 'Copy reference') : (copied() ? 'Copiada' : 'Copiar referencia')"
           variant="text"
           size="compact"
           (pressed)="copy()"
         />
         @if (canOpenTrace()) {
           <app-ui-button
-            label="Ver trazabilidad"
+            [label]="language.language() === 'en' ? 'View trace' : 'Ver trazabilidad'"
             variant="text"
             size="compact"
             (pressed)="openTrace.emit()"
@@ -80,6 +81,7 @@ import { UiButtonComponent } from '../button/ui-button.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TraceReferenceComponent {
+  protected readonly language = inject(LanguageService);
   readonly correlationId = input.required<string>();
   readonly operationId = input<string>();
   readonly canOpenTrace = input(false);
@@ -94,9 +96,9 @@ export class TraceReferenceComponent {
     try {
       await navigator.clipboard.writeText(reference);
       this.copied.set(true);
-      this.announcement.set('Referencia copiada al portapapeles.');
+      this.announcement.set(this.language.language() === 'en' ? 'Reference copied to clipboard.' : 'Referencia copiada al portapapeles.');
     } catch {
-      this.announcement.set('No fue posible copiar la referencia. Selecciónala manualmente.');
+      this.announcement.set(this.language.text('No fue posible copiar la referencia. Selecciónala manualmente.'));
     }
   }
 }

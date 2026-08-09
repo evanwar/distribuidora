@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { UiIconComponent, UiIconName } from '../../../shared/ui/icon/ui-icon.component';
 import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-header.component';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-masters-hub-page',
@@ -10,9 +11,9 @@ import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-he
   template: `
     <div class="page">
       <app-ui-page-header
-        eyebrow="F02 · Catálogos"
-        title="Otros Catálogos"
-        subtitle="Clasificación y configuración reutilizada por productos e inventario."
+        [eyebrow]="text('F02 · Catálogos')"
+        [title]="text('Otros Catálogos')"
+        [subtitle]="text('Clasificación y configuración reutilizada por productos e inventario.')"
       />
       <section class="hub">
         @for (item of items; track item.path) {
@@ -21,8 +22,8 @@ import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-he
               <mat-card-content>
                 <span><app-ui-icon [name]="item.icon" /></span>
                 <div>
-                  <h2>{{ item.label }}</h2>
-                  <p>{{ item.description }}</p>
+                  <h2>{{ text(item.label) }}</h2>
+                  <p>{{ text(item.description) }}</p>
                 </div>
                 <app-ui-icon name="open" />
               </mat-card-content>
@@ -45,6 +46,7 @@ import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-he
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MastersHubPage {
+  private readonly language = inject(LanguageService);
   protected readonly items: readonly {
     label: string;
     path: string;
@@ -57,4 +59,8 @@ export class MastersHubPage {
     { label: 'Almacenes', path: 'warehouses', icon: 'warehouse', description: 'Almacenes centrales.' },
     { label: 'Aliases de producto', path: 'product-aliases', icon: 'alias', description: 'Códigos alternos.' },
   ];
+
+  protected text(value: string): string {
+    return this.language.text(value);
+  }
 }

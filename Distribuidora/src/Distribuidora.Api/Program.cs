@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Serialization;
 using Distribuidora.Api.Auth;
+using Distribuidora.Api;
 using Distribuidora.Api.Common;
 using Distribuidora.Api.Middleware;
 using Distribuidora.Application;
@@ -10,6 +12,8 @@ using Distribuidora.Infrastructure;
 using Distribuidora.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Threading.RateLimiting;
@@ -20,6 +24,15 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddLocalization();
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[] { new CultureInfo("es-MX"), new CultureInfo("en-US") };
+    options.DefaultRequestCulture = new RequestCulture("es-MX");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+    options.ApplyCurrentCultureToResponseHeaders = true;
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<FluentValidationActionFilter>();
@@ -44,12 +57,13 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options 
 {
     options.InvalidModelStateResponseFactory = context =>
     {
+        var messages = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizer<ApiMessages>>();
         var errors = context.ModelState.Values.SelectMany(x => x.Errors)
-            .Select(x => string.IsNullOrWhiteSpace(x.ErrorMessage) ? "Invalid request." : x.ErrorMessage)
+            .Select(x => string.IsNullOrWhiteSpace(x.ErrorMessage) ? messages["InvalidRequest"].Value : x.ErrorMessage)
             .ToArray();
         return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(
             Distribuidora.Contracts.Common.ApiResponse<object>.Fail(
-                "Request validation failed.", errors, context.HttpContext.TraceIdentifier));
+                messages["ValidationFailed"], errors, context.HttpContext.TraceIdentifier));
     };
 });
 builder.Services.AddEndpointsApiExplorer();
@@ -111,21 +125,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     {
         OnChallenge = async context =>
         {
+            var messages = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizer<ApiMessages>>();
+            var message = messages["AuthenticationRequired"].Value;
             context.HandleResponse();
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(
                 Distribuidora.Contracts.Common.ApiResponse<object>.Fail(
-                    "Authentication is required.", ["Authentication is required."], context.HttpContext.TraceIdentifier));
+                    message, [message], context.HttpContext.TraceIdentifier));
         },
         OnForbidden = async context =>
         {
+            var messages = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizer<ApiMessages>>();
+            var message = messages["Forbidden"].Value;
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(
                 Distribuidora.Contracts.Common.ApiResponse<object>.Fail(
-                    "The current user does not have the required permission.",
-                    ["The current user does not have the required permission."],
+                    message,
+                    [message],
                     context.HttpContext.TraceIdentifier));
         }
     };
@@ -137,6 +155,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+app.UseRequestLocalization();
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();

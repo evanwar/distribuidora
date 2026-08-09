@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, forwardRef, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, forwardRef, inject, Input, Output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor, FormControl, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { DateAdapter, MAT_DATE_FORMATS, NativeDateAdapter } from '@angular/material/core';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DISPLAY_DATE_PATTERN = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
@@ -68,17 +69,17 @@ export class UiDateAdapter extends NativeDateAdapter {
         autocomplete="off"
         (blur)="markTouched()"
       />
-      <mat-datepicker-toggle matIconSuffix [for]="picker" [attr.aria-label]="'Abrir calendario para ' + label" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker" [attr.aria-label]="(language.language() === 'en' ? 'Open calendar for ' : 'Abrir calendario para ') + label" />
       <mat-datepicker #picker [startView]="startView" (closed)="markTouched()" />
       @if (hint && !dateControl.hasError('matDatepickerParse')) {
         <mat-hint>{{ hint }}</mat-hint>
       }
       @if (dateControl.hasError('matDatepickerParse')) {
-        <mat-error>Escribe una fecha válida en formato DD/MM/AAAA.</mat-error>
+        <mat-error>{{ language.language() === 'en' ? 'Enter a valid date in MM/DD/YYYY format.' : 'Escribe una fecha válida en formato DD/MM/AAAA.' }}</mat-error>
       } @else if (dateControl.hasError('matDatepickerMin')) {
-        <mat-error>La fecha es anterior al mínimo permitido.</mat-error>
+        <mat-error>{{ language.language() === 'en' ? 'The date is earlier than the allowed minimum.' : 'La fecha es anterior al mínimo permitido.' }}</mat-error>
       } @else if (dateControl.hasError('matDatepickerMax')) {
-        <mat-error>La fecha es posterior al máximo permitido.</mat-error>
+        <mat-error>{{ language.language() === 'en' ? 'The date is later than the allowed maximum.' : 'La fecha es posterior al máximo permitido.' }}</mat-error>
       }
     </mat-form-field>
   `,
@@ -88,6 +89,7 @@ export class UiDateAdapter extends NativeDateAdapter {
   `,
 })
 export class UiDateFieldComponent implements ControlValueAccessor {
+  protected readonly language = inject(LanguageService);
   @Input({ required: true }) label = '';
   @Input() hint = '';
   @Input() placeholder = 'DD/MM/AAAA';

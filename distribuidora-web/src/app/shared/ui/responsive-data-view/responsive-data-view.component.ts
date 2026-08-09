@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { UiIconButtonComponent } from '../button/ui-icon-button.component';
 import { UiStatusChipComponent } from '../status-chip/ui-status-chip.component';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 export interface DataColumn<T extends object> {
   key: keyof T & string;
@@ -23,9 +24,9 @@ export interface DataColumn<T extends object> {
           </ng-container>
         }
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Acciones</span></th>
+          <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">{{ text('Acciones') }}</span></th>
           <td mat-cell *matCellDef="let row">
-            <app-ui-icon-button icon="edit" ariaLabel="Editar registro" (pressed)="edit.emit(row)" />
+            <app-ui-icon-button icon="edit" [ariaLabel]="text('Editar registro')" (pressed)="edit.emit(row)" />
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -40,7 +41,7 @@ export interface DataColumn<T extends object> {
             <strong>{{ primaryValue(row) }}</strong>
             @if (activeKey()) {
               <app-ui-status-chip
-                [label]="row[activeKey()!] ? 'Activo' : 'Inactivo'"
+                [label]="text(row[activeKey()!] ? 'Activo' : 'Inactivo')"
                 [tone]="row[activeKey()!] ? 'success' : 'neutral'"
               />
             }
@@ -53,7 +54,7 @@ export interface DataColumn<T extends object> {
               </div>
             }
           </dl>
-          <app-ui-icon-button icon="edit" ariaLabel="Editar registro" (pressed)="edit.emit(row)" />
+          <app-ui-icon-button icon="edit" [ariaLabel]="text('Editar registro')" (pressed)="edit.emit(row)" />
         </article>
       }
     </div>
@@ -88,6 +89,7 @@ export interface DataColumn<T extends object> {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ResponsiveDataViewComponent<T extends object> {
+  private readonly language = inject(LanguageService);
   readonly rows = input.required<readonly T[]>();
   readonly columns = input.required<readonly DataColumn<T>[]>();
   readonly activeKey = input<keyof T & string>();
@@ -103,18 +105,22 @@ export class ResponsiveDataViewComponent<T extends object> {
 
   protected primaryValue(row: T): string {
     const column = this.columns().find((candidate) => candidate.priority === 'primary') ?? this.columns()[0];
-    return column ? this.value(column, row) : 'Registro';
+    return column ? this.value(column, row) : (this.language.language() === 'en' ? 'Record' : 'Registro');
   }
 
   protected value(column: DataColumn<T>, row: T): string {
     const raw = row[column.key];
     if (column.format) return column.format(raw, row);
     if (raw === null || raw === undefined || raw === '') return '—';
-    if (typeof raw === 'boolean') return raw ? 'Sí' : 'No';
+    if (typeof raw === 'boolean') return this.text(raw ? 'Sí' : 'No');
     return String(raw);
   }
 
   protected trackById(index: number, row: T): unknown {
     return 'id' in row ? row['id'] : index;
+  }
+
+  protected text(value: string): string {
+    return this.language.text(value);
   }
 }

@@ -66,7 +66,8 @@ public sealed class SalesController(SalesService service, PointPaymentService po
         CancellationToken cancellationToken)
     {
         var payment = await pointPayments.StartAsync(
-            id, request.Amount, currentUser.Id, HttpContext.TraceIdentifier, cancellationToken);
+            id, request.Amount, request.PaymentTerminalId, currentUser.Id,
+            HttpContext.TraceIdentifier, cancellationToken);
         return Ok(ApiResponse<PointCardPaymentResponse>.Ok(
             HttpResponseMapper.Map(payment), HttpContext.TraceIdentifier,
             "Payment sent to the Mercado Pago Point terminal."));

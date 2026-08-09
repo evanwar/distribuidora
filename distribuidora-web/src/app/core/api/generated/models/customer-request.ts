@@ -7,8 +7,13 @@ export interface CustomerRequest {
   city?: string | null;
   creditBlocked?: boolean;
   creditLimit?: number;
+  defaultCfdiUseCode?: string | null;
   email?: string | null;
+  fiscalLegalName?: string | null;
+  fiscalZipCode?: string | null;
+  invoiceEmail?: string | null;
   name?: string | null;
   phone?: string | null;
   taxId?: string | null;
+  taxRegimeCode?: string | null;
 }

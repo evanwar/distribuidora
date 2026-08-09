@@ -1,6 +1,7 @@
 using Distribuidora.Application.Abstractions;
 using Distribuidora.Application.Common;
 using Distribuidora.Application.Features.Audits;
+using Distribuidora.Application.Features.Administration;
 using Distribuidora.Application.Specifications;
 using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Common;
@@ -12,6 +13,7 @@ public sealed class PointPaymentService(
     IAppDbContext db,
     IMercadoPagoPointClient pointClient,
     IMercadoPagoWebhookValidator webhookValidator,
+    PaymentTerminalService paymentTerminals,
     SalesService sales,
     AuditEntryService audit,
     IDatatimeProvider datetimeProvider)
@@ -76,6 +78,7 @@ public sealed class PointPaymentService(
     public async Task<PointPayment> StartAsync(
         Guid saleId,
         decimal amount,
+        Guid? paymentTerminalId,
         Guid actorId,
         string correlationId,
         CancellationToken cancellationToken)
@@ -90,17 +93,25 @@ public sealed class PointPaymentService(
                 x.SaleId == saleId && ActiveStatuses.Contains(x.Status)))
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefault();
-        if (active?.OrderId is not null) return active;
+        if (active?.OrderId is not null)
+        {
+            if (paymentTerminalId is not null && active.PaymentTerminalId != paymentTerminalId)
+                throw new ConflictException("This sale already has an active order on another payment terminal.");
+            return active;
+        }
+
+        var terminal = paymentTerminals.ResolveForPayment(paymentTerminalId);
 
         var payment = active ?? new PointPayment
         {
             SaleId = saleId,
             InitiatedBy = actorId,
             Amount = amount,
-            TerminalId = pointClient.TerminalId,
             IdempotencyKey = Guid.NewGuid().ToString(),
             CreatedBy = actorId
         };
+        payment.PaymentTerminalId = terminal.Id;
+        payment.TerminalId = terminal.ExternalId;
         if (active is null)
         {
             payment.ExternalReference = $"sale_{saleId:N}_{payment.Id.ToString("N")[..8]}";
@@ -111,7 +122,11 @@ public sealed class PointPaymentService(
         try
         {
             var order = await pointClient.CreateOrderAsync(
-                payment.ExternalReference, payment.IdempotencyKey, payment.Amount, cancellationToken);
+                payment.ExternalReference,
+                payment.IdempotencyKey,
+                payment.Amount,
+                payment.TerminalId,
+                cancellationToken);
             if (!string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
                 throw new InvalidOperationException("Mercado Pago returned an unexpected external reference.");
             payment.OrderId = order.Id;

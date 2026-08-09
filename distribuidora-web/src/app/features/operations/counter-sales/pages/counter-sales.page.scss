@@ -320,9 +320,17 @@ dd {
 
 .sale-row__actions {
   display: grid;
-  grid-template-columns: repeat(2, max-content);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    'detail continue'
+    'confirm confirm'
+    'receipt cancel';
   align-items: center;
   gap: var(--space-1);
+}
+
+.sale-row__actions > .sale-action {
+  min-width: 0;
 }
 
 .sale-action--detail { grid-area: detail; }

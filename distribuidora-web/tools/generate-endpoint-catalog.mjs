@@ -35,8 +35,8 @@ for (const line of lines) {
   });
 }
 
-if (operations.length !== 116) {
-  throw new Error(`Se esperaban 116 operaciones y se encontraron ${operations.length}.`);
+if (operations.length !== 128) {
+  throw new Error(`Se esperaban 128 operaciones y se encontraron ${operations.length}.`);
 }
 
 const source = `// Generado desde 06_MATRIZ_ENDPOINTS_FRONTEND.md. No editar manualmente.

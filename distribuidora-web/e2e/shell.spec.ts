@@ -9,6 +9,24 @@ test('login remains usable without horizontal overflow', async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
+test('language selection persists and is sent to the API', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Idioma' }).click();
+  await page.getByRole('menuitem', { name: 'English' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Welcome' })).toBeVisible();
+  await expect(page.getByLabel('Username')).toBeVisible();
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Password').fill('test-only');
+  const loginRequest = page.waitForRequest((request) => request.url().includes('/api/v1/auth/login'));
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  expect((await loginRequest).headers()['accept-language']).toBe('en-US');
+  await expect(page.getByRole('heading', { name: 'Operations center' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+});
+
 test('the point of sale is an operational flow on every viewport', async ({ page }, testInfo) => {
   await mockApi(page);
   await page.goto('/login');
@@ -89,6 +107,40 @@ test('business modules hide transport details and expose guided tasks', async ({
   }
 });
 
+test('payment terminals can be administered without horizontal overflow', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/login');
+  await page.getByLabel('Usuario').fill('admin');
+  await page.getByLabel(/Contrase/).fill('test-only');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await navigateFromShell(page, 'Terminales de pago');
+
+  await expect(page.getByRole('heading', { name: 'Terminales de pago', exact: true })).toBeVisible();
+  await expect(page.getByText('Mostrador principal')).toBeVisible();
+  await expect(page.getByText('Predeterminada', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Nueva terminal' }).click();
+  const createDialog = page.getByRole('dialog');
+  await expect(createDialog.getByRole('heading', { name: 'Registrar terminal' })).toBeVisible();
+  await expect(createDialog.getByLabel('Nombre de la terminal')).toBeFocused();
+  await expect(createDialog.getByLabel('Nombre de la terminal')).toHaveValue('');
+  const dialogBox = await createDialog.boundingBox();
+  expect(dialogBox).not.toBeNull();
+  expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await createDialog.getByRole('button', { name: 'Cancelar' }).click();
+
+  await page.getByRole('button', { name: 'Editar' }).click();
+  const editDialog = page.getByRole('dialog');
+  await expect(editDialog.getByRole('heading', { name: 'Editar terminal' })).toBeVisible();
+  await expect(editDialog.getByLabel('Nombre de la terminal')).toHaveValue('Mostrador principal');
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
+});
+
 test('products render the paged backend response', async ({ page }) => {
   await mockApi(page);
   await page.goto('/login');
@@ -162,8 +214,8 @@ test('dashboard metrics open the corresponding operational query', async ({ page
 
   await page.getByRole('link', { name: 'Consultar ventas de hoy' }).click();
   await expect(page.getByRole('heading', { name: 'Ventas recientes' })).toBeVisible();
-  await expect(page.getByLabel('Desde')).toHaveValue(e2eDay());
-  await expect(page.getByLabel('Hasta')).toHaveValue(e2eDay());
+  await expect(page.getByRole('textbox', { name: 'Desde' })).toHaveValue(e2eDisplayDay());
+  await expect(page.getByRole('textbox', { name: 'Hasta' })).toHaveValue(e2eDisplayDay());
   await expect(page.getByText('CS-0002')).toBeVisible();
   await expect(page.getByText('CS-0001')).toHaveCount(0);
 });
@@ -174,6 +226,7 @@ test('every primary module remains usable without global overflow', async ({ pag
   await page.getByLabel('Usuario').fill('admin');
   await page.getByLabel(/Contrase/).fill('test-only');
   await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Centro de operación', exact: true })).toBeVisible();
 
   const modules = [
     ['/dashboard', 'Centro de operación'],
@@ -189,6 +242,7 @@ test('every primary module remains usable without global overflow', async ({ pag
     ['/operations/reports', 'Reportes'],
     ['/operations/audit', 'Auditoría y soporte'],
     ['/operations/administration', 'Administración'],
+    ['/operations/administration/payment-terminals', 'Terminales de pago'],
   ] as const;
 
   for (const [path, heading] of modules) {
@@ -198,6 +252,41 @@ test('every primary module remains usable without global overflow', async ({ pag
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
     expect(overflow, `${path} must not overflow`).toBe(false);
+  }
+});
+
+test('English covers every primary module instead of only the application shell', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Idioma' }).click();
+  await page.getByRole('menuitem', { name: 'English' }).click();
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Password').fill('test-only');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('heading', { name: 'Operations center', exact: true })).toBeVisible();
+
+  const modules = [
+    ['/dashboard', 'Operations center'],
+    ['/operations/counter-sales', 'Point of sale'],
+    ['/operations/inventory', 'Inventory'],
+    ['/operations/purchases', 'Purchases and receipts'],
+    ['/operations/receivables', 'Accounts receivable'],
+    ['/customers', 'Customers'],
+    ['/suppliers', 'Suppliers'],
+    ['/products', 'Products'],
+    ['/masters', 'Other catalogs'],
+    ['/operations/security', 'Users, roles, and permissions'],
+    ['/operations/reports', 'Reports'],
+    ['/operations/audit', 'Audit and support'],
+    ['/operations/administration', 'Administration'],
+    ['/operations/administration/payment-terminals', 'Payment terminals'],
+  ] as const;
+
+  const untranslatedShellCopy = /Selecciona una tarea|Elige una opción|Consultar el catálogo|Nueva terminal|Agregar productos|Buscar clientes/;
+  for (const [path, heading] of modules) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(untranslatedShellCopy);
   }
 });
 
@@ -252,6 +341,31 @@ async function mockApi(page: import('@playwright/test').Page): Promise<void> {
       data = [{ id: 'warehouse-1', name: 'Almacén principal', active: true }];
     } else if (path === '/api/v1/admin/payment-methods') {
       data = [{ code: 'cash', name: 'Efectivo', requiresReference: false, active: true }];
+    } else if (path === '/api/v1/admin/payment-terminals/available') {
+      data = [
+        {
+          id: 'terminal-1',
+          name: 'Mostrador principal',
+          externalId: 'PAX_A910__MAIN',
+          provider: 'mercado_pago',
+          isDefault: true,
+          active: true,
+          rowVersion: 0,
+        },
+      ];
+    } else if (path === '/api/v1/admin/payment-terminals') {
+      data = [
+        {
+          id: 'terminal-1',
+          name: 'Mostrador principal',
+          externalId: 'PAX_A910__MAIN',
+          provider: 'mercado_pago',
+          description: 'Caja principal',
+          isDefault: true,
+          active: true,
+          rowVersion: 0,
+        },
+      ];
     } else if (path === '/api/v1/counter-sales') {
       data = [
         {
@@ -320,6 +434,11 @@ function e2eDay(offset = 0): string {
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function e2eDisplayDay(offset = 0): string {
+  const [year, month, day] = e2eDay(offset).split('-');
+  return `${day}/${month}/${year}`;
 }
 
 async function navigateFromShell(

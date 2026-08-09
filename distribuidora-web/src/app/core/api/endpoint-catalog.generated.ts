@@ -572,6 +572,46 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "moduleLabel": "Punto de venta y facturación"
   },
   {
+    "id": "SAL-17",
+    "method": "GET",
+    "path": "/api/v1/counter-sales/{saleId}/billing-eligibility",
+    "description": "consultar elegibilidad y siguiente acción fiscal antes de abrir o emitir factura",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-18",
+    "method": "PUT",
+    "path": "/api/v1/counter-sales/{saleId}/billing-recipient",
+    "description": "asociar receptor fiscal posterior sin modificar el cliente comercial de la venta",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-19",
+    "method": "GET",
+    "path": "/api/v1/counter-sales/{saleId}/fiscal-status",
+    "description": "consultar cobertura global/nominativa y estado de conciliación",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-20",
+    "method": "PUT",
+    "path": "/api/v1/counter-sales/{saleId}/fiscal-coverage",
+    "description": "conciliación administrativa protegida; no disponible al cajero",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
+    "id": "SAL-21",
+    "method": "POST",
+    "path": "/api/v1/counter-sales/{id}/card-payment/cancel",
+    "description": "cancelar una orden pendiente o enviada y liberar la terminal; confirmación explícita, sin reintento automático",
+    "module": "F05",
+    "moduleLabel": "Punto de venta y facturación"
+  },
+  {
     "id": "ACR-01",
     "method": "GET",
     "path": "/api/v1/accounts-receivable",
@@ -872,6 +912,62 @@ export const ENDPOINT_CATALOG: readonly EndpointDefinition[] = [
     "method": "PUT",
     "path": "/api/v1/admin/payment-methods/{id}",
     "description": "edición de método",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-01",
+    "method": "GET",
+    "path": "/api/v1/admin/payment-terminals",
+    "description": "listado administrativo de terminales Mercado Pago, incluidas las inactivas",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-02",
+    "method": "GET",
+    "path": "/api/v1/admin/payment-terminals/available",
+    "description": "selector de terminales activas en el cobro POS; consumidor adicional de F05",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-03",
+    "method": "GET",
+    "path": "/api/v1/admin/payment-terminals/{id}",
+    "description": "detalle autoritativo para edición y control de concurrencia",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-04",
+    "method": "POST",
+    "path": "/api/v1/admin/payment-terminals",
+    "description": "alta de terminal con nombre, identificador externo y selección predeterminada",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-05",
+    "method": "PUT",
+    "path": "/api/v1/admin/payment-terminals/{id}",
+    "description": "edición de terminal y cambio de terminal predeterminada",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-06",
+    "method": "POST",
+    "path": "/api/v1/admin/payment-terminals/{id}/deactivate",
+    "description": "baja lógica; manejar 409 cuando exista una orden Point activa",
+    "module": "F09",
+    "moduleLabel": "Administración y trazabilidad técnica"
+  },
+  {
+    "id": "PTR-07",
+    "method": "POST",
+    "path": "/api/v1/admin/payment-terminals/{id}/activate",
+    "description": "reactivación de una terminal registrada",
     "module": "F09",
     "moduleLabel": "Administración y trazabilidad técnica"
   },

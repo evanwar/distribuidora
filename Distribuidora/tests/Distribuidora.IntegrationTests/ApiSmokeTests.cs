@@ -30,6 +30,9 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("/api/v1/counter-sales/{id}/confirm", body);
         Assert.Contains("/api/v1/counter-sales/{id}/card-payment/cancel", body);
+        Assert.Contains("/api/v1/admin/payment-terminals", body);
+        Assert.Contains("/api/v1/admin/payment-terminals/available", body);
+        Assert.Contains("/api/v1/admin/payment-terminals/{id}/deactivate", body);
         Assert.Contains("/api/v1/counter-sales/{saleId}/billing-eligibility", body);
         Assert.Contains("/api/v1/counter-sales/{saleId}/billing-recipient", body);
         Assert.Contains("/api/v1/counter-sales/{saleId}/fiscal-status", body);
@@ -74,9 +77,31 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("Request validation failed.", body);
+        Assert.Contains("La validación de la solicitud falló.", body);
         Assert.Contains("Username", body);
         Assert.Contains("Password", body);
+    }
+
+    [Fact]
+    public async Task Api_localizes_authentication_errors_from_accept_language()
+    {
+        using var englishRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/counter-sales");
+        englishRequest.Headers.Add("Accept-Language", "en-US");
+        englishRequest.Content = JsonContent.Create(new { });
+        var englishResponse = await _client.SendAsync(englishRequest);
+        var englishBody = await englishResponse.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, englishResponse.StatusCode);
+        Assert.Contains("Authentication is required.", englishBody);
+        Assert.Equal("en-US", englishResponse.Content.Headers.ContentLanguage?.Single());
+
+        using var spanishRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/counter-sales");
+        spanishRequest.Content = JsonContent.Create(new { });
+        var spanishResponse = await _client.SendAsync(spanishRequest);
+        var spanishBody = await spanishResponse.Content.ReadAsStringAsync();
+
+        Assert.Contains("Se requiere autenticación.", spanishBody);
+        Assert.Equal("es-MX", spanishResponse.Content.Headers.ContentLanguage?.Single());
     }
 
     [Fact]

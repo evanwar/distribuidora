@@ -102,6 +102,8 @@ public static class Permissions
         public const string Configure = "admin.configure";
         public const string ManageFolios = "admin.manage_folios";
         public const string ManagePaymentMethods = "admin.manage_payment_methods";
+        public const string ViewPaymentTerminals = "admin.view_payment_terminals";
+        public const string ManagePaymentTerminals = "admin.manage_payment_terminals";
     }
 
     public static readonly string[] All =
@@ -157,6 +159,8 @@ public static class Permissions
         Administration.View,
         Administration.Configure,
         Administration.ManageFolios,
-        Administration.ManagePaymentMethods
+        Administration.ManagePaymentMethods,
+        Administration.ViewPaymentTerminals,
+        Administration.ManagePaymentTerminals
     ];
 }

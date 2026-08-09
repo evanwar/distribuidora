@@ -1,7 +1,7 @@
 ---
 project: Distribuidora Frontend - MVP Mostrador
 source_of_truth: ../Distribuidora/docs/frontend-api/README.md
-contract_snapshot: 120 frontend operations, 33 controllers
+contract_snapshot: 128 frontend operations, 34 controllers
 ---
 
 # 06 - Matriz de endpoints y cobertura frontend
@@ -33,7 +33,7 @@ Un endpoint se considera integrado únicamente cuando tiene:
 [ ] prueba de componente o E2E para el flujo de negocio
 ```
 
-El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `bloqueado` o `integrado`. La meta de alcance vigente es **120/120 operaciones clasificadas e integradas**. Los endpoints administrativos no deben mezclarse en navegación de catálogos.
+El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `bloqueado` o `integrado`. La meta de alcance vigente es **128/128 operaciones clasificadas e integradas**. Los endpoints administrativos no deben mezclarse en navegación de catálogos.
 
 ## Resumen por módulo
 
@@ -44,12 +44,12 @@ El tablero de ejecución debe mantener los estados `pendiente`, `en progreso`, `
 | F02 | Customers, Suppliers, Products, ProductAliases, Categories, Brands, Units, Warehouses | 25 | maestros por dominio |
 | F03 | Inventory | 7 | existencias, kardex, ajustes y transferencias |
 | F04 | Purchases, GoodsReceipts | 10 | compras y recepción |
-| F05 | Sales | 20 | punto de venta y facturación electrónica |
+| F05 | Sales | 21 | punto de venta y facturación electrónica |
 | F06 | AccountsReceivable, CustomerPayments | 7 | cobranza |
 | F07 | Audit, CancellationReasons, OperationalNotes, Logs | 15 | auditoría, soporte y excepciones |
 | F08 | Reports, Dashboard | 8 | indicadores y reportes |
-| F09 | Settings, FolioSequences, PaymentMethods, Policies, Trace | 16 | administración y trazabilidad técnica |
-| **Total** | **33 recursos** | **120** | |
+| F09 | Settings, FolioSequences, PaymentMethods, PaymentTerminals, Policies, Trace | 23 | administración y trazabilidad técnica |
+| **Total** | **34 recursos** | **128** | |
 
 ## F0 - Bootstrap y diagnóstico (1)
 
@@ -158,7 +158,7 @@ Cada maestro debe tener ruta propia y nombre intuitivo: `/customers`, `/supplier
 | SAL-20 | `PUT /api/v1/counter-sales/{saleId}/fiscal-coverage` | conciliación administrativa protegida; no disponible al cajero |
 | SAL-21 | `POST /api/v1/counter-sales/{id}/card-payment/cancel` | cancelar una orden pendiente o enviada y liberar la terminal; confirmación explícita, sin reintento automático |
 
-Dependencias de lectura del workspace POS: `PRD-01`, `CUS-01`, `WHS-01` y `PMT-01`. La feature usa contratos públicos/adapters; no importa stores internos de F02 o F09.
+Dependencias de lectura del workspace POS: `PRD-01`, `CUS-01`, `WHS-01`, `PMT-01` y `PTR-02`. La feature usa contratos públicos/adapters; no importa stores internos de F02 o F09.
 
 ## F06 - Cuentas por cobrar y pagos (7)
 
@@ -209,7 +209,7 @@ Las cancelaciones de ventas, compras, recepciones e inventario permanecen en sus
 
 No se debe mostrar botón de exportación mientras OpenAPI no exponga una operación de exportación. Las gráficas consumen agregados; no calculan métricas desde transacciones descargadas.
 
-## F09 - Administración y trazabilidad técnica (16)
+## F09 - Administración y trazabilidad técnica (23)
 
 | ID | Endpoint | Integración requerida |
 |---|---|---|
@@ -221,6 +221,13 @@ No se debe mostrar botón de exportación mientras OpenAPI no exponga una operac
 | PMT-01 | `GET /api/v1/admin/payment-methods` | métodos de pago y selector público |
 | PMT-02 | `POST /api/v1/admin/payment-methods` | alta de método |
 | PMT-03 | `PUT /api/v1/admin/payment-methods/{id}` | edición de método |
+| PTR-01 | `GET /api/v1/admin/payment-terminals` | listado administrativo de terminales Mercado Pago, incluidas las inactivas |
+| PTR-02 | `GET /api/v1/admin/payment-terminals/available` | selector de terminales activas en el cobro POS; consumidor adicional de F05 |
+| PTR-03 | `GET /api/v1/admin/payment-terminals/{id}` | detalle autoritativo para edición y control de concurrencia |
+| PTR-04 | `POST /api/v1/admin/payment-terminals` | alta de terminal con nombre, identificador externo y selección predeterminada |
+| PTR-05 | `PUT /api/v1/admin/payment-terminals/{id}` | edición de terminal y cambio de terminal predeterminada |
+| PTR-06 | `POST /api/v1/admin/payment-terminals/{id}/deactivate` | baja lógica; manejar 409 cuando exista una orden Point activa |
+| PTR-07 | `POST /api/v1/admin/payment-terminals/{id}/activate` | reactivación de una terminal registrada |
 | PLC-01 | `GET /api/v1/admin/policies/credit` | consulta de política de crédito |
 | PLC-02 | `PUT /api/v1/admin/policies/credit` | actualización de política de crédito |
 | PLC-03 | `GET /api/v1/admin/policies/inventory` | consulta de política de inventario |
@@ -264,6 +271,7 @@ Administración
   Configuración
   Folios
   Métodos de pago
+  Terminales de pago
   Políticas
   Trazabilidad
 ```

@@ -7,6 +7,7 @@ public sealed record CounterSaleResponse(Guid Id, string Folio, DateTimeOffset S
 public sealed record PointCardPaymentResponse(
     Guid Id,
     Guid SaleId,
+    Guid? PaymentTerminalId,
     string? OrderId,
     decimal Amount,
     string Status,

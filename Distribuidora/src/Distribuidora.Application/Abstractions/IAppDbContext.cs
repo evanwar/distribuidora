@@ -36,11 +36,11 @@ public interface ICurrentUser
 
 public interface IMercadoPagoPointClient
 {
-    string TerminalId { get; }
     Task<MercadoPagoPointOrder> CreateOrderAsync(
         string externalReference,
         string idempotencyKey,
         decimal amount,
+        string terminalId,
         CancellationToken cancellationToken);
     Task<MercadoPagoPointOrder> GetOrderAsync(string orderId, CancellationToken cancellationToken);
     Task<MercadoPagoPointOrder> CancelOrderAsync(

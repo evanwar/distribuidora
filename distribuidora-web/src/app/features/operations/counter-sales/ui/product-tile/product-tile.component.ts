@@ -1,8 +1,9 @@
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { UiButtonComponent } from '../../../../../shared/ui/button/ui-button.component';
 import { PosProduct } from '../../models/counter-sale.models';
+import { LanguageService } from '../../../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-product-tile',
@@ -20,7 +21,7 @@ import { PosProduct } from '../../models/counter-sale.models';
             <path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12.1V21" />
           </svg>
         </span>
-        <span class="product-tile__sku">{{ product().sku || 'SIN SKU' }}</span>
+        <span class="product-tile__sku">{{ product().sku || text('SIN SKU') }}</span>
       </div>
 
       <mat-card-content>
@@ -31,29 +32,29 @@ import { PosProduct } from '../../models/counter-sale.models';
         >
           <span class="product-tile__stock-dot" aria-hidden="true"></span>
           @if (available() === 0) {
-            <span>Sin existencia</span>
+            <span>{{ text('Sin existencia') }}</span>
           } @else {
-            <span><strong>{{ available() | number: '1.0-4' }}</strong> disponibles</span>
+            <span><strong>{{ available() | number: '1.0-4' }}</strong> {{ text('disponibles') }}</span>
           }
         </div>
       </mat-card-content>
 
       <mat-card-actions>
         <div class="product-tile__price">
-          <span>Precio</span>
+          <span>{{ text('Precio') }}</span>
           <strong>{{ product().price | currency: 'MXN' }}</strong>
         </div>
         <div class="product-tile__actions" [class.product-tile__actions--complete]="!canAdd()">
           @if (canAdd()) {
             <app-ui-button
-              label="Agregar"
+              [label]="text('Agregar')"
               icon="add"
               size="compact"
               [ariaLabel]="'Agregar una unidad de ' + product().name"
               (pressed)="add.emit()"
             />
             <app-ui-button
-              label="Agregar todos"
+              [label]="text('Agregar todos')"
               variant="outlined"
               size="compact"
               [ariaLabel]="
@@ -84,6 +85,7 @@ import { PosProduct } from '../../models/counter-sale.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductTileComponent {
+  private readonly language = inject(LanguageService);
   readonly product = input.required<PosProduct>();
   readonly available = input.required<number>();
   readonly canAdd = input.required<boolean>();
@@ -91,7 +93,9 @@ export class ProductTileComponent {
   readonly addAll = output<void>();
 
   protected readonly actionLabel = computed(() => {
-    if (this.available() === 0) return 'Sin stock';
-    return this.canAdd() ? 'Agregar' : 'Máximo agregado';
+    if (this.available() === 0) return this.text('Sin stock');
+    return this.canAdd() ? this.text('Agregar') : this.text('Máximo agregado');
   });
+
+  protected text(value: string): string { return this.language.text(value); }
 }

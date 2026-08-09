@@ -3,4 +3,5 @@
 
 export interface StartPointCardPaymentRequest {
   amount?: number;
+  paymentTerminalId?: string | null;
 }

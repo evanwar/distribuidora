@@ -25,12 +25,12 @@ public sealed class MercadoPagoPointClient(HttpClient httpClient, IOptions<Merca
     : IMercadoPagoPointClient
 {
     private readonly MercadoPagoPointOptions _options = options.Value;
-    public string TerminalId => Required(_options.TerminalId, "Mercado Pago Point terminal");
 
     public async Task<MercadoPagoPointOrder> CreateOrderAsync(
         string externalReference,
         string idempotencyKey,
         decimal amount,
+        string terminalId,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/orders");
@@ -44,7 +44,11 @@ public sealed class MercadoPagoPointClient(HttpClient httpClient, IOptions<Merca
             transactions = new { payments = new[] { new { amount = amount.ToString("0.00", CultureInfo.InvariantCulture) } } },
             config = new
             {
-                point = new { terminal_id = TerminalId, print_on_terminal = "no_ticket" },
+                point = new
+                {
+                    terminal_id = Required(terminalId, "Mercado Pago Point terminal"),
+                    print_on_terminal = "no_ticket"
+                },
                 payment_method = new { default_type = "credit_card" }
             },
             description = "Distribuidora counter sale"

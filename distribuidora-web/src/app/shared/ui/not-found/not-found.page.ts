@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-not-found-page',
@@ -8,9 +9,9 @@ import { MatButtonModule } from '@angular/material/button';
   template: `
     <main>
       <span>404</span>
-      <h1>Esta página no existe</h1>
-      <p>Verifica la dirección o vuelve al inicio.</p>
-      <a matButton="filled" routerLink="/">Volver al inicio</a>
+      <h1>{{ text('Esta página no existe') }}</h1>
+      <p>{{ text('Verifica la dirección o vuelve al inicio.') }}</p>
+      <a matButton="filled" routerLink="/">{{ text('Volver al inicio') }}</a>
     </main>
   `,
   styles: `
@@ -28,4 +29,7 @@ import { MatButtonModule } from '@angular/material/button';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NotFoundPage {}
+export class NotFoundPage {
+  private readonly language = inject(LanguageService);
+  protected text(value: string): string { return this.language.text(value); }
+}

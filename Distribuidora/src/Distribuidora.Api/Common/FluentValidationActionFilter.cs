@@ -2,10 +2,13 @@ using Distribuidora.Contracts.Common;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Localization;
 
 namespace Distribuidora.Api.Common;
 
-public sealed class FluentValidationActionFilter(IServiceProvider services) : IAsyncActionFilter
+public sealed class FluentValidationActionFilter(
+    IServiceProvider services,
+    IStringLocalizer<ApiMessages> messages) : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(
         ActionExecutingContext context,
@@ -33,7 +36,7 @@ public sealed class FluentValidationActionFilter(IServiceProvider services) : IA
         {
             context.Result = new BadRequestObjectResult(
                 ApiResponse<object>.Fail(
-                    "Request validation failed.",
+                    messages["ValidationFailed"],
                     errors,
                     context.HttpContext.TraceIdentifier));
             return;

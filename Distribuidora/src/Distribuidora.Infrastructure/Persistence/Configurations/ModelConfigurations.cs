@@ -163,6 +163,7 @@ public sealed class SalesConfiguration :
         b.HasIndex(x => x.OrderId).IsUnique();
         b.HasIndex(x => new { x.SaleId, x.Status });
         b.HasOne<CounterSale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<PaymentTerminal>().WithMany().HasForeignKey(x => x.PaymentTerminalId).OnDelete(DeleteBehavior.Restrict);
     }
     public void Configure(EntityTypeBuilder<ElectronicInvoice> b)
     {
@@ -252,11 +253,23 @@ public sealed class AuditConfiguration :
 
 public sealed class AdministrationConfiguration :
     IEntityTypeConfiguration<SystemSetting>, IEntityTypeConfiguration<FolioSequence>, IEntityTypeConfiguration<PaymentMethod>,
-    IEntityTypeConfiguration<CreditPolicy>, IEntityTypeConfiguration<InventoryPolicy>
+    IEntityTypeConfiguration<PaymentTerminal>, IEntityTypeConfiguration<CreditPolicy>, IEntityTypeConfiguration<InventoryPolicy>
 {
     public void Configure(EntityTypeBuilder<SystemSetting> b) { b.ToTable("system_settings", "admin"); b.Audit(); b.Property(x => x.Key).HasMaxLength(150); b.HasIndex(x => x.Key).IsUnique(); }
     public void Configure(EntityTypeBuilder<FolioSequence> b) { b.ToTable("folio_sequences", "admin"); b.Audit(); b.Property(x => x.DocumentType).HasMaxLength(50); b.HasIndex(x => x.DocumentType).IsUnique(); }
     public void Configure(EntityTypeBuilder<PaymentMethod> b) { b.ToTable("payment_methods", "admin"); b.Audit(); b.Property(x => x.Code).HasMaxLength(50); b.HasIndex(x => x.Code).IsUnique(); }
+    public void Configure(EntityTypeBuilder<PaymentTerminal> b)
+    {
+        b.ToTable("payment_terminals", "admin");
+        b.Audit();
+        b.Property(x => x.Name).HasMaxLength(PaymentTerminal.NameMaximumLength).IsRequired();
+        b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
+        b.Property(x => x.ExternalId).HasMaxLength(PaymentTerminal.ExternalIdMaximumLength).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(PaymentTerminal.DescriptionMaximumLength);
+        b.HasIndex(x => new { x.Provider, x.ExternalId }).IsUnique();
+        b.HasIndex(x => new { x.Provider, x.IsDefault }).IsUnique().HasFilter("\"IsDefault\" = TRUE");
+        b.HasIndex(x => new { x.Active, x.Name });
+    }
     public void Configure(EntityTypeBuilder<CreditPolicy> b) { b.ToTable("credit_policies", "admin"); b.Audit(); }
     public void Configure(EntityTypeBuilder<InventoryPolicy> b) { b.ToTable("inventory_policies", "admin"); b.Audit(); }
 }

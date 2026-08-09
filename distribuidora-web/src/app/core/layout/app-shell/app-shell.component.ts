@@ -10,15 +10,18 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { map } from 'rxjs';
 import { UiIconComponent, UiIconName } from '../../../shared/ui/icon/ui-icon.component';
 import { SessionService } from '../../auth/session.service';
+import { LanguageService } from '../../i18n/language.service';
+import { TranslationKey } from '../../i18n/translation.catalog';
+import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher/language-switcher.component';
 
 interface NavigationItem {
-  label: string;
+  label: TranslationKey;
   path: string;
   icon: UiIconName;
 }
 
 interface NavigationGroup {
-  label: string;
+  label: TranslationKey;
   items: readonly NavigationItem[];
 }
 
@@ -30,6 +33,7 @@ interface NavigationGroup {
     MatSidenavModule,
     MatToolbarModule,
     MatTooltipModule,
+    LanguageSwitcherComponent,
     UiIconComponent,
     RouterLink,
     RouterLinkActive,
@@ -42,20 +46,20 @@ interface NavigationGroup {
         [mode]="isHandset() ? 'over' : 'side'"
         [opened]="!isHandset()"
         [fixedInViewport]="isHandset()"
-        aria-label="Navegación principal"
+        [attr.aria-label]="i18n.translate('app.navigation')"
       >
         <a class="brand" routerLink="/dashboard" (click)="closeOnHandset(sidenav)">
           <span class="brand__mark" aria-hidden="true">D</span>
           <span>
             <strong>Distribuidora</strong>
-            <small>Operación de mostrador</small>
+            <small>{{ i18n.translate('app.brandSubtitle') }}</small>
           </span>
         </a>
 
-        <nav aria-label="Secciones">
+        <nav [attr.aria-label]="i18n.translate('app.sections')">
           @for (group of navigation; track group.label) {
             <section>
-              <h2>{{ group.label }}</h2>
+              <h2>{{ i18n.translate(group.label) }}</h2>
               @for (item of group.items; track item.path) {
                 <a
                   [routerLink]="item.path"
@@ -68,7 +72,7 @@ interface NavigationGroup {
                   <span class="nav-link__icon">
                     <app-ui-icon [name]="item.icon" />
                   </span>
-                  <span>{{ item.label }}</span>
+                  <span>{{ i18n.translate(item.label) }}</span>
                 </a>
               }
             </section>
@@ -82,16 +86,17 @@ interface NavigationGroup {
             <button
               matIconButton
               type="button"
-              aria-label="Abrir navegación"
-              matTooltip="Menú"
+              [attr.aria-label]="i18n.translate('app.openNavigation')"
+              [matTooltip]="i18n.translate('app.menu')"
               (click)="sidenav.open()"
             >
               <app-ui-icon name="menu" />
             </button>
           }
           <span class="toolbar-spacer"></span>
+          <app-language-switcher />
           <span class="identity">{{ nameUpper }}</span>
-          <button matButton type="button" (click)="logout()">Cerrar sesión</button>
+          <button matButton type="button" (click)="logout()">{{ i18n.translate('app.logout') }}</button>
         </mat-toolbar>
 
         <main id="main-content">
@@ -256,6 +261,7 @@ export class AppShellComponent {
   private readonly breakpoint = inject(BreakpointObserver);
   private readonly router = inject(Router);
   protected readonly session = inject(SessionService);
+  protected readonly i18n = inject(LanguageService);
 
 
   protected readonly isHandset = toSignal(
@@ -264,35 +270,40 @@ export class AppShellComponent {
   );
 
 
-  public nameUpper = this.session.identity()?.name.toUpperCase() ?? 'Usuario';
+  public nameUpper = this.session.identity()?.name.toLocaleUpperCase(this.i18n.locale()) ?? this.i18n.translate('login.username');
 
   protected readonly navigation: readonly NavigationGroup[] = [
     {
-      label: 'Operación',
+      label: 'nav.operation',
       items: [
-        { label: 'Inicio', path: '/dashboard', icon: 'home' },
-        { label: 'Punto de venta', path: '/operations/counter-sales', icon: 'point-of-sale' },
-        { label: 'Inventario', path: '/operations/inventory', icon: 'inventory' },
-        { label: 'Compras', path: '/operations/purchases', icon: 'purchases' },
-        { label: 'Cobranza', path: '/operations/receivables', icon: 'receivables' },
+        { label: 'nav.home', path: '/dashboard', icon: 'home' },
+        { label: 'nav.pointOfSale', path: '/operations/counter-sales', icon: 'point-of-sale' },
+        { label: 'nav.inventory', path: '/operations/inventory', icon: 'inventory' },
+        { label: 'nav.purchases', path: '/operations/purchases', icon: 'purchases' },
+        { label: 'nav.collection', path: '/operations/receivables', icon: 'receivables' },
       ],
     },
     {
-      label: 'Catálogos',
+      label: 'nav.catalogs',
       items: [
-        { label: 'Clientes', path: '/customers', icon: 'customers' },
-        { label: 'Proveedores', path: '/suppliers', icon: 'suppliers' },
-        { label: 'Productos', path: '/products', icon: 'products' },
-        { label: 'Otros catálogos', path: '/masters', icon: 'masters' },
+        { label: 'nav.customers', path: '/customers', icon: 'customers' },
+        { label: 'nav.suppliers', path: '/suppliers', icon: 'suppliers' },
+        { label: 'nav.products', path: '/products', icon: 'products' },
+        { label: 'nav.otherCatalogs', path: '/masters', icon: 'masters' },
       ],
     },
     {
-      label: 'Control',
+      label: 'nav.control',
       items: [
-        { label: 'Usuarios y roles', path: '/operations/security', icon: 'security' },
-        { label: 'Reportes', path: '/operations/reports', icon: 'reports' },
-        { label: 'Auditoría y soporte', path: '/operations/audit', icon: 'audit' },
-        { label: 'Administración', path: '/operations/administration', icon: 'settings' },
+        { label: 'nav.usersAndRoles', path: '/operations/security', icon: 'security' },
+        { label: 'nav.reports', path: '/operations/reports', icon: 'reports' },
+        { label: 'nav.audit', path: '/operations/audit', icon: 'audit' },
+        { label: 'nav.administration', path: '/operations/administration', icon: 'settings' },
+        {
+          label: 'nav.paymentTerminals',
+          path: '/operations/administration/payment-terminals',
+          icon: 'point-of-sale',
+        },
       ],
     },
   ];

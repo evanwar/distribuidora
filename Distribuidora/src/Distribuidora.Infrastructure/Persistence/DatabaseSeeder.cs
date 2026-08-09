@@ -77,6 +77,18 @@ public static class DatabaseSeeder
                 new PaymentMethod { Code = PaymentMethodCodes.Cash, Name = "Cash" },
                 new PaymentMethod { Code = PaymentMethodCodes.Card, Name = "Card", RequiresReference = true },
                 new PaymentMethod { Code = PaymentMethodCodes.BankTransfer, Name = "Bank Transfer", RequiresReference = true });
+        if (!await db.Query(Specification.All<PaymentTerminal>()).AnyAsync(ct))
+        {
+            var legacyTerminalId = configuration["MercadoPago:Point:TerminalId"];
+            if (!string.IsNullOrWhiteSpace(legacyTerminalId))
+                db.Add(new PaymentTerminal
+                {
+                    Name = "Mercado Pago Point",
+                    ExternalId = legacyTerminalId.Trim(),
+                    Provider = PaymentTerminalProviders.MercadoPago,
+                    IsDefault = true
+                });
+        }
         if (!await db.Query(Specification.All<CreditPolicy>()).AnyAsync(ct)) db.Add(new CreditPolicy());
         if (!await db.Query(Specification.All<InventoryPolicy>()).AnyAsync(ct)) db.Add(new InventoryPolicy());
         if (!await db.Query(Specification.All<CancellationReason>()).AnyAsync(ct))

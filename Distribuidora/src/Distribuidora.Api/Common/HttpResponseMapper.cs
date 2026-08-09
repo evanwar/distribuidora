@@ -33,7 +33,7 @@ internal static class HttpResponseMapper
     public static GoodsReceiptResponse Map(GoodsReceipt x) => new(x.Id, x.Folio, x.PurchaseOrderId, x.SupplierId, x.DestinationWarehouseId, x.ReceivedAt, x.ReceivedBy, x.Status.ToString(), x.Notes, x.CancelReason, x.Items.Select(i => new ReceiptItemResponse(i.Id, i.ProductId, i.ReceivedQuantity, i.UnitCost, i.Total)).ToArray());
     public static CounterSaleResponse Map(CounterSale x) => new(x.Id, x.Folio, x.SaleDate, x.CustomerId, x.SourceWarehouseId, x.Status.ToString(), x.PaymentCondition.ToString(), x.Subtotal, x.DiscountTotal, x.TaxTotal, x.Total, x.PaidAmount, x.Balance, x.Notes, x.Items.Select(i => new SaleItemResponse(i.Id, i.ProductId, i.Quantity, i.UnitPrice, i.Discount, i.Total, i.HistoricalUnitCost)).ToArray(), x.Payments.Select(i => new SalePaymentResponse(i.Id, i.PaymentDate, i.Method, i.Amount, i.Reference, i.ReceivedBy)).ToArray(), x.Cancellation is null ? null : new SaleCancellationResponse(x.Cancellation.Reason, x.Cancellation.CancelledBy, x.Cancellation.CancelledAt, x.Cancellation.InventoryReverted, x.Cancellation.PaymentsReverted));
     public static PointCardPaymentResponse Map(PointPayment x) => new(
-        x.Id, x.SaleId, x.OrderId, x.Amount, x.Status.ToString(), x.StatusDetail, x.PaymentId,
+        x.Id, x.SaleId, x.PaymentTerminalId, x.OrderId, x.Amount, x.Status.ToString(), x.StatusDetail, x.PaymentId,
         x.PaymentMethodType, x.PaymentMethodId, x.Installments, x.CompletedAt);
     public static PaymentAllocationResponse Map(PaymentAllocation x) => new(x.Id, x.CustomerPaymentId, x.AccountReceivableId, x.AmountApplied, x.Reversed);
     public static AccountReceivableResponse Map(AccountReceivable x) => new(x.Id, x.CustomerId, x.SaleId, x.IssueDate, x.DueDate, x.Total, x.Balance, x.Status.ToString(), x.Allocations.Select(Map).ToArray());
@@ -45,6 +45,8 @@ internal static class HttpResponseMapper
     public static SystemSettingResponse Map(SystemSetting x) => new(x.Id, x.Key, x.Value, x.DataType, x.Description, x.Module, x.UpdatedBy, x.UpdatedAt);
     public static FolioSequenceResponse Map(FolioSequence x) => new(x.Id, x.DocumentType, x.Prefix, x.CurrentNumber, x.Padding, x.Active);
     public static PaymentMethodResponse Map(PaymentMethod x) => new(x.Id, x.Code, x.Name, x.RequiresReference, x.Active);
+    public static PaymentTerminalResponse Map(PaymentTerminal x) => new(
+        x.Id, x.Name, x.Provider, x.ExternalId, x.Description, x.IsDefault, x.Active, x.RowVersion);
     public static CreditPolicyResponse Map(CreditPolicy x) => new(x.Id, x.AllowCreditSales, x.DefaultDueDays, x.RequireAuthorizationOverLimit, x.Active);
     public static InventoryPolicyResponse Map(InventoryPolicy x) => new(x.Id, x.AllowNegativeStock, x.RequireReasonForAdjustment, x.Active);
 }

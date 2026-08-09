@@ -71,6 +71,13 @@ export interface PosPaymentMethod {
   requiresReference: boolean;
 }
 
+export interface PosPaymentTerminal {
+  id: string;
+  name: string;
+  externalId: string;
+  isDefault: boolean;
+}
+
 export interface SaleLine {
   productId: string;
   sku: string;
@@ -127,6 +134,7 @@ export interface CreateCounterSale {
 export interface PointCardPayment {
   id: string;
   saleId: string;
+  paymentTerminalId: string | null;
   orderId: string | null;
   amount: number;
   status: string;

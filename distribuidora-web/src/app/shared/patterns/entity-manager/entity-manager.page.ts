@@ -12,13 +12,14 @@ import { UiAlertComponent } from '../../ui/alert/ui-alert.component';
 import { UiButtonComponent } from '../../ui/button/ui-button.component';
 import { UiFeedbackComponent } from '../../ui/feedback/ui-feedback.component';
 import { UiPageHeaderComponent } from '../../ui/page-header/ui-page-header.component';
-import { SpanishPaginatorIntl } from '../../../core/i18n/spanish-paginator-intl';
 import {
   DataColumn,
   ResponsiveDataViewComponent,
 } from '../../ui/responsive-data-view/responsive-data-view.component';
 import { EntityRecord, EntityResourceDefinition } from './entity-manager.models';
 import { EntityManagerStore } from './entity-manager.store';
+import { LocalizedPaginatorIntl } from '../../../core/i18n/localized-paginator-intl';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 type EntityControl = FormControl<string | number | boolean>;
 
@@ -39,25 +40,25 @@ type EntityControl = FormControl<string | number | boolean>;
     UiFeedbackComponent,
     UiPageHeaderComponent,
   ],
-  providers: [EntityManagerStore, { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }],
+  providers: [EntityManagerStore, { provide: MatPaginatorIntl, useClass: LocalizedPaginatorIntl }],
   template: `
     <div class="page">
       <app-ui-page-header
-        [eyebrow]="definition.module"
-        [title]="definition.title"
-        [subtitle]="definition.description"
+        [eyebrow]="text(definition.module)"
+        [title]="text(definition.title)"
+        [subtitle]="text(definition.description)"
       >
-        <app-ui-button [label]="'Nuevo ' + definition.singular" icon="add" (pressed)="open()" />
+        <app-ui-button [label]="newLabel()" icon="add" (pressed)="open()" />
       </app-ui-page-header>
 
       @if (store.error()) {
         <app-ui-alert
-          title="La operación no se completó"
+          [title]="text('La operación no se completó')"
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
           [operationId]="store.error()!.operationId"
-          actionLabel="Recargar"
+          [actionLabel]="text('Recargar')"
           (action)="store.load()"
         />
       }
@@ -66,7 +67,7 @@ type EntityControl = FormControl<string | number | boolean>;
         <mat-card appearance="outlined">
           <mat-card-header>
             <mat-card-title>
-              {{ selected() ? 'Editar' : 'Nuevo' }} {{ definition.singular }}
+              {{ selected() ? text('Editar') : text('Nuevo') }} {{ text(definition.singular) }}
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
@@ -74,34 +75,34 @@ type EntityControl = FormControl<string | number | boolean>;
               <div class="form-grid">
                 @for (field of definition.fields; track field.key) {
                   @if (field.type === 'boolean') {
-                    <mat-checkbox [formControlName]="field.key">{{ field.label }}</mat-checkbox>
+                    <mat-checkbox [formControlName]="field.key">{{ text(field.label) }}</mat-checkbox>
                   } @else if (field.type === 'select') {
                     <mat-form-field appearance="outline">
-                      <mat-label>{{ field.label }}</mat-label>
+                      <mat-label>{{ text(field.label) }}</mat-label>
                       <mat-select [formControlName]="field.key">
                         @for (option of store.optionsFor(field); track option.value) {
-                          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                          <mat-option [value]="option.value">{{ text(option.label) }}</mat-option>
                         }
                       </mat-select>
                       @if (form.controls[field.key]?.hasError('required')) {
-                        <mat-error>{{ field.label }} es obligatorio.</mat-error>
+                        <mat-error>{{ requiredLabel(field.label) }}</mat-error>
                       }
                     </mat-form-field>
                   } @else {
                     <mat-form-field appearance="outline">
-                      <mat-label>{{ field.label }}</mat-label>
+                      <mat-label>{{ text(field.label) }}</mat-label>
                       <input matInput [type]="field.type" [formControlName]="field.key" />
                       @if (form.controls[field.key]?.hasError('required')) {
-                        <mat-error>{{ field.label }} es obligatorio.</mat-error>
+                        <mat-error>{{ requiredLabel(field.label) }}</mat-error>
                       }
                     </mat-form-field>
                   }
                 }
               </div>
               <app-ui-action-bar [sticky]="true">
-                <app-ui-button label="Cancelar" variant="text" tone="neutral" (pressed)="close()" />
+                <app-ui-button [label]="text('Cancelar')" variant="text" tone="neutral" (pressed)="close()" />
                 <app-ui-button
-                  [label]="selected() ? 'Guardar cambios' : 'Crear ' + definition.singular"
+                  [label]="saveLabel()"
                   type="submit"
                   [loading]="store.saving()"
                   [disabled]="form.invalid"
@@ -116,17 +117,17 @@ type EntityControl = FormControl<string | number | boolean>;
         <section class="surface">
           <app-ui-feedback
             kind="loading"
-            [title]="'Cargando ' + definition.title.toLowerCase()"
-            message="Consultando el catálogo."
+            [title]="loadingLabel()"
+            [message]="text('Consultando el catálogo.')"
           />
         </section>
       } @else if (store.rows().length === 0) {
         <section class="surface">
           <app-ui-feedback
             kind="empty"
-            [title]="'Todavía no hay ' + definition.title.toLowerCase()"
-            [message]="'Registra el primer ' + definition.singular + ' para comenzar.'"
-            [actionLabel]="'Nuevo ' + definition.singular"
+            [title]="emptyLabel()"
+            [message]="emptyMessage()"
+            [actionLabel]="newLabel()"
             (action)="open()"
           />
         </section>
@@ -143,7 +144,7 @@ type EntityControl = FormControl<string | number | boolean>;
             [pageIndex]="store.page() - 1"
             [pageSize]="store.pageSize()"
             [pageSizeOptions]="[10, 25, 50, 100]"
-            aria-label="Paginación de productos"
+            [attr.aria-label]="language.language() === 'en' ? 'Catalog pagination' : 'Paginación del catálogo'"
             (page)="changePage($event)"
           />
         }
@@ -171,6 +172,7 @@ type EntityControl = FormControl<string | number | boolean>;
 })
 export class EntityManagerPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  protected readonly language = inject(LanguageService);
   protected readonly store = inject(EntityManagerStore);
   protected readonly definition = this.route.snapshot.data['resource'] as EntityResourceDefinition;
   protected readonly editorOpen = signal(false);
@@ -180,7 +182,7 @@ export class EntityManagerPage implements OnInit {
     .filter((field) => field.table !== false)
     .map((field, index) => ({
       key: field.key,
-      label: field.label,
+      label: this.text(field.label),
       priority: index === 0 ? 'primary' : 'secondary',
     }));
 
@@ -196,6 +198,47 @@ export class EntityManagerPage implements OnInit {
     }
     this.store.configure(this.definition);
     this.store.load();
+  }
+
+  protected text(value: string): string {
+    return this.language.text(value);
+  }
+
+  protected newLabel(): string {
+    return this.language.language() === 'en'
+      ? `New ${this.text(this.definition.singular)}`
+      : `Nuevo ${this.definition.singular}`;
+  }
+
+  protected saveLabel(): string {
+    if (this.selected()) return this.text('Guardar cambios');
+    return this.language.language() === 'en'
+      ? `Create ${this.text(this.definition.singular)}`
+      : `Crear ${this.definition.singular}`;
+  }
+
+  protected loadingLabel(): string {
+    return this.language.language() === 'en'
+      ? `Loading ${this.text(this.definition.title).toLowerCase()}`
+      : `Cargando ${this.definition.title.toLowerCase()}`;
+  }
+
+  protected emptyLabel(): string {
+    return this.language.language() === 'en'
+      ? `No ${this.text(this.definition.title).toLowerCase()} yet`
+      : `Todavía no hay ${this.definition.title.toLowerCase()}`;
+  }
+
+  protected emptyMessage(): string {
+    return this.language.language() === 'en'
+      ? `Register the first ${this.text(this.definition.singular)} to get started.`
+      : `Registra el primer ${this.definition.singular} para comenzar.`;
+  }
+
+  protected requiredLabel(label: string): string {
+    return this.language.language() === 'en'
+      ? `${this.text(label)} is required.`
+      : `${label} es obligatorio.`;
   }
 
   protected open(row?: EntityRecord): void {

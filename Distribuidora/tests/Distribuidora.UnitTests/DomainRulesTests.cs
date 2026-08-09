@@ -217,6 +217,24 @@ public sealed class DomainRulesTests
         Assert.False(profile.IsComplete());
     }
 
+    [Fact]
+    public void Payment_terminal_deactivation_is_logical_and_auditable()
+    {
+        var terminal = new PaymentTerminal
+        {
+            Name = "Main counter",
+            ExternalId = "PAX_A910__MAIN",
+            IsDefault = true
+        };
+
+        terminal.Deactivate(OccurredAt);
+
+        Assert.False(terminal.Active);
+        Assert.False(terminal.IsDefault);
+        var domainEvent = Assert.Single(terminal.DomainEvents);
+        Assert.Equal("PaymentTerminalDeactivated", Assert.IsType<EntityChangedDomainEvent>(domainEvent).EventName);
+    }
+
     private static CounterSale Sale(PaymentCondition condition)
     {
         var sale = new CounterSale { PaymentCondition = condition, CustomerId = condition == PaymentCondition.Cash ? null : Guid.NewGuid() };

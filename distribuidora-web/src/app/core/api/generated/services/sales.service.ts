@@ -14,6 +14,8 @@ import { apiV1CounterSalesGet } from '../fn/sales/api-v-1-counter-sales-get';
 import { ApiV1CounterSalesGet$Params } from '../fn/sales/api-v-1-counter-sales-get';
 import { apiV1CounterSalesIdCancelPost } from '../fn/sales/api-v-1-counter-sales-id-cancel-post';
 import { ApiV1CounterSalesIdCancelPost$Params } from '../fn/sales/api-v-1-counter-sales-id-cancel-post';
+import { apiV1CounterSalesIdCardPaymentCancelPost } from '../fn/sales/api-v-1-counter-sales-id-card-payment-cancel-post';
+import { ApiV1CounterSalesIdCardPaymentCancelPost$Params } from '../fn/sales/api-v-1-counter-sales-id-card-payment-cancel-post';
 import { apiV1CounterSalesIdCardPaymentGet } from '../fn/sales/api-v-1-counter-sales-id-card-payment-get';
 import { ApiV1CounterSalesIdCardPaymentGet$Params } from '../fn/sales/api-v-1-counter-sales-id-card-payment-get';
 import { apiV1CounterSalesIdCardPaymentPost } from '../fn/sales/api-v-1-counter-sales-id-card-payment-post';
@@ -32,6 +34,7 @@ import { apiV1CounterSalesIdSummaryGet } from '../fn/sales/api-v-1-counter-sales
 import { ApiV1CounterSalesIdSummaryGet$Params } from '../fn/sales/api-v-1-counter-sales-id-summary-get';
 import { apiV1CounterSalesPost } from '../fn/sales/api-v-1-counter-sales-post';
 import { ApiV1CounterSalesPost$Params } from '../fn/sales/api-v-1-counter-sales-post';
+import { PointCardPaymentResponseApiResponse } from '../models/point-card-payment-response-api-response';
 
 @Injectable({ providedIn: 'root' })
 export class SalesService extends BaseService {
@@ -333,6 +336,33 @@ export class SalesService extends BaseService {
     const resp = this.apiV1CounterSalesIdCardPaymentPost$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `apiV1CounterSalesIdCardPaymentCancelPost()` */
+  static readonly ApiV1CounterSalesIdCardPaymentCancelPostPath = '/api/v1/counter-sales/{id}/card-payment/cancel';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `apiV1CounterSalesIdCardPaymentCancelPost()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  apiV1CounterSalesIdCardPaymentCancelPost$Response(params: ApiV1CounterSalesIdCardPaymentCancelPost$Params, context?: HttpContext): Observable<StrictHttpResponse<PointCardPaymentResponseApiResponse>> {
+    const obs = apiV1CounterSalesIdCardPaymentCancelPost(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `apiV1CounterSalesIdCardPaymentCancelPost$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  apiV1CounterSalesIdCardPaymentCancelPost(params: ApiV1CounterSalesIdCardPaymentCancelPost$Params, context?: HttpContext): Observable<PointCardPaymentResponseApiResponse> {
+    const resp = this.apiV1CounterSalesIdCardPaymentCancelPost$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<PointCardPaymentResponseApiResponse>): PointCardPaymentResponseApiResponse => r.body)
     );
   }
 

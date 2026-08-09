@@ -6,13 +6,15 @@ using Distribuidora.Domain.Audits;
 using Distribuidora.Infrastructure.Observability;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.Extensions.Localization;
 
 namespace Distribuidora.Api.Middleware;
 
 public sealed class ExceptionMiddleware(
     RequestDelegate next,
     ILogger<ExceptionMiddleware> logger,
-    IHostEnvironment environment)
+    IHostEnvironment environment,
+    IStringLocalizer<ApiMessages> messages)
 {
     public async Task Invoke(
         HttpContext context,
@@ -80,7 +82,7 @@ public sealed class ExceptionMiddleware(
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/json";
             var message = status == StatusCodes.Status500InternalServerError
-                ? "An unexpected error occurred."
+                ? messages["UnexpectedError"]
                 : ex.Message;
             await context.Response.WriteAsJsonAsync(ApiResponse<object>.Fail(message, [message], trace.CorrelationId));
         }

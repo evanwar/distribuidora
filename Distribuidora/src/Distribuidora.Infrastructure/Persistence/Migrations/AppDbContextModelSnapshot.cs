@@ -17,7 +17,7 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -381,6 +381,70 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("payment_methods", "admin");
+                });
+
+            modelBuilder.Entity("Distribuidora.Domain.Administration.PaymentTerminal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<long>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Active", "Name");
+
+                    b.HasIndex("Provider", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("Provider", "IsDefault")
+                        .IsUnique()
+                        .HasFilter("\"IsDefault\" = TRUE");
+
+                    b.ToTable("payment_terminals", "admin");
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Administration.SystemSetting", b =>
@@ -2247,6 +2311,9 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("PaymentTerminalId")
+                        .HasColumnType("uuid");
+
                     b.Property<long>("RowVersion")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
@@ -2283,6 +2350,8 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId")
                         .IsUnique();
+
+                    b.HasIndex("PaymentTerminalId");
 
                     b.HasIndex("SaleId", "Status");
 
@@ -2780,6 +2849,11 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Distribuidora.Domain.Sales.PointPayment", b =>
                 {
+                    b.HasOne("Distribuidora.Domain.Administration.PaymentTerminal", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentTerminalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Distribuidora.Domain.Sales.CounterSale", null)
                         .WithMany()
                         .HasForeignKey("SaleId")

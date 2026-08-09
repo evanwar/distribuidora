@@ -9,6 +9,46 @@ public static class PaymentMethodCodes
     public const string BankTransfer = "transfer";
 }
 
+public static class PaymentTerminalProviders
+{
+    public const string MercadoPago = "mercado_pago";
+}
+
+public sealed class PaymentTerminal : AuditableEntity
+{
+    public const int NameMaximumLength = 120;
+    public const int ExternalIdMaximumLength = 150;
+    public const int DescriptionMaximumLength = 500;
+
+    public string Name { get; set; } = "";
+    public string Provider { get; set; } = PaymentTerminalProviders.MercadoPago;
+    public string ExternalId { get; set; } = "";
+    public string? Description { get; set; }
+    public bool IsDefault { get; set; }
+    public bool Active { get; set; } = true;
+
+    public void RecordCreated(DateTimeOffset occurredAt) =>
+        Raise(new EntityChangedDomainEvent("PaymentTerminalCreated", nameof(PaymentTerminal), Id, occurredAt));
+
+    public void RecordUpdated(DateTimeOffset occurredAt) =>
+        Raise(new EntityChangedDomainEvent("PaymentTerminalUpdated", nameof(PaymentTerminal), Id, occurredAt));
+
+    public void Activate(DateTimeOffset occurredAt)
+    {
+        if (Active) return;
+        Active = true;
+        Raise(new EntityChangedDomainEvent("PaymentTerminalActivated", nameof(PaymentTerminal), Id, occurredAt));
+    }
+
+    public void Deactivate(DateTimeOffset occurredAt)
+    {
+        if (!Active) return;
+        Active = false;
+        IsDefault = false;
+        Raise(new EntityChangedDomainEvent("PaymentTerminalDeactivated", nameof(PaymentTerminal), Id, occurredAt));
+    }
+}
+
 public static class DocumentFolioTypes
 {
     public const string Purchase = "purchase";

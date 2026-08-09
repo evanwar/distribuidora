@@ -7,6 +7,8 @@ import { UiFeedbackComponent } from '../../../shared/ui/feedback/ui-feedback.com
 import { UiIconComponent } from '../../../shared/ui/icon/ui-icon.component';
 import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-header.component';
 import { DashboardStore } from '../data-access/dashboard.store';
+import { LanguageService } from '../../../core/i18n/language.service';
+import { TranslationKey } from '../../../core/i18n/translation.catalog';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -24,12 +26,12 @@ import { DashboardStore } from '../data-access/dashboard.store';
   template: `
     <div class="page">
       <app-ui-page-header
-        eyebrow="Resumen de hoy"
-        title="Centro de operación"
-        subtitle="Una lectura rápida de ventas, inventario y cobranza."
+        [eyebrow]="i18n.translate('dashboard.eyebrow')"
+        [title]="i18n.translate('dashboard.title')"
+        [subtitle]="i18n.translate('dashboard.subtitle')"
       >
         <app-ui-button
-          label="Actualizar"
+          [label]="i18n.translate('common.refresh')"
           variant="outlined"
           icon="refresh"
           (pressed)="store.load()"
@@ -40,30 +42,30 @@ import { DashboardStore } from '../data-access/dashboard.store';
         <section class="surface">
           <app-ui-feedback
             kind="loading"
-            title="Actualizando indicadores"
-            message="Consultando el estado más reciente."
+            [title]="i18n.translate('dashboard.loading')"
+            [message]="i18n.translate('dashboard.loadingMessage')"
           />
         </section>
       } @else if (store.error()) {
         <app-ui-alert
-          title="No pudimos cargar el resumen"
+          [title]="i18n.translate('dashboard.loadError')"
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
           [operationId]="store.error()!.operationId"
-          actionLabel="Reintentar"
+          [actionLabel]="i18n.translate('common.retry')"
           (action)="store.load()"
         />
       } @else if (store.metrics().length === 0) {
         <section class="surface">
           <app-ui-feedback
             kind="empty"
-            title="Sin indicadores por ahora"
-            message="Todavía no hay información disponible para este momento."
+            [title]="i18n.translate('dashboard.noData')"
+            [message]="i18n.translate('dashboard.noDataMessage')"
           />
         </section>
       } @else {
-        <section class="metrics" aria-label="Indicadores">
+        <section class="metrics" [attr.aria-label]="i18n.translate('dashboard.indicators')">
           @for (metric of store.metrics(); track metric.key) {
             <a
               class="surface metric"
@@ -73,7 +75,7 @@ import { DashboardStore } from '../data-access/dashboard.store';
             >
               <span class="metric__icon"><app-ui-icon [name]="metric.icon" /></span>
               <div class="metric__content">
-                <span>{{ metric.label }}</span>
+                <span>{{ i18n.translate(metric.label) }}</span>
                 <strong>
                   @if (metric.format === 'currency' && isNumber(metric.value)) {
                     {{ metric.value | currency: 'MXN' : 'symbol' : '1.2-2' }}
@@ -170,6 +172,7 @@ import { DashboardStore } from '../data-access/dashboard.store';
 })
 export class DashboardPage implements OnInit {
   protected readonly store = inject(DashboardStore);
+  protected readonly i18n = inject(LanguageService);
   private readonly today = localDate(new Date());
 
   ngOnInit(): void {
@@ -202,14 +205,14 @@ export class DashboardPage implements OnInit {
   }
 
   protected actionLabelFor(key: string): string {
-    const labels: Record<string, string> = {
-      todaySales: 'Consultar ventas de hoy',
-      todayTransactions: 'Ver operaciones de hoy',
-      inventoryUnits: 'Consultar existencias',
-      lowStockProducts: 'Revisar stock bajo',
-      receivables: 'Consultar cartera',
+    const labels: Record<string, TranslationKey> = {
+      todaySales: 'dashboard.action.sales',
+      todayTransactions: 'dashboard.action.transactions',
+      inventoryUnits: 'dashboard.action.inventory',
+      lowStockProducts: 'dashboard.action.lowStock',
+      receivables: 'dashboard.action.receivables',
     };
-    return labels[key] ?? 'Abrir reporte';
+    return this.i18n.translate(labels[key] ?? 'dashboard.action.openReport');
   }
 }
 

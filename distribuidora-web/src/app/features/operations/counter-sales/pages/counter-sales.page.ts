@@ -37,6 +37,7 @@ import { CounterSalesApiAdapter } from '../data-access/counter-sales-api.adapter
 import { CounterSalesStore } from '../data-access/counter-sales.store';
 import { CounterSale, CreateCounterSale, IssueElectronicInvoice, PosCustomer } from '../models/counter-sale.models';
 import { ProductTileComponent } from '../ui/product-tile/product-tile.component';
+import { LanguageService } from '../../../../core/i18n/language.service';
 
 type SaleAction = 'payment' | 'cancel' | null;
 
@@ -69,12 +70,12 @@ type SaleAction = 'payment' | 'cancel' | null;
   template: `
     <div class="page pos-page">
       <app-ui-page-header
-        eyebrow="Ventas"
-        title="Punto de venta"
-        subtitle="Agrega productos, cobra y entrega el comprobante desde una sola pantalla."
+        [eyebrow]="text('Ventas')"
+        [title]="text('Punto de venta')"
+        [subtitle]="text('Agrega productos, cobra y entrega el comprobante desde una sola pantalla.')"
       >
         <app-ui-button
-          [label]="view() === 'sale' ? 'Ver historial' : 'Nueva venta'"
+          [label]="text(view() === 'sale' ? 'Ver historial' : 'Nueva venta')"
           [icon]="view() === 'sale' ? 'history' : 'add'"
           variant="outlined"
           (pressed)="switchView()"
@@ -83,21 +84,21 @@ type SaleAction = 'payment' | 'cancel' | null;
 
       @if (store.error()) {
         <app-ui-alert
-          title="No pudimos completar la operación"
+          [title]="text('No pudimos completar la operación')"
           [message]="store.error()!.message"
           tone="danger"
           [correlationId]="store.error()!.correlationId"
           [operationId]="store.error()!.operationId"
-          actionLabel="Reintentar"
+          [actionLabel]="text('Reintentar')"
           (action)="store.load()"
         />
       }
       @if (store.notice()) {
-        <app-ui-alert title="Listo" [message]="store.notice()!" tone="success" />
+        <app-ui-alert [title]="text('Listo')" [message]="store.notice()!" tone="success" />
       }
       @if (store.stockNotice()) {
         <app-ui-alert
-          title="Revisa la existencia"
+          [title]="text('Revisa la existencia')"
           [message]="store.stockNotice()!"
           tone="warning"
         />
@@ -107,8 +108,8 @@ type SaleAction = 'payment' | 'cancel' | null;
         <section class="surface">
           <app-ui-feedback
             kind="loading"
-            title="Preparando el punto de venta"
-            message="Cargando productos, clientes y formas de pago."
+            [title]="text('Preparando el punto de venta')"
+            [message]="text('Cargando productos, clientes y formas de pago.')"
           />
         </section>
       } @else if (view() === 'sale') {
@@ -117,7 +118,7 @@ type SaleAction = 'payment' | 'cancel' | null;
             <mat-card appearance="outlined" class="sale-settings">
               <mat-card-content [formGroup]="saleForm">
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>Almacén de salida</mat-label>
+                  <mat-label>{{ text('Almacén de salida') }}</mat-label>
                   <mat-select formControlName="sourceWarehouseId">
                     @for (warehouse of store.warehouses(); track warehouse.id) {
                       <mat-option [value]="warehouse.id">
@@ -128,12 +129,12 @@ type SaleAction = 'payment' | 'cancel' | null;
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>Cliente</mat-label>
+                  <mat-label>{{ text('Cliente') }}</mat-label>
                   <input
                     matInput
                     type="search"
                     autocomplete="off"
-                    placeholder="Nombre o número celular"
+                    [placeholder]="text('Nombre o número celular')"
                     [formControl]="customerSearchControl"
                     [matAutocomplete]="customerAutocomplete"
                     (input)="searchCustomers($event)"
@@ -143,7 +144,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                     [displayWith]="displayCustomer"
                     (optionSelected)="selectCustomer($event)"
                   >
-                    <mat-option value="">Venta al público</mat-option>
+                    <mat-option value="">{{ text('Venta al público') }}</mat-option>
                     @for (customer of store.customers(); track customer.id) {
                       <mat-option [value]="customer.id" [disabled]="customer.creditBlocked">
                         <span class="customer-option">
@@ -152,26 +153,26 @@ type SaleAction = 'payment' | 'cancel' | null;
                             <small>{{ customer.phone }}</small>
                           }
                           @if (customer.creditBlocked) {
-                            <small>Crédito bloqueado</small>
+                            <small>{{ text('Crédito bloqueado') }}</small>
                           }
                         </span>
                       </mat-option>
                     }
                     @if (store.customersLoading()) {
-                      <mat-option disabled>Buscando clientes…</mat-option>
+                      <mat-option disabled>{{ text('Buscando clientes…') }}</mat-option>
                     } @else if (store.customers().length === 0) {
-                      <mat-option disabled>No encontramos clientes.</mat-option>
+                      <mat-option disabled>{{ text('No encontramos clientes.') }}</mat-option>
                     }
                   </mat-autocomplete>
-                  <mat-hint>Escribe el nombre o celular para filtrar.</mat-hint>
+                  <mat-hint>{{ text('Escribe el nombre o celular para filtrar.') }}</mat-hint>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>Condición de pago</mat-label>
+                  <mat-label>{{ text('Condición de pago') }}</mat-label>
                   <mat-select formControlName="paymentCondition">
-                    <mat-option [value]="0">Contado</mat-option>
-                    <mat-option [value]="1">Crédito</mat-option>
-                    <mat-option [value]="2">Mixto</mat-option>
+                    <mat-option [value]="0">{{ text('Contado') }}</mat-option>
+                    <mat-option [value]="1">{{ text('Crédito') }}</mat-option>
+                    <mat-option [value]="2">{{ text('Mixto') }}</mat-option>
                   </mat-select>
                 </mat-form-field>
               </mat-card-content>
@@ -180,23 +181,23 @@ type SaleAction = 'payment' | 'cancel' | null;
             <section class="surface product-picker">
               <div class="section-heading">
                 <div>
-                  <h2 class="section-title">Agregar productos</h2>
-                  <p>Busca por nombre, SKU o código de barras.</p>
+                  <h2 class="section-title">{{ text('Agregar productos') }}</h2>
+                  <p>{{ text('Busca por nombre, SKU o código de barras.') }}</p>
                 </div>
-                <span class="shortcut">F2 Buscar</span>
+                <span class="shortcut">{{ text('F2 Buscar') }}</span>
               </div>
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="product-search">
-                <mat-label>Buscar producto</mat-label>
+                <mat-label>{{ text('Buscar producto') }}</mat-label>
                 <input
                   matInput
                   type="search"
                   autocomplete="off"
-                  placeholder="Ej. ARZ-001 o arroz"
+                  [placeholder]="text('Ej. ARZ-001 o arroz')"
                   (input)="store.search(inputValue($event))"
                 />
               </mat-form-field>
               @if (store.products().length === 0) {
-                <div class="compact-empty">No encontramos productos con esa búsqueda.</div>
+                <div class="compact-empty">{{ text('No encontramos productos con esa búsqueda.') }}</div>
               } @else {
                 <div class="product-grid">
                   @for (product of store.products(); track product.id) {
@@ -215,15 +216,15 @@ type SaleAction = 'payment' | 'cancel' | null;
             <section class="surface cart">
               <div class="section-heading">
                 <div>
-                  <h2 class="section-title">Productos de la venta</h2>
+                  <h2 class="section-title">{{ text('Productos de la venta') }}</h2>
                   <p>
                     {{ store.lines().length }}
-                    {{ store.lines().length === 1 ? 'partida' : 'partidas' }}
+                    {{ text(store.lines().length === 1 ? 'partida' : 'partidas') }}
                   </p>
                 </div>
                 @if (store.lines().length > 0) {
                   <button matButton type="button" class="quiet-danger" (click)="store.clear()">
-                    Vaciar
+                    {{ text('Vaciar') }}
                   </button>
                 }
               </div>
@@ -231,8 +232,8 @@ type SaleAction = 'payment' | 'cancel' | null;
               @if (store.lines().length === 0) {
                 <div class="cart-empty">
                   <span><app-ui-icon name="empty" /></span>
-                  <strong>La venta está vacía</strong>
-                  <p>Selecciona un producto para comenzar.</p>
+                  <strong>{{ text('La venta está vacía') }}</strong>
+                  <p>{{ text('Selecciona un producto para comenzar.') }}</p>
                 </div>
               } @else {
                 <div class="cart-lines">
@@ -243,10 +244,10 @@ type SaleAction = 'payment' | 'cancel' | null;
                         <strong>{{ line.name }}</strong>
                         <small>{{ line.unitPrice | currency: 'MXN' }} c/u</small>
                         <small class="cart-line__stock">
-                          Disponible: {{ store.availableStock(line.productId) | number: '1.0-4' }}
+                          {{ text('Disponible') }}: {{ store.availableStock(line.productId) | number: '1.0-4' }}
                         </small>
                       </div>
-                      <div class="quantity" aria-label="Cantidad">
+                      <div class="quantity" [attr.aria-label]="text('Cantidad')">
                         <button
                           matIconButton
                           type="button"
@@ -293,30 +294,30 @@ type SaleAction = 'payment' | 'cancel' | null;
           <aside class="surface checkout">
             <div>
               <span class="checkout__eyebrow">
-                {{ store.editingSaleId() ? 'Editando borrador' : 'Resumen de venta' }}
+                {{ text(store.editingSaleId() ? 'Editando borrador' : 'Resumen de venta') }}
               </span>
-              <h2>Total a cobrar</h2>
+              <h2>{{ text('Total a cobrar') }}</h2>
               <strong class="checkout__total money">{{ total() | currency: 'MXN' }}</strong>
             </div>
 
             <dl>
               <div>
-                <dt>Subtotal</dt>
+                <dt>{{ text('Subtotal') }}</dt>
                 <dd>{{ store.subtotal() | currency: 'MXN' }}</dd>
               </div>
               <div>
-                <dt>Descuento</dt>
+                <dt>{{ text('Descuento') }}</dt>
                 <dd>− {{ store.discount() | currency: 'MXN' }}</dd>
               </div>
               <div>
-                <dt>Impuestos</dt>
+                <dt>{{ text('Impuestos') }}</dt>
                 <dd>{{ tax() | currency: 'MXN' }}</dd>
               </div>
             </dl>
 
             <form [formGroup]="paymentForm" class="checkout-form">
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>Impuestos</mat-label>
+                <mat-label>{{ text('Impuestos') }}</mat-label>
                 <span matTextPrefix>$&nbsp;</span>
                 <input
                   matInput
@@ -328,7 +329,7 @@ type SaleAction = 'payment' | 'cancel' | null;
               </mat-form-field>
               @if (saleForm.controls.paymentCondition.value !== 1) {
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>Forma de pago</mat-label>
+                  <mat-label>{{ text('Forma de pago') }}</mat-label>
                   <mat-select formControlName="method">
                     @for (method of store.paymentMethods(); track method.code) {
                       <mat-option [value]="method.code">
@@ -337,15 +338,33 @@ type SaleAction = 'payment' | 'cancel' | null;
                     }
                   </mat-select>
                 </mat-form-field>
+                @if (isPointCardSelected()) {
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ text('Terminal de cobro') }}</mat-label>
+                    <mat-select formControlName="paymentTerminalId" required>
+                      @for (terminal of store.paymentTerminals(); track terminal.id) {
+                        <mat-option [value]="terminal.id">
+                          {{ terminal.name }}{{ terminal.isDefault ? ' · ' + text('Predeterminada') : '' }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                    @if (store.paymentTerminals().length === 0) {
+                      <mat-hint>{{ text('No hay terminales activas. Solicita su alta en Administración.') }}</mat-hint>
+                    }
+                    @if (paymentForm.controls.paymentTerminalId.touched && paymentForm.controls.paymentTerminalId.invalid) {
+                      <mat-error>{{ text('Selecciona una terminal activa.') }}</mat-error>
+                    }
+                  </mat-form-field>
+                }
                 @if (selectedMethodRequiresReference()) {
                   <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-label>Referencia</mat-label>
+                    <mat-label>{{ text('Referencia') }}</mat-label>
                     <input matInput formControlName="reference" />
                   </mat-form-field>
                 }
                 @if (isCashSelected()) {
                   <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-label>Efectivo recibido</mat-label>
+                    <mat-label>{{ text('Efectivo recibido') }}</mat-label>
                     <span matTextPrefix>$&nbsp;</span>
                     <input
                       matInput
@@ -357,17 +376,17 @@ type SaleAction = 'payment' | 'cancel' | null;
                       (input)="setCashTendered($event)"
                     />
                     @if ((paymentForm.controls.cashTendered.dirty || paymentForm.controls.cashTendered.touched) && cashTendered() < total()) {
-                      <mat-error>El efectivo recibido es menor al total a cobrar.</mat-error>
+                      <mat-error>{{ text('El efectivo recibido es menor al total a cobrar.') }}</mat-error>
                     }
                   </mat-form-field>
                   <section class="cash-change" aria-live="polite">
-                    <span>Cambio a devolver</span>
+                    <span>{{ text('Cambio a devolver') }}</span>
                     <strong class="money">{{ cashChange() | currency: 'MXN' }}</strong>
                   </section>
                 }
               }
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>Notas</mat-label>
+                <mat-label>{{ text('Notas') }}</mat-label>
                 <textarea matInput rows="2" formControlName="notes"></textarea>
               </mat-form-field>
             </form>
@@ -375,13 +394,13 @@ type SaleAction = 'payment' | 'cancel' | null;
             @if (store.cardPayment()) {
               <section class="terminal-status" aria-live="polite">
                 <app-ui-alert
-                  title="Terminal Mercado Pago"
+                  [title]="text('Terminal Mercado Pago')"
                   [message]="pointPaymentMessage()"
                   [tone]="pointPaymentTone()"
                 />
                 @if (canCancelPointPayment()) {
                   <app-ui-button
-                    label="Cancelar cobro en terminal"
+                    [label]="text('Cancelar cobro en terminal')"
                     loadingLabel="Cancelando en terminal…"
                     icon="close"
                     variant="outlined"
@@ -389,7 +408,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                     permission="sales.register_payment"
                     [fullWidth]="true"
                     [loading]="store.terminalCancelling()"
-                    ariaLabel="Cancelar el cobro pendiente y liberar la terminal"
+                    [ariaLabel]="language.language() === 'en' ? 'Cancel the pending payment and release the terminal' : 'Cancelar el cobro pendiente y liberar la terminal'"
                     (pressed)="openTerminalCancellation()"
                   />
                 }
@@ -398,7 +417,7 @@ type SaleAction = 'payment' | 'cancel' | null;
 
             <div class="checkout-actions">
               <app-ui-button
-                [label]="isPointCardSelected() ? 'Cobrar en terminal' : 'Cobrar y confirmar'"
+                [label]="text(isPointCardSelected() ? 'Cobrar en terminal' : 'Cobrar y confirmar')"
                 loadingLabel="Procesando venta…"
                 [icon]="isPointCardSelected() ? 'point-of-sale' : 'check'"
                 [fullWidth]="true"
@@ -407,7 +426,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                 (pressed)="save(true)"
               />
               <app-ui-button
-                label="Guardar borrador"
+                [label]="text('Guardar borrador')"
                 variant="outlined"
                 [fullWidth]="true"
                 [disabled]="!canSave(false) || store.saving()"
@@ -420,11 +439,11 @@ type SaleAction = 'payment' | 'cancel' | null;
         <section class="surface history">
           <div class="section-heading">
             <div>
-              <h2 class="section-title">Ventas recientes</h2>
-              <p>Consulta, completa o cancela operaciones anteriores.</p>
+              <h2 class="section-title">{{ text('Ventas recientes') }}</h2>
+              <p>{{ text('Consulta, completa o cancela operaciones anteriores.') }}</p>
             </div>
             <app-ui-button
-              label="Actualizar"
+              [label]="text('Actualizar')"
               icon="refresh"
               variant="outlined"
               (pressed)="store.load()"
@@ -433,31 +452,31 @@ type SaleAction = 'payment' | 'cancel' | null;
 
           <form class="history-filters" [formGroup]="historyForm">
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="history-filters__search">
-              <mat-label>Buscar ventas</mat-label>
+              <mat-label>{{ text('Buscar ventas') }}</mat-label>
               <input
                 matInput
                 type="search"
                 autocomplete="off"
                 formControlName="query"
-                placeholder="Folio, cliente, producto o nota"
+                [placeholder]="text('Folio, cliente, producto o nota')"
               />
-              <mat-hint>No necesitas conocer el ID de la venta.</mat-hint>
+              <mat-hint>{{ text('No necesitas conocer el ID de la venta.') }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Estado</mat-label>
+              <mat-label>{{ text('Estado') }}</mat-label>
               <mat-select formControlName="status">
-                <mat-option value="">Todos</mat-option>
-                <mat-option value="draft">Borrador</mat-option>
-                <mat-option value="confirmed">Confirmada</mat-option>
-                <mat-option value="partiallypaid">Pago parcial</mat-option>
-                <mat-option value="paid">Pagada</mat-option>
-                <mat-option value="cancelled">Cancelada</mat-option>
+                <mat-option value="">{{ text('Todos') }}</mat-option>
+                <mat-option value="draft">{{ text('Borrador') }}</mat-option>
+                <mat-option value="confirmed">{{ text('Confirmada') }}</mat-option>
+                <mat-option value="partiallypaid">{{ text('Pago parcial') }}</mat-option>
+                <mat-option value="paid">{{ text('Pagada') }}</mat-option>
+                <mat-option value="cancelled">{{ text('Cancelada') }}</mat-option>
               </mat-select>
             </mat-form-field>
-            <app-ui-date-field label="Desde" formControlName="from" />
-            <app-ui-date-field label="Hasta" formControlName="to" />
+            <app-ui-date-field [label]="text('Desde')" formControlName="from" />
+            <app-ui-date-field [label]="text('Hasta')" formControlName="to" />
             <app-ui-button
-              label="Limpiar filtros"
+              [label]="text('Limpiar filtros')"
               variant="text"
               tone="neutral"
               [disabled]="activeHistoryFilterCount() === 0"
@@ -467,11 +486,11 @@ type SaleAction = 'payment' | 'cancel' | null;
 
           <p class="history-summary" aria-live="polite">
             {{ filteredSales().length }}
-            {{ filteredSales().length === 1 ? 'venta encontrada' : 'ventas encontradas' }}
+            {{ text(filteredSales().length === 1 ? 'venta encontrada' : 'ventas encontradas') }}
             @if (activeHistoryFilterCount() > 0) {
               <span>
                 · {{ activeHistoryFilterCount() }}
-                {{ activeHistoryFilterCount() === 1 ? 'filtro activo' : 'filtros activos' }}
+                {{ text(activeHistoryFilterCount() === 1 ? 'filtro activo' : 'filtros activos') }}
               </span>
             }
           </p>
@@ -479,17 +498,17 @@ type SaleAction = 'payment' | 'cancel' | null;
           @if (store.sales().length === 0) {
             <app-ui-feedback
               kind="empty"
-              title="Todavía no hay ventas"
-              message="Las operaciones aparecerán aquí cuando registres la primera venta."
-              actionLabel="Crear venta"
+              [title]="text('Todavía no hay ventas')"
+              [message]="text('Las operaciones aparecerán aquí cuando registres la primera venta.')"
+              [actionLabel]="text('Crear venta')"
               (action)="view.set('sale')"
             />
           } @else if (filteredSales().length === 0) {
             <app-ui-feedback
               kind="empty"
-              title="No encontramos ventas"
-              message="Prueba otro folio, cliente, producto, estado o periodo."
-              actionLabel="Limpiar filtros"
+              [title]="text('No encontramos ventas')"
+              [message]="text('Prueba otro folio, cliente, producto, estado o periodo.')"
+              [actionLabel]="text('Limpiar filtros')"
               (action)="clearHistoryFilters()"
             />
           } @else {
@@ -507,7 +526,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                   />
                   <div class="sale-row__amount">
                     <strong class="money">{{ sale.total | currency: 'MXN' }}</strong>
-                    <span>Saldo {{ sale.balance | currency: 'MXN' }}</span>
+                    <span>{{ text('Saldo') }} {{ sale.balance | currency: 'MXN' }}</span>
                   </div>
                   <div class="sale-row__actions">
                     <button
@@ -518,23 +537,23 @@ type SaleAction = 'payment' | 'cancel' | null;
                       [attr.aria-expanded]="expandedSaleId() === sale.id"
                       (click)="toggleSaleDetails(sale.id)"
                     >
-                      {{ expandedSaleId() === sale.id ? 'Ocultar detalle' : 'Ver detalle' }}
+                      {{ text(expandedSaleId() === sale.id ? 'Ocultar detalle' : 'Ver detalle') }}
                     </button>
                     @if (isDraft(sale)) {
-                      <button class="sale-action sale-action--continue" matButton type="button" (click)="resume(sale)">Continuar</button>
+                      <button class="sale-action sale-action--continue" matButton type="button" (click)="resume(sale)">{{ text('Continuar') }}</button>
                       <button class="sale-action sale-action--confirm" matButton="filled" type="button" (click)="store.confirmSale(sale)">
-                        Confirmar
+                        {{ text('Confirmar') }}
                       </button>
                     } @else if (sale.balance > 0 && !isCancelled(sale)) {
                       <button class="sale-action sale-action--continue" matButton type="button" (click)="openAction(sale, 'payment')">
-                        Registrar pago
+                        {{ text('Registrar pago') }}
                       </button>
                     }
                     @if (!isCancelled(sale)) {
                       @if (!isDraft(sale)) {
                         <app-ui-button
                           class="sale-action sale-action--invoice"
-                          label="Factura"
+                          [label]="text('Factura')"
                           icon="receipt"
                           variant="text"
                           permission="sales.invoice"
@@ -543,7 +562,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                         />
                       }
                       <button class="sale-action sale-action--receipt" matButton type="button" (click)="store.print(sale, showTicket)">
-                        Comprobante
+                        {{ text('Comprobante') }}
                       </button>
                       <button
                         class="quiet-danger sale-action sale-action--cancel"
@@ -551,20 +570,20 @@ type SaleAction = 'payment' | 'cancel' | null;
                         type="button"
                         (click)="openAction(sale, 'cancel')"
                       >
-                        Cancelar
+                        {{ text('Cancelar') }}
                       </button>
                     }
                   </div>
                   @if (expandedSaleId() === sale.id) {
                     <section class="sale-detail" [attr.aria-label]="'Detalle de ' + sale.folio">
-                      <h3>Detalle de {{ sale.folio }}</h3>
+                      <h3>{{ text('Detalle de') }} {{ sale.folio }}</h3>
                       <dl class="sale-detail__summary">
-                        <div><dt>Cliente</dt><dd>{{ customerName(sale.customerId) }}</dd></div>
-                        <div><dt>Condición</dt><dd>{{ paymentConditionLabel(sale.paymentCondition) }}</dd></div>
-                        <div><dt>Subtotal</dt><dd>{{ sale.subtotal | currency: 'MXN' }}</dd></div>
-                        <div><dt>Impuestos</dt><dd>{{ sale.taxTotal | currency: 'MXN' }}</dd></div>
-                        <div><dt>Pagado</dt><dd>{{ sale.paidAmount | currency: 'MXN' }}</dd></div>
-                        <div><dt>Saldo</dt><dd>{{ sale.balance | currency: 'MXN' }}</dd></div>
+                        <div><dt>{{ text('Cliente') }}</dt><dd>{{ customerName(sale.customerId) }}</dd></div>
+                        <div><dt>{{ text('Condición') }}</dt><dd>{{ paymentConditionLabel(sale.paymentCondition) }}</dd></div>
+                        <div><dt>{{ text('Subtotal') }}</dt><dd>{{ sale.subtotal | currency: 'MXN' }}</dd></div>
+                        <div><dt>{{ text('Impuestos') }}</dt><dd>{{ sale.taxTotal | currency: 'MXN' }}</dd></div>
+                        <div><dt>{{ text('Pagado') }}</dt><dd>{{ sale.paidAmount | currency: 'MXN' }}</dd></div>
+                        <div><dt>{{ text('Saldo') }}</dt><dd>{{ sale.balance | currency: 'MXN' }}</dd></div>
                       </dl>
                       <div class="sale-detail__items">
                         @for (item of sale.items; track item.productId) {
@@ -576,7 +595,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                         }
                       </div>
                       @if (sale.notes) {
-                        <p><strong>Notas:</strong> {{ sale.notes }}</p>
+                        <p><strong>{{ text('Notas') }}:</strong> {{ sale.notes }}</p>
                       }
                     </section>
                   }
@@ -595,15 +614,15 @@ type SaleAction = 'payment' | 'cancel' | null;
             <div>
               <span>{{ activeSale()!.folio }}</span>
               <h2 id="sale-action-title">
-                {{ activeAction() === 'payment' ? 'Registrar pago' : 'Cancelar venta' }}
+                {{ text(activeAction() === 'payment' ? 'Registrar pago' : 'Cancelar venta') }}
               </h2>
             </div>
-            <app-ui-icon-button icon="close" ariaLabel="Cerrar" (pressed)="closeAction()" />
+            <app-ui-icon-button icon="close" [ariaLabel]="text('Cerrar')" (pressed)="closeAction()" />
           </div>
           @if (activeAction() === 'payment') {
             <form [formGroup]="actionForm" class="modal__form">
               <mat-form-field appearance="outline">
-                <mat-label>Forma de pago</mat-label>
+                <mat-label>{{ text('Forma de pago') }}</mat-label>
                 <mat-select formControlName="method">
                   @for (method of store.paymentMethods(); track method.code) {
                     <mat-option [value]="method.code">
@@ -613,30 +632,30 @@ type SaleAction = 'payment' | 'cancel' | null;
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Importe</mat-label>
+                <mat-label>{{ text('Importe') }}</mat-label>
                 <span matTextPrefix>$&nbsp;</span>
                 <input matInput type="number" min="0.01" formControlName="amount" />
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Referencia</mat-label>
+                <mat-label>{{ text('Referencia') }}</mat-label>
                 <input matInput formControlName="reference" />
               </mat-form-field>
             </form>
           } @else {
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Motivo de cancelación</mat-label>
+              <mat-label>{{ text('Motivo de cancelación') }}</mat-label>
               <textarea matInput rows="3" [formControl]="cancelReason"></textarea>
             </mat-form-field>
             <app-ui-alert
-              title="Esta acción no se puede deshacer"
-              message="El sistema revisará si la venta y sus movimientos pueden cancelarse."
+              [title]="text('Esta acción no se puede deshacer')"
+              [message]="text('El sistema revisará si la venta y sus movimientos pueden cancelarse.')"
               tone="warning"
             />
           }
           <div class="modal__actions">
-            <app-ui-button label="Volver" variant="text" tone="neutral" (pressed)="closeAction()" />
+            <app-ui-button [label]="text('Volver')" variant="text" tone="neutral" (pressed)="closeAction()" />
             <app-ui-button
-              [label]="activeAction() === 'payment' ? 'Registrar pago' : 'Cancelar venta'"
+              [label]="text(activeAction() === 'payment' ? 'Registrar pago' : 'Cancelar venta')"
               [tone]="activeAction() === 'cancel' ? 'danger' : 'primary'"
               [loading]="store.saving()"
               [disabled]="actionInvalid()"
@@ -651,12 +670,12 @@ type SaleAction = 'payment' | 'cancel' | null;
       <section class="modal terminal-cancel-modal" aria-labelledby="terminal-cancel-title">
         <div class="modal__header">
           <div>
-            <span>Terminal Mercado Pago</span>
-            <h2 id="terminal-cancel-title">¿Cancelar el cobro pendiente?</h2>
+            <span>{{ text('Terminal Mercado Pago') }}</span>
+            <h2 id="terminal-cancel-title">{{ text('¿Cancelar el cobro pendiente?') }}</h2>
           </div>
           <app-ui-icon-button
             icon="close"
-            ariaLabel="Mantener el cobro pendiente"
+            [ariaLabel]="text('Mantener el cobro pendiente')"
             [disabled]="store.terminalCancelling()"
             (pressed)="closeTerminalCancellation()"
           />
@@ -666,20 +685,20 @@ type SaleAction = 'payment' | 'cancel' | null;
           borrador y los productos permanecerán en el carrito.
         </p>
         <app-ui-alert
-          title="Verifica la terminal antes de continuar"
+          [title]="text('Verifica la terminal antes de continuar')"
           message="Si el cliente ya presentó su tarjeta, espera el resultado para evitar un cobro duplicado."
           tone="warning"
         />
         <div class="modal__actions terminal-cancel-modal__actions">
           <app-ui-button
-            label="Mantener cobro"
+            [label]="text('Mantener cobro')"
             variant="text"
             tone="neutral"
             [disabled]="store.terminalCancelling()"
             (pressed)="closeTerminalCancellation()"
           />
           <app-ui-button
-            label="Sí, cancelar en terminal"
+            [label]="text('Sí, cancelar en terminal')"
             loadingLabel="Liberando terminal…"
             tone="danger"
             [loading]="store.terminalCancelling()"
@@ -695,9 +714,9 @@ type SaleAction = 'payment' | 'cancel' | null;
           <div class="modal__header">
             <div>
               <span>{{ invoiceSale()!.folio }}</span>
-              <h2 id="invoice-title">Factura electrónica</h2>
+              <h2 id="invoice-title">{{ text('Factura electrónica') }}</h2>
             </div>
-            <app-ui-icon-button icon="close" ariaLabel="Cerrar factura" (pressed)="closeInvoice()" />
+            <app-ui-icon-button icon="close" [ariaLabel]="language.language() === 'en' ? 'Close invoice' : 'Cerrar factura'" (pressed)="closeInvoice()" />
           </div>
 
           @if (!invoiceSale()!.customerId) {
@@ -705,15 +724,15 @@ type SaleAction = 'payment' | 'cancel' | null;
               @if (eligibility.requiredAction === 'assign_billing_recipient') {
                 <section class="fiscal-product-card" [formGroup]="billingRecipientForm">
                   <div>
-                    <h3>Receptor fiscal</h3>
-                    <p>La venta original seguirá registrada como venta al público.</p>
+                    <h3>{{ text('Receptor fiscal') }}</h3>
+                    <p>{{ text('La venta original seguirá registrada como venta al público.') }}</p>
                   </div>
                   <mat-form-field appearance="outline">
-                    <mat-label>Buscar cliente</mat-label>
+                    <mat-label>{{ text('Buscar cliente') }}</mat-label>
                     <input matInput formControlName="search" autocomplete="off" (input)="searchBillingCustomers()" />
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Cliente que solicita la factura</mat-label>
+                    <mat-label>{{ text('Cliente que solicita la factura') }}</mat-label>
                     <mat-select formControlName="customerId" (selectionChange)="applyBillingCustomer()">
                       @for (customer of store.customers(); track customer.id) {
                         <mat-option [value]="customer.id">
@@ -724,17 +743,17 @@ type SaleAction = 'payment' | 'cancel' | null;
                   </mat-form-field>
                   @if (selectedBillingCustomer() && !selectedBillingCustomer()!.hasCompleteFiscalProfile) {
                     <app-ui-alert
-                      title="Perfil fiscal incompleto"
-                      message="Completa RFC, razón social, código postal y régimen en Clientes antes de asociarlo."
+                      [title]="text('Perfil fiscal incompleto')"
+                      [message]="text('Completa RFC, razón social, código postal y régimen en Clientes antes de asociarlo.')"
                       tone="warning"
                     />
                   }
                   <mat-form-field appearance="outline">
-                    <mat-label>Motivo de asociación</mat-label>
+                    <mat-label>{{ text('Motivo de asociación') }}</mat-label>
                     <textarea matInput formControlName="reason" rows="2"></textarea>
                   </mat-form-field>
                   <app-ui-button
-                    label="Asociar receptor fiscal"
+                    [label]="text('Asociar receptor fiscal')"
                     icon="customers"
                     permission="sales.assign_billing_recipient"
                     [loading]="store.saving()"
@@ -744,36 +763,36 @@ type SaleAction = 'payment' | 'cancel' | null;
                 </section>
               } @else if (!eligibility.eligible && eligibility.requiredAction !== 'view_invoice') {
                 <app-ui-alert
-                  title="La venta requiere revisión fiscal"
+                  [title]="text('La venta requiere revisión fiscal')"
                   [message]="billingEligibilityMessage(eligibility.reasonCode)"
                   tone="warning"
                 />
                 @if (eligibility.requiredAction === 'reconcile_fiscal_coverage') {
                   <section class="fiscal-product-card" [formGroup]="fiscalReconciliationForm">
                     <div>
-                      <h3>Conciliación administrativa</h3>
-                      <p>Registra el resultado verificado contra la fuente fiscal externa.</p>
+                      <h3>{{ text('Conciliación administrativa') }}</h3>
+                      <p>{{ text('Registra el resultado verificado contra la fuente fiscal externa.') }}</p>
                     </div>
                     <mat-form-field appearance="outline">
-                      <mat-label>Cobertura verificada</mat-label>
+                      <mat-label>{{ text('Cobertura verificada') }}</mat-label>
                       <mat-select formControlName="coverageStatus">
-                        <mat-option value="Uncovered">No incluida en factura global</mat-option>
-                        <mat-option value="IncludedInOpenGlobalInvoice">Incluida en global abierta</mat-option>
-                        <mat-option value="IncludedInIssuedGlobalInvoice">Incluida en global emitida</mat-option>
+                        <mat-option value="Uncovered">{{ text('No incluida en factura global') }}</mat-option>
+                        <mat-option value="IncludedInOpenGlobalInvoice">{{ text('Incluida en global abierta') }}</mat-option>
+                        <mat-option value="IncludedInIssuedGlobalInvoice">{{ text('Incluida en global emitida') }}</mat-option>
                       </mat-select>
                     </mat-form-field>
                     @if (fiscalReconciliationForm.controls.coverageStatus.value === 'IncludedInIssuedGlobalInvoice') {
                       <mat-form-field appearance="outline">
-                        <mat-label>UUID de la factura global</mat-label>
+                        <mat-label>{{ text('UUID de la factura global') }}</mat-label>
                         <input matInput formControlName="globalInvoiceFiscalUuid" autocomplete="off" />
                       </mat-form-field>
                     }
                     <mat-form-field appearance="outline">
-                      <mat-label>Evidencia o motivo de conciliación</mat-label>
+                      <mat-label>{{ text('Evidencia o motivo de conciliación') }}</mat-label>
                       <textarea matInput formControlName="reason" rows="3"></textarea>
                     </mat-form-field>
                     <app-ui-button
-                      label="Guardar conciliación"
+                      [label]="text('Guardar conciliación')"
                       icon="audit"
                       variant="outlined"
                       permission="sales.manage_global_invoice_replacement"
@@ -785,13 +804,13 @@ type SaleAction = 'payment' | 'cancel' | null;
                 }
               } @else if (eligibility.billingCustomerId) {
                 <app-ui-alert
-                  title="Receptor fiscal asociado"
+                  [title]="text('Receptor fiscal asociado')"
                   [message]="'La factura se emitirá a ' + billingCustomerName(eligibility.billingCustomerId) + '. La venta original no se modificará.'"
                   tone="info"
                 />
               }
             } @else {
-              <app-ui-alert title="Verificando cobertura fiscal" message="Consultando el estado autoritativo de la venta." tone="info" />
+              <app-ui-alert [title]="text('Verificando cobertura fiscal')" [message]="text('Consultando el estado autoritativo de la venta.')" tone="info" />
             }
           }
 
@@ -799,22 +818,22 @@ type SaleAction = 'payment' | 'cancel' | null;
             <div class="invoice-result">
               <app-ui-status-chip [label]="invoiceStatusLabel(invoice.status)" [tone]="invoiceStatusTone(invoice.status)" />
               @if (invoice.fiscalUuid) {
-                <div class="invoice-uuid"><span>Folio fiscal</span><strong>{{ invoice.fiscalUuid }}</strong></div>
+                <div class="invoice-uuid"><span>{{ text('Folio fiscal') }}</span><strong>{{ invoice.fiscalUuid }}</strong></div>
               }
               @if (invoice.errorMessage) {
-                <app-ui-alert title="Requiere revisión" [message]="invoice.errorMessage" tone="warning" />
+                <app-ui-alert [title]="text('Requiere revisión')" [message]="invoice.errorMessage" tone="warning" />
               }
               @if (canDownloadInvoice(invoice.status)) {
                 <div class="invoice-file-actions">
-                  <app-ui-button label="Descargar XML" icon="download" variant="outlined" [loading]="store.saving()" (pressed)="downloadInvoice('xml')" />
-                  <app-ui-button label="Descargar PDF" icon="download" variant="outlined" [loading]="store.saving()" (pressed)="downloadInvoice('pdf')" />
+                  <app-ui-button [label]="text('Descargar XML')" icon="download" variant="outlined" [loading]="store.saving()" (pressed)="downloadInvoice('xml')" />
+                  <app-ui-button [label]="text('Descargar PDF')" icon="download" variant="outlined" [loading]="store.saving()" (pressed)="downloadInvoice('pdf')" />
                 </div>
               }
               @if (invoice.status.toLowerCase() === 'issued') {
                 <div class="invoice-cancel" [formGroup]="invoiceCancelForm">
-                  <h3>Cancelar factura</h3>
+                  <h3>{{ text('Cancelar factura') }}</h3>
                   <mat-form-field appearance="outline">
-                    <mat-label>Motivo SAT</mat-label>
+                    <mat-label>{{ text('Motivo SAT') }}</mat-label>
                     <mat-select formControlName="reasonCode">
                       <mat-option value="01">01 · Comprobante emitido con errores con relación</mat-option>
                       <mat-option value="02">02 · Comprobante emitido con errores sin relación</mat-option>
@@ -823,42 +842,42 @@ type SaleAction = 'payment' | 'cancel' | null;
                   </mat-form-field>
                   @if (invoiceCancelForm.controls.reasonCode.value === '01') {
                     <mat-form-field appearance="outline">
-                      <mat-label>UUID de la factura sustituta</mat-label>
+                      <mat-label>{{ text('UUID de la factura sustituta') }}</mat-label>
                       <input matInput formControlName="replacementUuid" autocomplete="off" />
                     </mat-form-field>
                   }
-                  <app-ui-button label="Cancelar CFDI" tone="danger" variant="outlined" permission="sales.cancel_invoice" [disabled]="invoiceCancellationInvalid()" [loading]="store.saving()" (pressed)="cancelInvoice()" />
+                  <app-ui-button [label]="text('Cancelar CFDI')" tone="danger" variant="outlined" permission="sales.cancel_invoice" [disabled]="invoiceCancellationInvalid()" [loading]="store.saving()" (pressed)="cancelInvoice()" />
                 </div>
               }
             </div>
           } @else {
             <form [formGroup]="invoiceForm" class="invoice-form">
-              <p class="form-intro">Captura los datos tal como aparecen en la constancia de situación fiscal.</p>
+              <p class="form-intro">{{ text('Captura los datos tal como aparecen en la constancia de situación fiscal.') }}</p>
               <div class="invoice-form__grid">
                 <mat-form-field appearance="outline"><mat-label>RFC</mat-label><input matInput formControlName="taxId" autocomplete="off" /></mat-form-field>
-                <mat-form-field appearance="outline"><mat-label>Nombre o razón social</mat-label><input matInput formControlName="legalName" autocomplete="name" /></mat-form-field>
-                <mat-form-field appearance="outline"><mat-label>Código postal fiscal</mat-label><input matInput formControlName="zipCode" inputmode="numeric" maxlength="5" /></mat-form-field>
-                <mat-form-field appearance="outline"><mat-label>Régimen fiscal</mat-label><input matInput formControlName="taxRegimeCode" maxlength="3" placeholder="Ej. 612" /></mat-form-field>
-                <mat-form-field appearance="outline"><mat-label>Uso CFDI</mat-label><input matInput formControlName="cfdiUseCode" maxlength="4" placeholder="Ej. G03" /></mat-form-field>
-                <mat-form-field appearance="outline"><mat-label>Forma de pago SAT</mat-label><input matInput formControlName="paymentFormCode" maxlength="2" placeholder="Ej. 01" /></mat-form-field>
-                <mat-form-field appearance="outline" class="span-two"><mat-label>Correo para la factura (opcional)</mat-label><input matInput type="email" formControlName="email" autocomplete="email" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>{{ text('Nombre o razón social') }}</mat-label><input matInput formControlName="legalName" autocomplete="name" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>{{ text('Código postal fiscal') }}</mat-label><input matInput formControlName="zipCode" inputmode="numeric" maxlength="5" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>{{ text('Régimen fiscal') }}</mat-label><input matInput formControlName="taxRegimeCode" maxlength="3" placeholder="Ej. 612" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>{{ text('Uso CFDI') }}</mat-label><input matInput formControlName="cfdiUseCode" maxlength="4" placeholder="Ej. G03" /></mat-form-field>
+                <mat-form-field appearance="outline"><mat-label>{{ text('Forma de pago SAT') }}</mat-label><input matInput formControlName="paymentFormCode" maxlength="2" placeholder="Ej. 01" /></mat-form-field>
+                <mat-form-field appearance="outline" class="span-two"><mat-label>{{ text('Correo para la factura (opcional)') }}</mat-label><input matInput type="email" formControlName="email" autocomplete="email" /></mat-form-field>
               </div>
               <div class="fiscal-product-card">
-                <div><h3>Datos SAT de los productos</h3><p>Se aplicarán a todos los conceptos de esta venta.</p></div>
+                <div><h3>{{ text('Datos SAT de los productos') }}</h3><p>{{ text('Se aplicarán a todos los conceptos de esta venta.') }}</p></div>
                 <div class="invoice-form__grid">
-                  <mat-form-field appearance="outline"><mat-label>Clave producto/servicio</mat-label><input matInput formControlName="satProductCode" maxlength="8" /></mat-form-field>
-                  <mat-form-field appearance="outline"><mat-label>Clave unidad</mat-label><input matInput formControlName="satUnitCode" maxlength="3" /></mat-form-field>
-                  <mat-form-field appearance="outline"><mat-label>Objeto de impuesto</mat-label><mat-select formControlName="taxObjectCode"><mat-option value="02">02 · Sí objeto de impuesto</mat-option><mat-option value="01">01 · No objeto de impuesto</mat-option></mat-select></mat-form-field>
-                  <mat-form-field appearance="outline"><mat-label>Tasa IVA</mat-label><mat-select formControlName="taxRate"><mat-option [value]="0.16">16%</mat-option><mat-option [value]="0.08">8%</mat-option><mat-option [value]="0">0%</mat-option></mat-select></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ text('Clave producto/servicio') }}</mat-label><input matInput formControlName="satProductCode" maxlength="8" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ text('Clave unidad') }}</mat-label><input matInput formControlName="satUnitCode" maxlength="3" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ text('Objeto de impuesto') }}</mat-label><mat-select formControlName="taxObjectCode"><mat-option value="02">02 · {{ language.language() === 'en' ? 'Taxable' : 'Sí objeto de impuesto' }}</mat-option><mat-option value="01">01 · {{ language.language() === 'en' ? 'Not taxable' : 'No objeto de impuesto' }}</mat-option></mat-select></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ text('Tasa IVA') }}</mat-label><mat-select formControlName="taxRate"><mat-option [value]="0.16">16%</mat-option><mat-option [value]="0.08">8%</mat-option><mat-option [value]="0">0%</mat-option></mat-select></mat-form-field>
                 </div>
               </div>
               <app-ui-alert title="Revisa antes de timbrar" message="La emisión fiscal no se reintenta automáticamente. Verifica RFC, razón social y régimen." tone="info" />
             </form>
           }
           <div class="modal__actions">
-            <app-ui-button label="Cerrar" variant="text" tone="neutral" (pressed)="closeInvoice()" />
+            <app-ui-button [label]="text('Cerrar')" variant="text" tone="neutral" (pressed)="closeInvoice()" />
             @if (!store.electronicInvoice()) {
-              <app-ui-button label="Emitir factura" icon="receipt" permission="sales.invoice" [loading]="store.saving()" loadingLabel="Timbrando…" [disabled]="invoiceIssueDisabled()" (pressed)="issueInvoice()" />
+              <app-ui-button [label]="text('Emitir factura')" icon="receipt" permission="sales.invoice" [loading]="store.saving()" [loadingLabel]="language.language() === 'en' ? 'Issuing…' : 'Timbrando…'" [disabled]="invoiceIssueDisabled()" (pressed)="issueInvoice()" />
             }
           </div>
         </section>
@@ -867,11 +886,11 @@ type SaleAction = 'payment' | 'cancel' | null;
 
     <ng-template #ticketDialog>
       @if (ticket()) {
-        <article class="ticket" aria-label="Comprobante de venta">
+        <article class="ticket" [attr.aria-label]="text('Comprobante de venta')">
           <header>
             <span class="ticket__mark">D</span>
             <strong>Distribuidora</strong>
-            <small>Comprobante de venta</small>
+            <small>{{ text('Comprobante de venta') }}</small>
           </header>
           <div class="ticket__meta">
             <span>{{ ticket()!.folio }}</span>
@@ -887,25 +906,25 @@ type SaleAction = 'payment' | 'cancel' | null;
           }
           <dl>
             <div>
-              <dt>Subtotal</dt>
+              <dt>{{ text('Subtotal') }}</dt>
               <dd>{{ ticket()!.subtotal | currency: 'MXN' }}</dd>
             </div>
             <div>
-              <dt>Impuestos</dt>
+              <dt>{{ text('Impuestos') }}</dt>
               <dd>{{ ticket()!.taxTotal | currency: 'MXN' }}</dd>
             </div>
             <div class="ticket__total">
-              <dt>Total</dt>
+              <dt>{{ text('Total') }}</dt>
               <dd>{{ ticket()!.total | currency: 'MXN' }}</dd>
             </div>
             <div>
-              <dt>Pagado</dt>
+              <dt>{{ text('Pagado') }}</dt>
               <dd>{{ ticket()!.paidAmount | currency: 'MXN' }}</dd>
             </div>
           </dl>
           <footer class="ticket__actions">
-            <app-ui-button label="Cerrar" variant="text" tone="neutral" (pressed)="closeTicket()" />
-            <app-ui-button label="Imprimir" icon="print" (pressed)="printTicket()" />
+            <app-ui-button [label]="text('Cerrar')" variant="text" tone="neutral" (pressed)="closeTicket()" />
+            <app-ui-button [label]="text('Imprimir')" icon="print" (pressed)="printTicket()" />
           </footer>
         </article>
       }
@@ -923,6 +942,7 @@ export class CounterSalesPage implements OnInit {
 
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
+  protected readonly language = inject(LanguageService);
   private actionDialogRef: MatDialogRef<unknown> | null = null;
   private ticketDialogRef: MatDialogRef<unknown> | null = null;
   private invoiceDialogRef: MatDialogRef<unknown> | null = null;
@@ -948,6 +968,7 @@ export class CounterSalesPage implements OnInit {
   protected readonly paymentForm = new FormGroup({
     tax: new FormControl(0, { nonNullable: true, validators: [Validators.min(0)] }),
     method: new FormControl('cash', { nonNullable: true }),
+    paymentTerminalId: new FormControl('', { nonNullable: true }),
     reference: new FormControl('', { nonNullable: true }),
     cashTendered: new FormControl(0, {
       nonNullable: true,
@@ -1101,6 +1122,12 @@ export class CounterSalesPage implements OnInit {
       ) {
         this.paymentForm.controls.method.setValue(methods[0].code);
       }
+      const terminals = this.store.paymentTerminals();
+      const selectedTerminalId = this.paymentForm.controls.paymentTerminalId.value;
+      if (terminals.length > 0 && !terminals.some((terminal) => terminal.id === selectedTerminalId)) {
+        const preferred = terminals.find((terminal) => terminal.isDefault) ?? terminals[0];
+        this.paymentForm.controls.paymentTerminalId.setValue(preferred.id);
+      }
     });
   }
 
@@ -1121,18 +1148,18 @@ export class CounterSalesPage implements OnInit {
   }
 
   protected customerName(customerId?: string | null): string {
-    if (!customerId) return 'Venta al público';
-    return this.store.customers().find((customer) => customer.id === customerId)?.name ?? 'Cliente';
+    if (!customerId) return this.text('Venta al público');
+    return this.store.customers().find((customer) => customer.id === customerId)?.name ?? this.text('Cliente');
   }
 
   protected paymentConditionLabel(condition: string): string {
     const labels: Record<string, string> = { cash: 'Contado', credit: 'Crédito', mixed: 'Mixto' };
-    return labels[condition.toLocaleLowerCase('en')] ?? condition;
+    return this.text(labels[condition.toLocaleLowerCase('en')] ?? condition);
   }
 
   protected productLabel(productId: string): string {
     const product = this.store.products().find((item) => item.id === productId);
-    return product ? `${product.sku} · ${product.name}` : 'Producto';
+    return product ? `${product.sku} · ${product.name}` : this.text('Producto');
   }
 
   protected inputValue(event: Event): string {
@@ -1197,13 +1224,17 @@ export class CounterSalesPage implements OnInit {
       this.selectedMethodRequiresReference() && !this.paymentForm.controls.reference.value.trim();
     const cashInsufficient =
       confirm && !isCredit && this.isCashSelected() && this.cashTendered() < this.total();
+    const terminalMissing =
+      confirm && !isCredit && this.isPointCardSelected() &&
+      !this.paymentForm.controls.paymentTerminalId.value;
     return (
       this.saleForm.valid &&
       this.store.lines().length > 0 &&
       this.store.hasValidStock() &&
       (!isCredit || Boolean(this.saleForm.controls.customerId.value)) &&
       (isCredit || !referenceMissing) &&
-      !cashInsufficient
+      !cashInsufficient &&
+      !terminalMissing
     );
   }
 
@@ -1211,6 +1242,9 @@ export class CounterSalesPage implements OnInit {
     if (!this.canSave(confirm)) {
       if (confirm && this.isCashSelected()) {
         this.paymentForm.controls.cashTendered.markAsTouched();
+      }
+      if (confirm && this.isPointCardSelected()) {
+        this.paymentForm.controls.paymentTerminalId.markAsTouched();
       }
       return;
     }
@@ -1241,7 +1275,11 @@ export class CounterSalesPage implements OnInit {
           : [],
     };
     if (pointCard) {
-      this.store.saveCard(request, this.completeConfirmedSale);
+      this.store.saveCard(
+        request,
+        this.paymentForm.controls.paymentTerminalId.value,
+        this.completeConfirmedSale,
+      );
       return;
     }
     this.store.save(request, confirm, confirm ? this.completeConfirmedSale : this.showTicket);
@@ -1570,11 +1608,11 @@ export class CounterSalesPage implements OnInit {
       paid: 'Pagada',
       cancelled: 'Cancelada',
     };
-    return labels[status.toLocaleLowerCase('en').replace(/\s/g, '')] ?? status;
+    return this.text(labels[status.toLocaleLowerCase('en').replace(/\s/g, '')] ?? status);
   }
 
   protected warehouseLabel(name: string): string {
-    return name.trim().toLowerCase() === 'main warehouse' ? 'Almacén principal' : name;
+    return name.trim().toLowerCase() === 'main warehouse' ? this.text('Almacén principal') : name;
   }
 
   protected paymentMethodLabel(code: string, name: string): string {
@@ -1586,7 +1624,7 @@ export class CounterSalesPage implements OnInit {
       check: 'Cheque',
     };
 
-    return labels[normalized] ?? name;
+    return this.text(labels[normalized] ?? name);
   }
 
   protected statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
@@ -1598,7 +1636,11 @@ export class CounterSalesPage implements OnInit {
   }
 
   protected productName(id: string): string {
-    return this.store.products().find((product) => product.id === id)?.name ?? 'Producto';
+    return this.store.products().find((product) => product.id === id)?.name ?? this.text('Producto');
+  }
+
+  protected text(value: string): string {
+    return this.language.text(value);
   }
 
   protected printTicket(): void {

@@ -25,6 +25,8 @@ import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-
 import { OperationWorkbenchStore } from '../data-access/operation-workbench.store';
 import { BUSINESS_FIELDS, BUSINESS_MODULES, BUSINESS_TITLES } from './business-workspace.config';
 import { BusinessField, BusinessLineField, BusinessResultRow } from './business-workspace.models';
+import { LanguageService } from '../../../core/i18n/language.service';
+import { BUSINESS_MODULES_EN, BUSINESS_TITLES_EN, businessText } from './business-workspace.i18n';
 
 type FieldValue =
   string | number | boolean | readonly string[] | readonly Record<string, string | number>[];
@@ -57,11 +59,11 @@ type FieldValue =
       />
 
       @if (workflowMessage()) {
-        <app-ui-alert title="Siguiente paso" [message]="workflowMessage()!" tone="info" />
+        <app-ui-alert [title]="text('Siguiente paso')" [message]="workflowMessage()!" tone="info" />
       }
 
       <section class="workspace">
-        <nav class="surface task-nav" aria-label="Tareas disponibles">
+        <nav class="surface task-nav" [attr.aria-label]="text('Tareas disponibles')">
           @for (group of groups(); track group) {
             <section class="task-group">
               <h2>{{ group }}</h2>
@@ -92,8 +94,8 @@ type FieldValue =
           @if (!selected()) {
             <app-ui-feedback
               kind="empty"
-              title="Selecciona una tarea"
-              message="Elige una opción para consultar información o realizar una operación."
+              [title]="text('Selecciona una tarea')"
+              [message]="text('Elige una opción para consultar información o realizar una operación.')"
             />
           } @else {
             <header class="task-panel__header">
@@ -105,10 +107,10 @@ type FieldValue =
               <app-ui-status-chip
                 [label]="
                   selected()!.method === 'GET'
-                    ? 'Consulta'
+                    ? text('Consulta')
                     : selected()!.method === 'POST'
-                      ? 'Registro'
-                      : 'Actualización'
+                      ? text('Registro')
+                      : text('Actualización')
                 "
                 [tone]="selected()!.method === 'GET' ? 'info' : 'warning'"
               />
@@ -123,12 +125,12 @@ type FieldValue =
                         [checked]="booleanValue(field)"
                         (change)="setValue(field.key, $event.checked)"
                       >
-                        {{ field.label }}
+                        {{ text(field.label) }}
                       </mat-checkbox>
                     } @else if (field.type === 'date') {
                       <app-ui-date-field
-                        [label]="field.label"
-                        [hint]="field.hint ?? ''"
+                        [label]="text(field.label)"
+                        [hint]="text(field.hint ?? '')"
                         [required]="field.required ?? false"
                         [value]="dateValue(field)"
                         (valueChange)="setValue(field.key, $event)"
@@ -142,7 +144,7 @@ type FieldValue =
                           field.type === 'multi-select'
                         "
                       >
-                        <mat-label>{{ field.label }}</mat-label>
+                        <mat-label>{{ text(field.label) }}</mat-label>
                         @if (field.type === 'select' || field.type === 'multi-select') {
                           <mat-select
                             [required]="field.required"
@@ -153,12 +155,12 @@ type FieldValue =
                             (selectionChange)="setValue(field.key, $event.value)"
                           >
                             @if (!field.required && field.type === 'select') {
-                              <mat-option value="">Todos</mat-option>
+                              <mat-option value="">{{ text('Todos') }}</mat-option>
                             }
                             @if (store.lookupLoading()) {
-                              <mat-option disabled>Cargando opciones…</mat-option>
+                              <mat-option disabled>{{ text('Cargando opciones…') }}</mat-option>
                             } @else if (store.optionsFor(field).length === 0) {
-                              <mat-option disabled>No hay registros disponibles</mat-option>
+                              <mat-option disabled>{{ text('No hay registros disponibles') }}</mat-option>
                             }
                             @for (option of store.optionsFor(field); track option.value) {
                               <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -182,7 +184,7 @@ type FieldValue =
                           />
                         }
                         @if (field.hint) {
-                          <mat-hint>{{ field.hint }}</mat-hint>
+                          <mat-hint>{{ text(field.hint) }}</mat-hint>
                         } @else if (field.type === 'select') {
                           <mat-hint>{{ lookupHint(field) }}</mat-hint>
                         }
@@ -195,17 +197,17 @@ type FieldValue =
                   <section class="line-editor">
                     <div class="line-editor__header">
                       <div>
-                        <h3>{{ field.label }}</h3>
+                        <h3>{{ text(field.label) }}</h3>
                         <p>
                           {{
                             selected()?.id === 'INV-04'
-                              ? 'Captura la existencia real de cada producto.'
-                              : 'Agrega una fila por cada elemento.'
+                              ? text('Captura la existencia real de cada producto.')
+                              : text('Agrega una fila por cada elemento.')
                           }}
                         </p>
                       </div>
                       <app-ui-button
-                        label="Agregar"
+                        [label]="text('Agregar')"
                         icon="add"
                         variant="outlined"
                         (pressed)="addLine(field)"
@@ -217,8 +219,8 @@ type FieldValue =
                           <strong>
                             {{
                               selected()?.id === 'INV-04'
-                                ? 'Producto ' + (lineIndex + 1)
-                                : 'Elemento ' + (lineIndex + 1)
+                                ? text('Producto') + ' ' + (lineIndex + 1)
+                                : text('Elemento') + ' ' + (lineIndex + 1)
                             }}
                           </strong>
                           <div class="line-editor__row-tools">
@@ -233,14 +235,14 @@ type FieldValue =
                                 "
                               >
                                 <app-ui-icon name="warehouse" />
-                                <span>Existencia:</span>
+                                <span>{{ text('Existencia') }}:</span>
                                 <strong>{{ adjustmentStock(line, productField) }}</strong>
                               </div>
                             }
                             <app-ui-icon-button
                               class="line-editor__remove"
                               icon="close"
-                              [ariaLabel]="'Quitar fila ' + (lineIndex + 1)"
+                              [ariaLabel]="removeRowLabel(lineIndex)"
                               (pressed)="removeLine(field, lineIndex)"
                             />
                           </div>
@@ -248,7 +250,7 @@ type FieldValue =
                         @for (itemField of field.itemFields ?? []; track itemField.key) {
                           <div class="line-editor__field">
                             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                              <mat-label>{{ itemField.label }}</mat-label>
+                              <mat-label>{{ text(itemField.label) }}</mat-label>
                               @if (itemField.type === 'select') {
                                 <mat-select
                                   [required]="itemField.required"
@@ -314,7 +316,7 @@ type FieldValue =
             } @else {
               <div class="task-panel__actions">
                 <app-ui-button
-                  label="Actualizar consulta"
+                  [label]="text('Actualizar consulta')"
                   icon="refresh"
                   variant="outlined"
                   [loading]="store.loading()"
@@ -325,7 +327,7 @@ type FieldValue =
 
             @if (store.error()) {
               <app-ui-alert
-                title="No pudimos completar la tarea"
+                [title]="text('No pudimos completar la tarea')"
                 [message]="store.error()!.message"
                 tone="danger"
                 [correlationId]="store.error()!.correlationId"
@@ -336,27 +338,27 @@ type FieldValue =
             @if (store.loading()) {
               <app-ui-feedback
                 kind="loading"
-                title="Consultando información"
-                message="La operación está en proceso."
+                [title]="text('Consultando información')"
+                [message]="text('La operación está en proceso.')"
               />
             } @else if (store.result() !== null) {
               <section class="results" aria-live="polite">
                 <div class="results__header">
                   <div>
-                    <h3>Resultado</h3>
+                    <h3>{{ text('Resultado') }}</h3>
                     <p>
                       {{ resultRows().length }}
-                      {{ resultRows().length === 1 ? 'registro' : 'registros' }}
+                      {{ resultRows().length === 1 ? text('registro') : text('registros') }}
                     </p>
                   </div>
                   <span class="success-mark"
-                    ><app-ui-icon name="check" /> Operación completada</span
+                    ><app-ui-icon name="check" /> {{ text('Operación completada') }}</span
                   >
                 </div>
                 @if (resultRows().length === 0) {
                   <div class="completed-message">
                     <span><app-ui-icon name="check" /></span>
-                    <strong>La operación se completó correctamente.</strong>
+                    <strong>{{ text('La operación se completó correctamente.') }}</strong>
                   </div>
                 } @else {
                   <div class="result-grid">
@@ -384,9 +386,13 @@ type FieldValue =
 })
 export class BusinessWorkspacePage {
   private readonly route = inject(ActivatedRoute);
+  protected readonly i18n = inject(LanguageService);
+  private readonly english = this.i18n.language() === 'en';
   protected readonly store = inject(OperationWorkbenchStore);
   protected readonly definition =
-    BUSINESS_MODULES[String(this.route.snapshot.data['moduleKey'])] ?? BUSINESS_MODULES['F03'];
+    (this.english ? BUSINESS_MODULES_EN : BUSINESS_MODULES)[
+      String(this.route.snapshot.data['moduleKey'])
+    ] ?? (this.english ? BUSINESS_MODULES_EN['F03'] : BUSINESS_MODULES['F03']);
   protected readonly operations = computed(() =>
     ENDPOINT_CATALOG.filter(
       (operation) =>
@@ -420,7 +426,9 @@ export class BusinessWorkspacePage {
         this.store.optionsFor(field).length === 0,
     );
   });
-  protected readonly resultRows = computed(() => toResultRows(this.store.result()));
+  protected readonly resultRows = computed(() =>
+    toResultRows(this.store.result(), this.english, this.i18n.locale()),
+  );
 
   constructor() {
     effect(() => {
@@ -454,11 +462,12 @@ export class BusinessWorkspacePage {
     const matchingKey = Object.keys(this.definition.groups)
       .sort((left, right) => right.length - left.length)
       .find((key) => operation.id.startsWith(key));
-    return matchingKey ? this.definition.groups[matchingKey] : 'Otras tareas';
+    return matchingKey ? this.definition.groups[matchingKey] : this.text('Otras tareas');
   }
 
   protected titleFor(operation: EndpointDefinition): string {
-    return BUSINESS_TITLES[operation.id] ?? sentenceCase(operation.description);
+    if (this.english) return BUSINESS_TITLES_EN[operation.id] ?? sentenceCase(operation.description, 'en-US');
+    return BUSINESS_TITLES[operation.id] ?? sentenceCase(operation.description, 'es-MX');
   }
 
   protected shortDescription(operation: EndpointDefinition): string {
@@ -466,6 +475,7 @@ export class BusinessWorkspacePage {
   }
 
   protected fullDescription(operation: EndpointDefinition): string {
+    if (this.english) return `Use this task to ${this.titleFor(operation).toLocaleLowerCase('en-US')}.`;
     return sentenceCase(operation.description)
       .replace(/\s+según DTO/gi, '')
       .replace(/\s+y deep link/gi, '')
@@ -550,35 +560,41 @@ export class BusinessWorkspacePage {
   }
 
   protected lookupHint(field: BusinessField): string {
-    if (this.store.lookupLoading()) return 'Cargando opciones…';
+    if (this.store.lookupLoading()) return this.text('Cargando opciones…');
     if (this.store.optionsFor(field).length === 0) {
-      return 'No hay registros disponibles para seleccionar.';
+      return this.text('No hay registros disponibles para seleccionar.');
     }
-    return 'Abre la lista; con ella abierta puedes escribir para localizar una opción.';
+    return this.text('Abre la lista; con ella abierta puedes escribir para localizar una opción.');
   }
 
   protected emptyLookupTitle(): string {
     const operationId = this.selected()?.id ?? '';
-    if (operationId.startsWith('PUR-')) return 'Todavía no hay compras';
-    if (operationId.startsWith('GRC-')) return 'Todavía no hay recepciones';
+    if (operationId.startsWith('PUR-')) return this.text('Todavía no hay compras');
+    if (operationId.startsWith('GRC-')) return this.text('Todavía no hay recepciones');
     if (operationId === 'INV-05' || operationId === 'INV-06') {
-      return 'Todavía no hay ajustes disponibles';
+      return this.text('Todavía no hay ajustes disponibles');
     }
-    return 'No hay registros disponibles';
+    return this.text('No hay registros disponibles');
   }
 
   protected emptyLookupMessage(): string {
     const operationId = this.selected()?.id ?? '';
     if (operationId.startsWith('PUR-')) {
-      return 'Primero registra una orden de compra. Después podrás consultarla, editarla, confirmarla o cancelarla desde aquí.';
+      return this.english
+        ? 'First record a purchase order. You can then view, edit, confirm, or cancel it here.'
+        : 'Primero registra una orden de compra. Después podrás consultarla, editarla, confirmarla o cancelarla desde aquí.';
     }
     if (operationId.startsWith('GRC-')) {
-      return 'Primero registra una recepción de mercancía para poder consultarla o cerrarla.';
+      return this.english
+        ? 'First record a goods receipt so you can view or close it.'
+        : 'Primero registra una recepción de mercancía para poder consultarla o cerrarla.';
     }
     if (operationId === 'INV-05' || operationId === 'INV-06') {
-      return 'Primero registra un ajuste de inventario para poder confirmarlo o cancelarlo.';
+      return this.english
+        ? 'First record an inventory adjustment so you can confirm or cancel it.'
+        : 'Primero registra un ajuste de inventario para poder confirmarlo o cancelarlo.';
     }
-    return 'Crea el registro requerido y vuelve a intentar esta tarea.';
+    return this.text('Crea el registro requerido y vuelve a intentar esta tarea.');
   }
 
   protected emptyLookupActionLabel(): string | undefined {
@@ -601,9 +617,9 @@ export class BusinessWorkspacePage {
 
   private emptyLookupActionText(): string {
     const targetId = this.emptyLookupTargetId();
-    if (targetId === 'PUR-02') return 'Registrar una compra';
-    if (targetId === 'GRC-02') return 'Registrar una recepción';
-    if (targetId === 'INV-04') return 'Registrar un ajuste';
+    if (targetId === 'PUR-02') return this.text('Registrar una compra');
+    if (targetId === 'GRC-02') return this.text('Registrar una recepción');
+    if (targetId === 'INV-04') return this.text('Registrar un ajuste');
     return '';
   }
 
@@ -621,8 +637,8 @@ export class BusinessWorkspacePage {
       String(this.values()['warehouseId'] ?? ''),
     );
     return stock === null
-      ? 'selecciona almacén y producto'
-      : new Intl.NumberFormat('es-MX', { maximumFractionDigits: 4 }).format(stock);
+      ? this.text('selecciona almacén y producto')
+      : new Intl.NumberFormat(this.i18n.locale(), { maximumFractionDigits: 4 }).format(stock);
   }
 
   protected adjustmentStockReady(
@@ -692,15 +708,15 @@ export class BusinessWorkspacePage {
   }
 
   protected actionLabel(operation: EndpointDefinition): string {
-    if (operation.id === 'INV-04') return 'Guardar y continuar';
-    if (operation.id === 'INV-05') return 'Aplicar ajuste al inventario';
-    if (operation.id === 'GRC-02') return 'Guardar y continuar';
-    if (operation.id === 'GRC-03') return 'Cerrar recepción y agregar stock';
-    if (operation.method === 'GET') return 'Consultar';
-    if (operation.method === 'PUT') return 'Guardar cambios';
-    if (/confirm|close/i.test(operation.path)) return 'Confirmar operación';
-    if (/cancel/i.test(operation.path)) return 'Confirmar cancelación';
-    return 'Completar tarea';
+    if (operation.id === 'INV-04') return this.text('Guardar y continuar');
+    if (operation.id === 'INV-05') return this.text('Aplicar ajuste al inventario');
+    if (operation.id === 'GRC-02') return this.text('Guardar y continuar');
+    if (operation.id === 'GRC-03') return this.text('Cerrar recepción y agregar stock');
+    if (operation.method === 'GET') return this.text('Consultar');
+    if (operation.method === 'PUT') return this.text('Guardar cambios');
+    if (/confirm|close/i.test(operation.path)) return this.text('Confirmar operación');
+    if (/cancel/i.test(operation.path)) return this.text('Confirmar cancelación');
+    return this.text('Completar tarea');
   }
 
   protected execute(): void {
@@ -730,9 +746,21 @@ export class BusinessWorkspacePage {
     this.select(next);
     this.workflowMessage.set(
       nextId === 'INV-05'
-        ? 'El ajuste quedó preparado. Confírmalo para que la nueva existencia se aplique al almacén.'
-        : 'La recepción quedó preparada. Ciérrala para sumar los productos al inventario.',
+        ? this.english
+          ? 'The adjustment is ready. Confirm it to apply the new stock to the warehouse.'
+          : 'El ajuste quedó preparado. Confírmalo para que la nueva existencia se aplique al almacén.'
+        : this.english
+          ? 'The receipt is ready. Close it to add the products to inventory.'
+          : 'La recepción quedó preparada. Ciérrala para sumar los productos al inventario.',
     );
+  }
+
+  protected text(value: string): string {
+    return businessText(value, this.english);
+  }
+
+  protected removeRowLabel(index: number): string {
+    return this.english ? `Remove row ${index + 1}` : `Quitar fila ${index + 1}`;
   }
 }
 
@@ -767,12 +795,12 @@ function normalizeValue(field: BusinessField, value: FieldValue | undefined): un
   return value ?? '';
 }
 
-function sentenceCase(value: string): string {
+function sentenceCase(value: string, locale = 'es-MX'): string {
   if (!value) return value;
-  return `${value.charAt(0).toLocaleUpperCase('es-MX')}${value.slice(1)}`;
+  return `${value.charAt(0).toLocaleUpperCase(locale)}${value.slice(1)}`;
 }
 
-function toResultRows(result: unknown): readonly BusinessResultRow[] {
+function toResultRows(result: unknown, english: boolean, locale: string): readonly BusinessResultRow[] {
   if (result === null || result === undefined) return [];
   const collection = Array.isArray(result) ? result : [result];
   return collection
@@ -785,11 +813,14 @@ function toResultRows(result: unknown): readonly BusinessResultRow[] {
           ([, value]) => !Array.isArray(value) && (typeof value !== 'object' || value === null),
         )
         .slice(0, 8)
-        .map(([key, value]) => ({ label: fieldLabel(key), value: formatValue(key, value) })),
+        .map(([key, value]) => ({
+          label: fieldLabel(key, english),
+          value: formatValue(key, value, english, locale),
+        })),
     }));
 }
 
-function fieldLabel(key: string): string {
+function fieldLabel(key: string, english: boolean): string {
   const labels: Record<string, string> = {
     id: 'Referencia',
     name: 'Nombre',
@@ -813,22 +844,21 @@ function fieldLabel(key: string): string {
     code: 'Código',
     module: 'Módulo',
   };
-  return (
-    labels[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase())
-  );
+  const label = labels[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase());
+  return businessText(label, english);
 }
 
-function formatValue(key: string, value: unknown): string {
+function formatValue(key: string, value: unknown, english: boolean, locale: string): string {
   if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (typeof value === 'boolean') return businessText(value ? 'Sí' : 'No', english);
   if (typeof value === 'number') {
     if (/total|amount|balance|cost|price|tax|paid|revenue|profit/i.test(key)) {
-      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+      return new Intl.NumberFormat(locale, { style: 'currency', currency: 'MXN' }).format(value);
     }
-    return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(value);
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
   }
   if (typeof value === 'string' && /date|at$/i.test(key) && !Number.isNaN(Date.parse(value))) {
-    return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
       new Date(value),
     );
   }

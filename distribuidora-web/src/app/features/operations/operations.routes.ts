@@ -67,6 +67,13 @@ export const OPERATIONS_ROUTES: Routes = [
     },
   },
   {
+    path: 'administration/payment-terminals',
+    loadComponent: () =>
+      import('./payment-terminals/pages/payment-terminals.page').then(
+        (m) => m.PaymentTerminalsPage,
+      ),
+  },
+  {
     path: 'administration',
     component: BusinessWorkspacePage,
     data: {

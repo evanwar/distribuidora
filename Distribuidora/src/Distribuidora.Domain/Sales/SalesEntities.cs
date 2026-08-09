@@ -137,6 +137,7 @@ public static class PointPaymentStatusDetails
 public sealed class PointPayment : AuditableEntity
 {
     public Guid SaleId { get; set; }
+    public Guid? PaymentTerminalId { get; set; }
     public Guid InitiatedBy { get; set; }
     public string ExternalReference { get; set; } = "";
     public string IdempotencyKey { get; set; } = "";

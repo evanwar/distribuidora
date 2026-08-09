@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, OnChanges, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnChanges, output } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { UiActionBarComponent } from '../../../../shared/ui/action-bar/ui-action-bar.component';
 import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.component';
 import { CustomerRequest, CustomerVm } from '../../models/customer.models';
+import { LanguageService } from '../../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-customer-form',
@@ -21,72 +22,72 @@ import { CustomerRequest, CustomerVm } from '../../models/customer.models';
     <form [formGroup]="form" (ngSubmit)="submit()">
       <div class="form-grid">
         <mat-form-field appearance="outline">
-          <mat-label>Nombre</mat-label>
+          <mat-label>{{ text('Nombre') }}</mat-label>
           <input matInput formControlName="name" />
-          <mat-error>El nombre es obligatorio.</mat-error>
+          <mat-error>{{ text('El nombre es obligatorio.') }}</mat-error>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>RFC</mat-label>
           <input matInput formControlName="taxId" maxlength="13" />
           @if (form.controls.taxId.hasError('pattern')) {
-            <mat-error>Captura un RFC vÃ¡lido.</mat-error>
+            <mat-error>{{ language.language() === 'en' ? 'Enter a valid tax ID.' : 'Captura un RFC válido.' }}</mat-error>
           }
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Nombre o razÃ³n social fiscal</mat-label>
+          <mat-label>{{ text('Nombre o razón social fiscal') }}</mat-label>
           <input matInput formControlName="fiscalLegalName" maxlength="254" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>CÃ³digo postal fiscal</mat-label>
+          <mat-label>{{ text('Código postal fiscal') }}</mat-label>
           <input matInput formControlName="fiscalZipCode" inputmode="numeric" maxlength="5" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>RÃ©gimen fiscal</mat-label>
+          <mat-label>{{ text('Régimen fiscal') }}</mat-label>
           <input matInput formControlName="taxRegimeCode" inputmode="numeric" maxlength="3" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Uso CFDI predeterminado</mat-label>
-          <input matInput formControlName="defaultCfdiUseCode" maxlength="4" placeholder="Ej. G03" />
+          <mat-label>{{ text('Uso CFDI predeterminado') }}</mat-label>
+          <input matInput formControlName="defaultCfdiUseCode" maxlength="4" [placeholder]="text('Ej. G03')" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Correo de facturaciÃ³n</mat-label>
+          <mat-label>{{ text('Correo de facturación') }}</mat-label>
           <input matInput formControlName="invoiceEmail" type="email" />
           @if (form.controls.invoiceEmail.hasError('email')) {
-            <mat-error>Captura un correo vÃ¡lido.</mat-error>
+            <mat-error>{{ text('Captura un correo válido.') }}</mat-error>
           }
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Teléfono</mat-label>
+          <mat-label>{{ text('Teléfono') }}</mat-label>
           <input matInput formControlName="phone" inputmode="tel" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Correo</mat-label>
+          <mat-label>{{ text('Correo') }}</mat-label>
           <input matInput formControlName="email" type="email" />
           @if (form.controls.email.hasError('email')) {
-            <mat-error>Captura un correo válido.</mat-error>
+            <mat-error>{{ text('Captura un correo válido.') }}</mat-error>
           }
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Dirección</mat-label>
+          <mat-label>{{ text('Dirección') }}</mat-label>
           <input matInput formControlName="address" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Ciudad</mat-label>
+          <mat-label>{{ text('Ciudad') }}</mat-label>
           <input matInput formControlName="city" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Límite de crédito</mat-label>
+          <mat-label>{{ text('Límite de crédito') }}</mat-label>
           <input matInput formControlName="creditLimit" type="number" min="0" />
         </mat-form-field>
         <div class="checks">
-          <mat-checkbox formControlName="creditBlocked">Crédito bloqueado</mat-checkbox>
-          <mat-checkbox formControlName="active">Cliente activo</mat-checkbox>
+          <mat-checkbox formControlName="creditBlocked">{{ text('Crédito bloqueado') }}</mat-checkbox>
+          <mat-checkbox formControlName="active">{{ text('Cliente activo') }}</mat-checkbox>
         </div>
       </div>
       <app-ui-action-bar [sticky]="true">
-        <app-ui-button label="Cancelar" variant="text" tone="neutral" (pressed)="cancelled.emit()" />
+        <app-ui-button [label]="text('Cancelar')" variant="text" tone="neutral" (pressed)="cancelled.emit()" />
         <app-ui-button
-          [label]="customer() ? 'Guardar cambios' : 'Crear cliente'"
+          [label]="text(customer() ? 'Guardar cambios' : 'Crear cliente')"
           type="submit"
           [loading]="saving()"
           [disabled]="form.invalid"
@@ -101,6 +102,7 @@ import { CustomerRequest, CustomerVm } from '../../models/customer.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerFormComponent implements OnChanges {
+  protected readonly language = inject(LanguageService);
   readonly customer = input<CustomerVm | null>(null);
   readonly saving = input(false);
   readonly saved = output<CustomerRequest>();
@@ -143,6 +145,10 @@ export class CustomerFormComponent implements OnChanges {
         invoiceEmail: '',
       },
     );
+  }
+
+  protected text(value: string): string {
+    return this.language.text(value);
   }
 
   protected submit(): void {

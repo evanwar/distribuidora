@@ -10,6 +10,8 @@ import { ApiError } from '../../../../core/error-handling/api-error.model';
 import { SessionService } from '../../../../core/auth/session.service';
 import { UiAlertComponent } from '../../../../shared/ui/alert/ui-alert.component';
 import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.component';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { LanguageSwitcherComponent } from '../../../../shared/ui/language-switcher/language-switcher.component';
 
 @Component({
   selector: 'app-login-page',
@@ -21,25 +23,27 @@ import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.compon
     MatInputModule,
     UiAlertComponent,
     UiButtonComponent,
+    LanguageSwitcherComponent,
   ],
   template: `
     <main>
+      <div class="language-action"><app-language-switcher /></div>
       <section class="login-intro">
         <span class="login-intro__mark" aria-hidden="true">D</span>
         <p class="eyebrow">Distribuidora</p>
-        <h1>Bienvenido</h1>
-        <p>Ventas, inventario y cobranza en un espacio rápido y claro.</p>
+        <h1>{{ i18n.translate('login.welcome') }}</h1>
+        <p>{{ i18n.translate('login.intro') }}</p>
       </section>
 
       <mat-card appearance="outlined">
         <mat-card-header>
-          <mat-card-title>Inicia sesión</mat-card-title>
-          <mat-card-subtitle>Usa tus credenciales de operación.</mat-card-subtitle>
+          <mat-card-title>{{ i18n.translate('login.title') }}</mat-card-title>
+          <mat-card-subtitle>{{ i18n.translate('login.subtitle') }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           @if (error()) {
             <app-ui-alert
-              title="No pudimos iniciar sesión"
+              [title]="i18n.translate('login.error')"
               [message]="error()!.message"
               tone="danger"
               [correlationId]="error()!.correlationId"
@@ -49,15 +53,15 @@ import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.compon
 
           <form [formGroup]="form" (ngSubmit)="submit()">
             <mat-form-field appearance="outline">
-              <mat-label>Usuario</mat-label>
+              <mat-label>{{ i18n.translate('login.username') }}</mat-label>
               <input matInput formControlName="username" autocomplete="username" />
               @if (form.controls.username.hasError('required')) {
-                <mat-error>Captura tu usuario.</mat-error>
+                <mat-error>{{ i18n.translate('login.usernameRequired') }}</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Contraseña</mat-label>
+              <mat-label>{{ i18n.translate('login.password') }}</mat-label>
               <input
                 matInput
                 type="password"
@@ -65,20 +69,20 @@ import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.compon
                 autocomplete="current-password"
               />
               @if (form.controls.password.hasError('required')) {
-                <mat-error>Captura tu contraseña.</mat-error>
+                <mat-error>{{ i18n.translate('login.passwordRequired') }}</mat-error>
               }
             </mat-form-field>
 
             <div class="remember-account">
               <mat-checkbox formControlName="rememberAccount">
-                Recordar mi cuenta en este equipo
+                {{ i18n.translate('login.remember') }}
               </mat-checkbox>
-              <span>Tu contraseña no se guarda.</span>
+              <span>{{ i18n.translate('login.accountHint') }}</span>
             </div>
 
             <app-ui-button
-              label="Entrar"
-              loadingLabel="Validando…"
+              [label]="i18n.translate('login.signIn')"
+              [loadingLabel]="i18n.translate('login.signingIn')"
               type="submit"
               [loading]="loading()"
               [disabled]="form.invalid"
@@ -110,6 +114,12 @@ import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.compon
       min-height: 100dvh;
       margin-inline: auto;
       padding-block: var(--space-6);
+    }
+
+    .language-action {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
     }
 
     .login-intro {
@@ -189,6 +199,7 @@ export class LoginPage {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly i18n = inject(LanguageService);
   protected readonly loading = signal(false);
   protected readonly error = signal<ApiError | null>(null);
   protected readonly form = new FormGroup({

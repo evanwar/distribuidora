@@ -1,5 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
+import { inject } from '@angular/core';
+import { LanguageService } from '../i18n/language.service';
 import { ApiError, ApiErrorKind } from './api-error.model';
 import {
   CORRELATION_ID_HEADER,
@@ -12,8 +14,9 @@ interface ErrorPayload {
   correlationId?: string;
 }
 
-export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
-  next(request).pipe(
+export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
+  const i18n = inject(LanguageService);
+  return next(request).pipe(
     catchError((error: unknown) => {
       if (!(error instanceof HttpErrorResponse)) {
         return throwError(() => error);
@@ -24,7 +27,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
       const message =
         payload.message ??
         (Array.isArray(payload.errors) ? payload.errors.join(', ') : undefined) ??
-        statusMessage(error.status);
+        statusMessage(error.status, i18n);
 
       const normalized: ApiError = {
         kind: statusKind(error.status),
@@ -46,6 +49,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
       return throwError(() => normalized);
     }),
   );
+};
 
 function statusKind(status: number): ApiErrorKind {
   if (status === 0) return 'network';
@@ -59,15 +63,15 @@ function statusKind(status: number): ApiErrorKind {
   return 'unexpected';
 }
 
-function statusMessage(status: number): string {
-  const messages: Record<number, string> = {
-    0: 'No fue posible conectar con el servidor.',
-    401: 'La sesión terminó. Inicia sesión nuevamente.',
-    403: 'No tienes permiso para realizar esta acción.',
-    404: 'No encontramos el recurso solicitado.',
-    409: 'La información cambió. Recarga y revisa antes de continuar.',
-    422: 'Revisa la información capturada.',
-    429: 'Hay demasiadas solicitudes. Intenta nuevamente en un momento.',
+function statusMessage(status: number, i18n: LanguageService): string {
+  const messages: Record<number, Parameters<LanguageService['translate']>[0]> = {
+    0: 'error.network',
+    401: 'error.session',
+    403: 'error.forbidden',
+    404: 'error.notFound',
+    409: 'error.conflict',
+    422: 'error.validation',
+    429: 'error.rateLimit',
   };
-  return messages[status] ?? 'Ocurrió un error inesperado.';
+  return i18n.translate(messages[status] ?? 'error.server');
 }
