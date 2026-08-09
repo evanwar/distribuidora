@@ -6,6 +6,7 @@ using Distribuidora.Application.Specifications;
 using Distribuidora.Contracts.Requests;
 using Distribuidora.Contracts.Responses;
 using Distribuidora.Domain.Inventory;
+using Distribuidora.Domain.Common;
 using Domain = Distribuidora.Domain;
 
 namespace Distribuidora.Application.Features.Inventory;
@@ -17,6 +18,8 @@ public sealed class InventoryService(
     AuditEntryService audit,
     IDatatimeProvider datetimeProvider)
 {
+    private const int RequiredWarehouseCountForTransfer = 2;
+
     public IReadOnlyCollection<InventoryAdjustment> GetAdjustments() =>
         db.Query(Specification.All<InventoryAdjustment>())
             .OrderByDescending(x => x.CreatedAt)
@@ -64,7 +67,10 @@ public sealed class InventoryService(
 
         var adjustment = new InventoryAdjustment
         {
-            Folio = await folios.NextAsync("inventory_adjustment", "ADJ-", cancellationToken),
+            Folio = await folios.NextAsync(
+                Domain.Administration.DocumentFolioTypes.InventoryAdjustment,
+                Domain.Administration.DocumentFolioTypes.InventoryAdjustmentPrefix,
+                cancellationToken),
             WarehouseId = request.WarehouseId,
             Reason = request.Reason,
             CreatedBy = actorId
@@ -112,14 +118,34 @@ public sealed class InventoryService(
             return adjustment;
         }, cancellationToken);
 
-    public async Task CancelAdjustmentAsync(
-        Guid id, string reason, Guid actorId, string correlationId, CancellationToken cancellationToken)
-    {
-        var adjustment = GetAdjustment(id);
-        adjustment.Cancel(reason, datetimeProvider.UtcNow);
-        audit.Add("Cancel", "inventory", nameof(InventoryAdjustment), id, actorId, correlationId);
-        await db.SaveChangesAsync(cancellationToken);
-    }
+    public Task CancelAdjustmentAsync(
+        Guid id,
+        string reason,
+        Guid actorId,
+        string correlationId,
+        CancellationToken cancellationToken) =>
+        db.ExecuteAtomicAsync(async token =>
+        {
+            var adjustment = GetAdjustment(id);
+
+            if (adjustment.Status == DocumentStatus.Confirmed)
+            {
+                ReverseConfirmedAdjustment(adjustment, reason, actorId);
+            }
+
+            adjustment.Cancel(reason, datetimeProvider.UtcNow);
+            audit.Add(
+                "Cancel",
+                "inventory",
+                nameof(InventoryAdjustment),
+                id,
+                actorId,
+                correlationId,
+                reason: reason);
+
+            await db.SaveChangesAsync(token);
+            return true;
+        }, cancellationToken);
 
     public Task TransferAsync(
         TransferRequest request, Guid actorId, string correlationId, CancellationToken cancellationToken) =>
@@ -135,14 +161,14 @@ public sealed class InventoryService(
             var activeWarehouses = db.Query(Specification.Create<Domain.Catalogs.Warehouse>(
                     x => (x.Id == request.SourceWarehouseId || x.Id == request.DestinationWarehouseId) && x.Active))
                 .Count();
-            if (activeWarehouses != 2)
+            if (activeWarehouses != RequiredWarehouseCountForTransfer)
                 throw new ArgumentException("Both warehouses must be active.");
             var reference = Guid.NewGuid();
             posting.Post(request.ProductId, request.SourceWarehouseId, -request.Quantity, request.UnitCost,
-                MovementType.InternalTransfer, "InternalTransfer", reference, actorId, false, request.Notes);
+                MovementType.InternalTransfer, nameof(MovementType.InternalTransfer), reference, actorId, false, request.Notes);
             posting.Post(request.ProductId, request.DestinationWarehouseId, request.Quantity, request.UnitCost,
-                MovementType.InternalTransfer, "InternalTransfer", reference, actorId, false, request.Notes);
-            audit.Add("Transfer", "inventory", "InternalTransfer", reference, actorId, correlationId);
+                MovementType.InternalTransfer, nameof(MovementType.InternalTransfer), reference, actorId, false, request.Notes);
+            audit.Add("Transfer", "inventory", nameof(MovementType.InternalTransfer), reference, actorId, correlationId);
             await db.SaveChangesAsync(token);
             return true;
         }, cancellationToken);
@@ -150,4 +176,34 @@ public sealed class InventoryService(
     private InventoryAdjustment GetAdjustment(Guid id) =>
         db.Query(Specification.Create<InventoryAdjustment>(x => x.Id == id)).SingleOrDefault()
         ?? throw new NotFoundException("Adjustment not found.");
+
+    private void ReverseConfirmedAdjustment(
+        InventoryAdjustment adjustment,
+        string reason,
+        Guid actorId)
+    {
+        var originalMovements = db.Query(Specification.Create<InventoryMovement>(movement =>
+                movement.MovementType == MovementType.Adjustment &&
+                movement.ReferenceType == nameof(InventoryAdjustment) &&
+                movement.ReferenceId == adjustment.Id))
+            .ToArray();
+
+        foreach (var movement in originalMovements)
+        {
+            var reversalQuantity = movement.DestinationWarehouseId == adjustment.WarehouseId
+                ? -movement.Quantity
+                : movement.Quantity;
+
+            posting.Post(
+                movement.ProductId,
+                adjustment.WarehouseId,
+                reversalQuantity,
+                movement.UnitCost,
+                MovementType.AdjustmentCancellation,
+                nameof(InventoryAdjustment),
+                adjustment.Id,
+                actorId,
+                notes: reason);
+        }
+    }
 }

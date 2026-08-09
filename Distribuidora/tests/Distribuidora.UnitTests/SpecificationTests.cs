@@ -44,12 +44,14 @@ public sealed class SpecificationTests
     [Fact]
     public void Persistence_contract_accepts_only_typed_specifications()
     {
-        Assert.Empty(typeof(IAppDbContext).GetProperties()
-            .Where(x => x.PropertyType.IsGenericType &&
-                        x.PropertyType.GetGenericTypeDefinition() == typeof(IQueryable<>)));
-        Assert.Empty(typeof(AppDbContext).GetProperties()
-            .Where(x => x.PropertyType.IsGenericType &&
-                        x.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>)));
+        Assert.DoesNotContain(
+            typeof(IAppDbContext).GetProperties(),
+            property => property.PropertyType.IsGenericType &&
+                        property.PropertyType.GetGenericTypeDefinition() == typeof(IQueryable<>));
+        Assert.DoesNotContain(
+            typeof(AppDbContext).GetProperties(),
+            property => property.PropertyType.IsGenericType &&
+                        property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>));
 
         var query = typeof(IAppDbContext).GetMethods().Single(x => x.Name == nameof(IAppDbContext.Query));
         Assert.Equal(typeof(Specification<>), query.GetParameters()[0].ParameterType.GetGenericTypeDefinition());

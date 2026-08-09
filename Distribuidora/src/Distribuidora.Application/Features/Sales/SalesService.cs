@@ -6,6 +6,7 @@ using Distribuidora.Application.Features.Inventory;
 using Distribuidora.Application.Specifications;
 using Distribuidora.Contracts.Requests;
 using Distribuidora.Domain.AccountsReceivable;
+using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Catalogs;
 using Distribuidora.Domain.Common;
 using Distribuidora.Domain.Inventory;
@@ -33,7 +34,10 @@ public sealed class SalesService(
         ValidateRequest(request);
         var sale = new CounterSale
         {
-            Folio = await folios.NextAsync("counter_sale", "CS-", cancellationToken),
+            Folio = await folios.NextAsync(
+                DocumentFolioTypes.CounterSale,
+                DocumentFolioTypes.CounterSalePrefix,
+                cancellationToken),
             CustomerId = request.CustomerId,
             SourceWarehouseId = request.SourceWarehouseId,
             PaymentCondition = (PaymentCondition)request.PaymentCondition,
@@ -104,7 +108,7 @@ public sealed class SalesService(
                     CustomerId = sale.CustomerId!.Value,
                     SaleId = sale.Id,
                     IssueDate = sale.SaleDate,
-                    DueDate = sale.SaleDate.AddDays(policy?.DefaultDueDays ?? 30),
+                    DueDate = sale.SaleDate.AddDays(policy?.DefaultDueDays ?? CreditPolicy.DefaultDueDaysValue),
                     Total = sale.Balance,
                     CreatedBy = actorId
                 };

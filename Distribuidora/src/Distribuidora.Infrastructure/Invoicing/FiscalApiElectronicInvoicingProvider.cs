@@ -13,7 +13,12 @@ public sealed class ElectronicInvoicingProfile(string issuerProviderId, string e
 
 public sealed class FiscalApiElectronicInvoicingProvider(IFiscalApiClient client) : IElectronicInvoicingProvider
 {
-    public string Name => "FiscalAPI";
+    public const string ProviderName = "FiscalAPI";
+
+    private const int UnknownHttpStatusCode = 0;
+    private const int ServerErrorStatusCode = 500;
+
+    public string Name => ProviderName;
 
     public async Task<ProviderInvoiceResult> IssueAsync(IssueElectronicInvoiceModel model, CancellationToken cancellationToken)
     {
@@ -35,19 +40,29 @@ public sealed class FiscalApiElectronicInvoicingProvider(IFiscalApiClient client
                 Issuer = new InvoiceIssuer { Id = model.IssuerProviderId },
                 Recipient = new InvoiceRecipient
                 {
-                    Tin = model.Recipient.TaxId, LegalName = model.Recipient.LegalName,
-                    ZipCode = model.Recipient.ZipCode, TaxRegimeCode = model.Recipient.TaxRegimeCode,
-                    CfdiUseCode = model.Recipient.CfdiUseCode, Email = model.Recipient.Email
+                    Tin = model.Recipient.TaxId,
+                    LegalName = model.Recipient.LegalName,
+                    ZipCode = model.Recipient.ZipCode,
+                    TaxRegimeCode = model.Recipient.TaxRegimeCode,
+                    CfdiUseCode = model.Recipient.CfdiUseCode,
+                    Email = model.Recipient.Email
                 },
                 Items = model.Lines.Select(x => new InvoiceItem
                 {
-                    ItemCode = x.SatProductCode, UnitOfMeasurementCode = x.SatUnitCode,
-                    Description = x.Description, ItemSku = x.Sku, Quantity = x.Quantity,
-                    UnitPrice = x.UnitPrice, Discount = x.Discount, TaxObjectCode = x.TaxObjectCode,
+                    ItemCode = x.SatProductCode,
+                    UnitOfMeasurementCode = x.SatUnitCode,
+                    Description = x.Description,
+                    ItemSku = x.Sku,
+                    Quantity = x.Quantity,
+                    UnitPrice = x.UnitPrice,
+                    Discount = x.Discount,
+                    TaxObjectCode = x.TaxObjectCode,
                     ItemTaxes = x.Taxes.Select(t => new InvoiceItemTax
                     {
-                        TaxCode = t.TaxCode, TaxTypeCode = t.TaxTypeCode,
-                        TaxRate = t.Rate, TaxFlagCode = t.TaxFlagCode
+                        TaxCode = t.TaxCode,
+                        TaxTypeCode = t.TaxTypeCode,
+                        TaxRate = t.Rate,
+                        TaxFlagCode = t.TaxFlagCode
                     }).ToList()
                 }).ToList()
             });
@@ -76,8 +91,10 @@ public sealed class FiscalApiElectronicInvoicingProvider(IFiscalApiClient client
         cancellationToken.ThrowIfCancellationRequested();
         var response = await client.Invoices.CancelAsync(new CancelInvoiceRequest
         {
-            Id = providerInvoiceId, InvoiceUuid = fiscalUuid,
-            CancellationReasonCode = reasonCode, ReplacementUuid = replacementUuid
+            Id = providerInvoiceId,
+            InvoiceUuid = fiscalUuid,
+            CancellationReasonCode = reasonCode,
+            ReplacementUuid = replacementUuid
         });
         if (!response.Succeeded) throw Failure(response.Message, response.Details, response.HttpStatusCode);
     }
@@ -93,6 +110,7 @@ public sealed class FiscalApiElectronicInvoicingProvider(IFiscalApiClient client
 
     private static ElectronicInvoicingProviderException Failure(string? message, string? details, int status) =>
         new(string.IsNullOrWhiteSpace(message) ? "FiscalAPI rejected the request." : message,
-            $"fiscalapi_http_{status}", status >= 500 || status == 0,
+            $"fiscalapi_http_{status}",
+            status >= ServerErrorStatusCode || status == UnknownHttpStatusCode,
             string.IsNullOrWhiteSpace(details) ? null : new InvalidOperationException(details));
 }

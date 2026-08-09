@@ -47,7 +47,7 @@ public sealed class ExceptionMiddleware(
                     await errorWriter.WriteAsync(new SystemErrorLog
                     {
                         OccurredAt = datetimeProvider.UtcNow,
-                        Severity = status == 500 ? "Error" : "Warning",
+                        Severity = status == StatusCodes.Status500InternalServerError ? "Error" : "Warning",
                         ErrorCode = ex.GetType().Name,
                         ExceptionType = ex.GetType().FullName ?? ex.GetType().Name,
                         Message = ex.Message,
@@ -79,7 +79,9 @@ public sealed class ExceptionMiddleware(
             }
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/json";
-            var message = status == 500 ? "An unexpected error occurred." : ex.Message;
+            var message = status == StatusCodes.Status500InternalServerError
+                ? "An unexpected error occurred."
+                : ex.Message;
             await context.Response.WriteAsJsonAsync(ApiResponse<object>.Fail(message, [message], trace.CorrelationId));
         }
     }

@@ -103,6 +103,8 @@ public sealed class SalesController(SalesService service, PointPaymentService po
 [ApiController, Route("api/v1/payments/mercado-pago"), Produces(MediaTypeNames.Application.Json)]
 public sealed class MercadoPagoWebhooksController(PointPaymentService pointPayments) : ControllerBase
 {
+    private const string OrderNotificationType = "order";
+
     [AllowAnonymous]
     [HttpPost("webhook")]
     public async Task<IActionResult> Receive(
@@ -112,7 +114,7 @@ public sealed class MercadoPagoWebhooksController(PointPaymentService pointPayme
         [FromBody] MercadoPagoWebhookRequest request,
         CancellationToken cancellationToken)
     {
-        if (!string.Equals(request.Type, "order", StringComparison.OrdinalIgnoreCase) ||
+        if (!string.Equals(request.Type, OrderNotificationType, StringComparison.OrdinalIgnoreCase) ||
             (request.Data?.Id is not null && !string.Equals(request.Data.Id, dataId, StringComparison.Ordinal)))
             return BadRequest();
         await pointPayments.HandleWebhookAsync(

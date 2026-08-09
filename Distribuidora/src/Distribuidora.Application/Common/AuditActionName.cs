@@ -6,10 +6,16 @@ public static partial class AuditActionName
 {
     private static readonly Dictionary<string, string> PastTense = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Create"] = "CREATED", ["Update"] = "UPDATED", ["Confirm"] = "CONFIRMED",
-        ["Cancel"] = "CANCELLED", ["Close"] = "CLOSED", ["Transfer"] = "TRANSFERRED",
-        ["RegisterPayment"] = "PAYMENT_REGISTERED", ["ApplyPayment"] = "PAYMENT_APPLIED",
-        ["CancelPayment"] = "PAYMENT_CANCELLED", ["ChangeCreditLimit"] = "CREDIT_LIMIT_CHANGED",
+        ["Create"] = "CREATED",
+        ["Update"] = "UPDATED",
+        ["Confirm"] = "CONFIRMED",
+        ["Cancel"] = "CANCELLED",
+        ["Close"] = "CLOSED",
+        ["Transfer"] = "TRANSFERRED",
+        ["RegisterPayment"] = "PAYMENT_REGISTERED",
+        ["ApplyPayment"] = "PAYMENT_APPLIED",
+        ["CancelPayment"] = "PAYMENT_CANCELLED",
+        ["ChangeCreditLimit"] = "CREDIT_LIMIT_CHANGED",
         ["AddNote"] = "NOTE_ADDED"
     };
 

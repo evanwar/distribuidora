@@ -3,6 +3,7 @@ using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Audits;
 using Distribuidora.Domain.Catalogs;
 using Distribuidora.Domain.Common;
+using Distribuidora.Domain.Fiscal;
 using Distribuidora.Domain.Inventory;
 using Distribuidora.Domain.Purchases;
 using Distribuidora.Domain.Sales;
@@ -169,19 +170,19 @@ public sealed class SalesConfiguration :
         b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
         b.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
         b.Property(x => x.ProviderInvoiceId).HasMaxLength(100);
-        b.Property(x => x.FiscalUuid).HasMaxLength(36);
-        b.Property(x => x.CancellationReasonCode).HasMaxLength(2);
+        b.Property(x => x.FiscalUuid).HasMaxLength(FiscalDataRules.FiscalUuidLength);
+        b.Property(x => x.CancellationReasonCode).HasMaxLength(FiscalDataRules.CancellationReasonCodeLength);
         b.Property(x => x.ErrorCode).HasMaxLength(100);
         b.Property(x => x.ErrorMessage).HasMaxLength(1000);
-        b.Property(x => x.RecipientTaxId).HasMaxLength(13).IsRequired();
-        b.Property(x => x.RecipientLegalName).HasMaxLength(254).IsRequired();
-        b.Property(x => x.RecipientFiscalZipCode).HasMaxLength(5).IsRequired();
-        b.Property(x => x.RecipientTaxRegimeCode).HasMaxLength(3).IsRequired();
-        b.Property(x => x.CfdiUseCode).HasMaxLength(4).IsRequired();
-        b.Property(x => x.PaymentFormCode).HasMaxLength(2).IsRequired();
-        b.Property(x => x.PaymentMethodCode).HasMaxLength(3).IsRequired();
-        b.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
-        b.Property(x => x.ExpeditionZipCode).HasMaxLength(5).IsRequired();
+        b.Property(x => x.RecipientTaxId).HasMaxLength(FiscalDataRules.TaxIdMaximumLength).IsRequired();
+        b.Property(x => x.RecipientLegalName).HasMaxLength(FiscalDataRules.LegalNameMaximumLength).IsRequired();
+        b.Property(x => x.RecipientFiscalZipCode).HasMaxLength(FiscalDataRules.PostalCodeLength).IsRequired();
+        b.Property(x => x.RecipientTaxRegimeCode).HasMaxLength(FiscalDataRules.TaxRegimeCodeLength).IsRequired();
+        b.Property(x => x.CfdiUseCode).HasMaxLength(FiscalDataRules.CfdiUseCodeMaximumLength).IsRequired();
+        b.Property(x => x.PaymentFormCode).HasMaxLength(FiscalDataRules.PaymentFormCodeLength).IsRequired();
+        b.Property(x => x.PaymentMethodCode).HasMaxLength(FiscalDataRules.PaymentMethodCodeLength).IsRequired();
+        b.Property(x => x.CurrencyCode).HasMaxLength(FiscalDataRules.CurrencyCodeLength).IsRequired();
+        b.Property(x => x.ExpeditionZipCode).HasMaxLength(FiscalDataRules.PostalCodeLength).IsRequired();
         b.HasIndex(x => x.SaleId).IsUnique();
         b.HasIndex(x => x.IdempotencyKey).IsUnique();
         b.HasIndex(x => new { x.Provider, x.ProviderInvoiceId }).IsUnique();
@@ -191,7 +192,7 @@ public sealed class SalesConfiguration :
     public void Configure(EntityTypeBuilder<SaleFiscalStatus> b)
     {
         b.ToTable("sale_fiscal_statuses", "sales"); b.Audit();
-        b.Property(x => x.GlobalInvoiceFiscalUuid).HasMaxLength(36);
+        b.Property(x => x.GlobalInvoiceFiscalUuid).HasMaxLength(FiscalDataRules.FiscalUuidLength);
         b.Property(x => x.ReconciliationReason).HasMaxLength(1000);
         b.HasIndex(x => x.SaleId).IsUnique();
         b.HasIndex(x => x.CoverageStatus);

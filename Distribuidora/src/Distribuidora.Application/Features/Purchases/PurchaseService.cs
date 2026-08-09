@@ -5,6 +5,7 @@ using Distribuidora.Application.Features.Audits;
 using Distribuidora.Application.Features.Inventory;
 using Distribuidora.Application.Specifications;
 using Distribuidora.Contracts.Requests;
+using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Common;
 using Distribuidora.Domain.Inventory;
 using Distribuidora.Domain.Purchases;
@@ -33,7 +34,10 @@ public sealed class PurchaseService(
         ValidateItems(request.Items);
         var purchase = new PurchaseOrder
         {
-            Folio = await folios.NextAsync("purchase", "PO-", cancellationToken),
+            Folio = await folios.NextAsync(
+                DocumentFolioTypes.Purchase,
+                DocumentFolioTypes.PurchasePrefix,
+                cancellationToken),
             SupplierId = request.SupplierId,
             Date = datetimeProvider.UtcNow,
             Tax = request.Tax,
@@ -125,7 +129,10 @@ public sealed class PurchaseService(
         ValidateReceiptAgainstPurchase(request.Items, purchase, request.PurchaseOrderId.Value, null);
         var receipt = new GoodsReceipt
         {
-            Folio = await folios.NextAsync("goods_receipt", "GR-", cancellationToken),
+            Folio = await folios.NextAsync(
+                DocumentFolioTypes.GoodsReceipt,
+                DocumentFolioTypes.GoodsReceiptPrefix,
+                cancellationToken),
             SupplierId = request.SupplierId,
             PurchaseOrderId = request.PurchaseOrderId,
             DestinationWarehouseId = request.DestinationWarehouseId,

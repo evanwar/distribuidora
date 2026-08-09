@@ -1,6 +1,7 @@
 using Distribuidora.Application.Abstractions;
 using Distribuidora.Application.Common;
 using Distribuidora.Application.Specifications;
+using Distribuidora.Application.Security;
 using Distribuidora.Contracts.Requests;
 using Distribuidora.Domain.Security;
 
@@ -21,7 +22,7 @@ public sealed class AuthService(
         var permissions = user.Roles.Where(x => x.Active).SelectMany(x => x.Permissions).Select(x => x.Key).Distinct().ToArray();
         var refresh = tokens.CreateRefreshToken();
         var utcNow = datetimeProvider.UtcNow;
-        var expires = utcNow.AddDays(7);
+        var expires = utcNow.AddDays(AuthenticationDefaults.RefreshTokenLifetimeDays);
         db.Add(new RefreshToken
         {
             UserId = user.Id,
@@ -46,7 +47,7 @@ public sealed class AuthService(
         if (!user.Active) throw new UnauthorizedException("User is inactive.");
         stored.RevokedAt = utcNow;
         var raw = tokens.CreateRefreshToken();
-        var expires = datetimeProvider.UtcNow.AddDays(7);
+        var expires = datetimeProvider.UtcNow.AddDays(AuthenticationDefaults.RefreshTokenLifetimeDays);
         db.Add(new RefreshToken { UserId = user.Id, TokenHash = tokens.HashRefreshToken(raw), ExpiresAt = expires, CreatedByIp = ip });
         await db.SaveChangesAsync(token);
         var permissions = user.Roles.Where(x => x.Active).SelectMany(x => x.Permissions).Select(x => x.Key).Distinct();

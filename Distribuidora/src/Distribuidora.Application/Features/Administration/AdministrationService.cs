@@ -32,7 +32,9 @@ public sealed class AdministrationService(IAppDbContext db, IDatatimeProvider da
 
     public async Task<FolioSequence> SaveFolioAsync(Guid? id, FolioSequenceRequest r, Guid actor, string correlationId, CancellationToken ct)
     {
-        if (r.Padding is < 1 or > 20 || string.IsNullOrWhiteSpace(r.DocumentType)) throw new ArgumentException("Invalid folio sequence.");
+        if (r.Padding is < FolioSequence.MinimumPadding or > FolioSequence.MaximumPadding ||
+            string.IsNullOrWhiteSpace(r.DocumentType))
+            throw new ArgumentException("Invalid folio sequence.");
         if (db.Query(Specification.Create<FolioSequence>(x => x.DocumentType == r.DocumentType && x.Id != id)).Any()) throw new ConflictException("Document type already has a sequence.");
         var entity = id is null ? new FolioSequence { CreatedBy = actor } :
             db.Query(Specification.Create<FolioSequence>(x => x.Id == id)).SingleOrDefault() ?? throw new NotFoundException("Folio sequence not found.");

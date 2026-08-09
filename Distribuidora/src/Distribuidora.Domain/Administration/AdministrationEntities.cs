@@ -2,6 +2,26 @@ using Distribuidora.Domain.Common;
 
 namespace Distribuidora.Domain.Administration;
 
+public static class PaymentMethodCodes
+{
+    public const string Cash = "cash";
+    public const string Card = "card";
+    public const string BankTransfer = "transfer";
+}
+
+public static class DocumentFolioTypes
+{
+    public const string Purchase = "purchase";
+    public const string PurchasePrefix = "PO-";
+    public const string GoodsReceipt = "goods_receipt";
+    public const string GoodsReceiptPrefix = "GR-";
+    public const string InventoryAdjustment = "inventory_adjustment";
+    public const string InventoryAdjustmentPrefix = "ADJ-";
+    public const string CounterSale = "counter_sale";
+    public const string CounterSalePrefix = "CS-";
+    public const int DefaultPadding = 8;
+}
+
 public sealed class SystemSetting : AuditableEntity
 {
     public string Key { get; set; } = "";
@@ -13,6 +33,9 @@ public sealed class SystemSetting : AuditableEntity
 
 public sealed class FolioSequence : AuditableEntity
 {
+    public const int MinimumPadding = 1;
+    public const int MaximumPadding = 20;
+
     public string DocumentType { get; set; } = "";
     public string Prefix { get; set; } = "";
     public long CurrentNumber { get; private set; }
@@ -43,8 +66,10 @@ public sealed class PaymentMethod : AuditableEntity
 
 public sealed class CreditPolicy : AuditableEntity
 {
+    public const int DefaultDueDaysValue = 30;
+
     public bool AllowCreditSales { get; set; } = true;
-    public int DefaultDueDays { get; set; } = 30;
+    public int DefaultDueDays { get; set; } = DefaultDueDaysValue;
     public bool RequireAuthorizationOverLimit { get; set; } = true;
     public bool Active { get; set; } = true;
 }

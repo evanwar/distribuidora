@@ -71,7 +71,10 @@ public sealed class CounterSale : AuditableEntity
         Status = DocumentStatus.Cancelled;
         Cancellation = new SaleCancellation
         {
-            SaleId = Id, Reason = reason, CancelledBy = userId, CancelledAt = occurredAt
+            SaleId = Id,
+            Reason = reason,
+            CancelledBy = userId,
+            CancelledAt = occurredAt
         };
         Raise(new EntityChangedDomainEvent("CounterSaleCancelled", nameof(CounterSale), Id, occurredAt));
     }
@@ -121,6 +124,16 @@ public enum PointPaymentStatus
     ReconciliationRequired
 }
 
+public static class PointPaymentStatusDetails
+{
+    public const string Creating = "creating";
+    public const string CancellationRequested = "cancellation_requested";
+    public const string OrderCreationResultUnknown = "order_creation_result_unknown";
+    public const string ApprovedAmountMismatch = "approved_amount_mismatch";
+    public const string Accredited = "accredited";
+    public const string SaleConfirmationFailed = "sale_confirmation_failed";
+}
+
 public sealed class PointPayment : AuditableEntity
 {
     public Guid SaleId { get; set; }
@@ -132,7 +145,7 @@ public sealed class PointPayment : AuditableEntity
     public string? PaymentId { get; set; }
     public decimal Amount { get; set; }
     public PointPaymentStatus Status { get; set; } = PointPaymentStatus.Creating;
-    public string StatusDetail { get; set; } = "creating";
+    public string StatusDetail { get; set; } = PointPaymentStatusDetails.Creating;
     public string? PaymentMethodType { get; set; }
     public string? PaymentMethodId { get; set; }
     public int? Installments { get; set; }

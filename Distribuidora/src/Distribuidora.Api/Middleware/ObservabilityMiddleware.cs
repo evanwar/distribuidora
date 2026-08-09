@@ -8,6 +8,8 @@ namespace Distribuidora.Api.Middleware;
 
 public sealed class CorrelationAndOperationMiddleware(RequestDelegate next)
 {
+    private const int MaximumClientIdentifierLength = 100;
+
     public async Task Invoke(
         HttpContext context,
         IRequestTraceContext trace,
@@ -26,7 +28,7 @@ public sealed class CorrelationAndOperationMiddleware(RequestDelegate next)
     }
 
     private static string? Valid(string? value) =>
-        !string.IsNullOrWhiteSpace(value) && value.Length <= 100 &&
+        !string.IsNullOrWhiteSpace(value) && value.Length <= MaximumClientIdentifierLength &&
         value.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.') ? value : null;
 
     private static string CreateOperationId(DateTimeOffset utcNow) =>
@@ -35,6 +37,8 @@ public sealed class CorrelationAndOperationMiddleware(RequestDelegate next)
 
 public sealed class UserActivityLoggingMiddleware(RequestDelegate next, ILogger<UserActivityLoggingMiddleware> logger)
 {
+    private const int ModuleRouteSegmentIndex = 2;
+
     public async Task Invoke(
         HttpContext context,
         IRequestTraceContext trace,
@@ -69,7 +73,9 @@ public sealed class UserActivityLoggingMiddleware(RequestDelegate next, ILogger<
                     UserId = UserId(context.User),
                     ActorIdentifier = context.User.Identity?.Name ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier),
                     SessionId = context.User.FindFirstValue("sid"),
-                    Module = segments?.Length > 2 ? segments[2] : "api",
+                    Module = segments?.Length > ModuleRouteSegmentIndex
+                        ? segments[ModuleRouteSegmentIndex]
+                        : "api",
                     Action = endpoint?.DisplayName ?? $"{context.Request.Method} {route ?? context.Request.Path.Value}",
                     HttpMethod = context.Request.Method,
                     RouteTemplate = route,
@@ -84,8 +90,9 @@ public sealed class UserActivityLoggingMiddleware(RequestDelegate next, ILogger<
                     RequestId = trace.RequestId,
                     TransactionId = trace.TransactionId,
                     CausationId = trace.CausationId,
-                    Succeeded = failure is null && status < 400,
-                    FailureCode = failure?.GetType().Name ?? (status >= 400 ? $"HTTP_{status}" : null)
+                    Succeeded = failure is null && status < StatusCodes.Status400BadRequest,
+                    FailureCode = failure?.GetType().Name ??
+                                  (status >= StatusCodes.Status400BadRequest ? $"HTTP_{status}" : null)
                 };
                 try
                 {

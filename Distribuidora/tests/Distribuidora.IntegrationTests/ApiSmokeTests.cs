@@ -68,6 +68,18 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
     }
 
     [Fact]
+    public async Task Login_rejects_missing_credentials_before_accessing_the_database()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { });
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Request validation failed.", body);
+        Assert.Contains("Username", body);
+        Assert.Contains("Password", body);
+    }
+
+    [Fact]
     public async Task Correlation_header_is_accepted_and_returned()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/health");

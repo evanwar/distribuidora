@@ -1,4 +1,5 @@
 using Distribuidora.Domain.Common;
+using Distribuidora.Domain.Fiscal;
 using System.Text.RegularExpressions;
 
 namespace Distribuidora.Domain.Catalogs;
@@ -30,8 +31,8 @@ public sealed class CustomerFiscalProfile : AuditableEntity
     public bool IsComplete() =>
         Regex.IsMatch(TaxId, @"^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$", RegexOptions.IgnoreCase) &&
         !string.IsNullOrWhiteSpace(LegalName) &&
-        FiscalZipCode.Length == 5 && FiscalZipCode.All(char.IsDigit) &&
-        TaxRegimeCode.Length == 3 && TaxRegimeCode.All(char.IsDigit) &&
+        FiscalDataRules.IsNumericCode(FiscalZipCode, FiscalDataRules.PostalCodeLength) &&
+        FiscalDataRules.IsNumericCode(TaxRegimeCode, FiscalDataRules.TaxRegimeCodeLength) &&
         (string.IsNullOrWhiteSpace(DefaultCfdiUseCode) ||
          Regex.IsMatch(DefaultCfdiUseCode, "^[A-Z0-9]{3,4}$", RegexOptions.IgnoreCase));
 }

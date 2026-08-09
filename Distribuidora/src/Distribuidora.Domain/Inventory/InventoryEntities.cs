@@ -9,7 +9,8 @@ public enum MovementType
     SaleCancellation,
     Adjustment,
     InternalTransfer,
-    ManualCorrection
+    ManualCorrection,
+    AdjustmentCancellation
 }
 
 public sealed class StockBalance : AuditableEntity
@@ -78,6 +79,7 @@ public sealed class InventoryAdjustment : AuditableEntity
         Status = DocumentStatus.Cancelled;
         CancelReason = reason;
         CancelledAt = occurredAt;
+        Raise(new EntityChangedDomainEvent("InventoryAdjustmentCancelled", nameof(InventoryAdjustment), Id, occurredAt));
     }
 }
 

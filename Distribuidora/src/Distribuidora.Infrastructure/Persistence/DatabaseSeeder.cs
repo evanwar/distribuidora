@@ -1,5 +1,6 @@
 using Distribuidora.Application.Abstractions;
 using Distribuidora.Application.Specifications;
+using Distribuidora.Application.Security;
 using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Audits;
 using Distribuidora.Domain.Catalogs;
@@ -11,38 +12,25 @@ namespace Distribuidora.Infrastructure.Persistence;
 
 public static class DatabaseSeeder
 {
-    private static readonly string[] PermissionKeys =
-    [
-        "security.view", "security.create_user", "security.edit_user", "security.manage_roles",
-        "catalogs.view", "catalogs.create", "catalogs.edit", "catalogs.deactivate",
-        "inventory.view", "inventory.adjust", "inventory.transfer", "inventory.cancel_adjustment",
-        "purchases.view", "purchases.create", "purchases.confirm", "purchases.cancel", "goods_receipts.close",
-        "sales.view", "sales.create", "sales.edit_draft", "sales.confirm", "sales.register_payment", "sales.cancel", "sales.invoice", "sales.cancel_invoice",
-        "sales.view_billing_eligibility", "sales.assign_billing_recipient", "sales.replace_billing_recipient", "sales.reconcile_invoice", "sales.manage_global_invoice_replacement",
-        "receivables.view", "receivables.register_payment", "receivables.apply_payment", "receivables.cancel_payment", "receivables.change_credit_limit",
-        "audit.view", "audit.export", "admin.manage_cancellation_reasons",
-        "logs.activity.read", "logs.audit.read", "logs.errors.read", "logs.errors.resolve", "logs.events.read", "logs.trace.read", "logs.export",
-        "reports.view", "reports.financial", "reports.inventory",
-        "admin.view", "admin.configure", "admin.manage_folios", "admin.manage_payment_methods"
-    ];
+    private const string ExampleAdminPassword = "replace-with-a-strong-unique-password";
 
     public static async Task SeedAsync(AppDbContext db, IPasswordService passwords, IConfiguration configuration, CancellationToken ct = default)
     {
         await db.Database.MigrateAsync(ct);
         var existingPermissionKeys = (await db.Query(Specification.All<Permission>())
             .Select(x => x.Key).ToArrayAsync(ct)).ToHashSet();
-        foreach (var key in PermissionKeys.Where(x => !existingPermissionKeys.Contains(x)))
+        foreach (var key in Permissions.All.Where(x => !existingPermissionKeys.Contains(x)))
         {
             var parts = key.Split('.', 2);
             db.Add(new Permission { Key = key, Module = parts[0], Action = parts[1], Description = key });
         }
         await db.SaveChangesAsync(ct);
 
-        var adminRole = await db.Query(Specification.Create<Role>(x => x.Name == "Administrator"))
+        var adminRole = await db.Query(Specification.Create<Role>(x => x.Name == SecurityRoleNames.Administrator))
             .Include(x => x.Permissions).SingleOrDefaultAsync(ct);
         if (adminRole is null)
         {
-            adminRole = new Role { Name = "Administrator", Description = "Full system access" };
+            adminRole = new Role { Name = SecurityRoleNames.Administrator, Description = "Full system access" };
             db.Add(adminRole);
         }
         var assigned = adminRole.Permissions.Select(x => x.Key).ToHashSet();
@@ -53,7 +41,8 @@ public static class DatabaseSeeder
         var adminUsername = configuration["Seed:AdminUsername"] ?? "admin";
         var adminEmail = configuration["Seed:AdminEmail"] ?? "admin@local.test";
         var adminPassword = configuration["Seed:AdminPassword"];
-        if (string.IsNullOrWhiteSpace(adminPassword) || adminPassword == "ChangeMe123!")
+        if (string.IsNullOrWhiteSpace(adminPassword) ||
+            adminPassword is "ChangeMe123!" or ExampleAdminPassword)
             throw new InvalidOperationException("Seed:AdminPassword must be explicitly configured with a non-default secret.");
         var syncAdminCredentials = configuration.GetValue("Seed:SyncAdminCredentials", false);
         var admin = await db.Query(Specification.Create<User>(x => x.Username == adminUsername))
@@ -85,19 +74,27 @@ public static class DatabaseSeeder
             db.Add(new Warehouse { Name = "Main Warehouse", Type = WarehouseType.Central });
         if (!await db.Query(Specification.All<PaymentMethod>()).AnyAsync(ct))
             db.AddRange(
-                new PaymentMethod { Code = "cash", Name = "Cash" },
-                new PaymentMethod { Code = "card", Name = "Card", RequiresReference = true },
-                new PaymentMethod { Code = "transfer", Name = "Bank Transfer", RequiresReference = true });
+                new PaymentMethod { Code = PaymentMethodCodes.Cash, Name = "Cash" },
+                new PaymentMethod { Code = PaymentMethodCodes.Card, Name = "Card", RequiresReference = true },
+                new PaymentMethod { Code = PaymentMethodCodes.BankTransfer, Name = "Bank Transfer", RequiresReference = true });
         if (!await db.Query(Specification.All<CreditPolicy>()).AnyAsync(ct)) db.Add(new CreditPolicy());
         if (!await db.Query(Specification.All<InventoryPolicy>()).AnyAsync(ct)) db.Add(new InventoryPolicy());
         if (!await db.Query(Specification.All<CancellationReason>()).AnyAsync(ct))
             db.Add(new CancellationReason { Code = "CAPTURE_ERROR", Description = "Capture error", Module = "all" });
         if (!await db.Query(Specification.All<FolioSequence>()).AnyAsync(ct))
             db.AddRange(
-                Sequence("purchase", "PO-"), Sequence("goods_receipt", "GR-"),
-                Sequence("inventory_adjustment", "ADJ-"), Sequence("counter_sale", "CS-"));
+                Sequence(DocumentFolioTypes.Purchase, DocumentFolioTypes.PurchasePrefix),
+                Sequence(DocumentFolioTypes.GoodsReceipt, DocumentFolioTypes.GoodsReceiptPrefix),
+                Sequence(DocumentFolioTypes.InventoryAdjustment, DocumentFolioTypes.InventoryAdjustmentPrefix),
+                Sequence(DocumentFolioTypes.CounterSale, DocumentFolioTypes.CounterSalePrefix));
         await db.SaveChangesAsync(ct);
     }
 
-    private static FolioSequence Sequence(string type, string prefix) => new() { DocumentType = type, Prefix = prefix, Padding = 8 };
+    private static FolioSequence Sequence(string type, string prefix) =>
+        new()
+        {
+            DocumentType = type,
+            Prefix = prefix,
+            Padding = DocumentFolioTypes.DefaultPadding
+        };
 }

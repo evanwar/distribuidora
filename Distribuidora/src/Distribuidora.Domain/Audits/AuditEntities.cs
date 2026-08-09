@@ -2,6 +2,14 @@ using Distribuidora.Domain.Common;
 
 namespace Distribuidora.Domain.Audits;
 
+public static class SystemEventStatuses
+{
+    public const string Pending = "Pending";
+    public const string Processed = "Processed";
+    public const string Failed = "Failed";
+    public const string DeadLetter = "DeadLetter";
+}
+
 public sealed class AuditLog : Entity
 {
     public DateTimeOffset OccurredAt { get; set; }
@@ -133,7 +141,7 @@ public sealed class SystemEventLog : Entity
     public DateTimeOffset? ProcessedAt { get; set; }
     public DateTimeOffset? LastAttemptAt { get; set; }
     public DateTimeOffset? NextAttemptAt { get; set; }
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = SystemEventStatuses.Pending;
     public string? Error { get; set; }
     public string CorrelationId { get; set; } = "";
     public string OperationId { get; set; } = "";

@@ -9,6 +9,11 @@ namespace Distribuidora.Application.Features.Reports;
 
 public sealed class ReportService(IAppDbContext db)
 {
+    private const int MaximumReportRangeDays = 366;
+    private const int FirstAgingBucketDays = 30;
+    private const int SecondAgingBucketDays = 60;
+    private const int ThirdAgingBucketDays = 90;
+
     public SalesSummaryResponse SalesSummary(DateTimeOffset from, DateTimeOffset to)
     {
         ValidateRange(from, to);
@@ -72,10 +77,10 @@ public sealed class ReportService(IAppDbContext db)
             x => x.Status != ReceivableStatus.Paid && x.Status != ReceivableStatus.Cancelled));
         return new(
             open.Where(x => x.DueDate >= asOf).Sum(x => x.Balance),
-            open.Where(x => x.DueDate < asOf && x.DueDate >= asOf.AddDays(-30)).Sum(x => x.Balance),
-            open.Where(x => x.DueDate < asOf.AddDays(-30) && x.DueDate >= asOf.AddDays(-60)).Sum(x => x.Balance),
-            open.Where(x => x.DueDate < asOf.AddDays(-60) && x.DueDate >= asOf.AddDays(-90)).Sum(x => x.Balance),
-            open.Where(x => x.DueDate < asOf.AddDays(-90)).Sum(x => x.Balance));
+            open.Where(x => x.DueDate < asOf && x.DueDate >= asOf.AddDays(-FirstAgingBucketDays)).Sum(x => x.Balance),
+            open.Where(x => x.DueDate < asOf.AddDays(-FirstAgingBucketDays) && x.DueDate >= asOf.AddDays(-SecondAgingBucketDays)).Sum(x => x.Balance),
+            open.Where(x => x.DueDate < asOf.AddDays(-SecondAgingBucketDays) && x.DueDate >= asOf.AddDays(-ThirdAgingBucketDays)).Sum(x => x.Balance),
+            open.Where(x => x.DueDate < asOf.AddDays(-ThirdAgingBucketDays)).Sum(x => x.Balance));
     }
 
     public DashboardResponse Dashboard(DateTimeOffset now)
@@ -95,6 +100,7 @@ public sealed class ReportService(IAppDbContext db)
     private static void ValidateRange(DateTimeOffset from, DateTimeOffset to)
     {
         if (from > to) throw new ArgumentException("From date must be before to date.");
-        if (to - from > TimeSpan.FromDays(366)) throw new ArgumentException("Report range cannot exceed 366 days.");
+        if (to - from > TimeSpan.FromDays(MaximumReportRangeDays))
+            throw new ArgumentException($"Report range cannot exceed {MaximumReportRangeDays} days.");
     }
 }

@@ -2,6 +2,7 @@ using Distribuidora.Application.Abstractions;
 using Distribuidora.Application.Common;
 using Distribuidora.Application.Features.Audits;
 using Distribuidora.Application.Specifications;
+using Distribuidora.Domain.Administration;
 using Distribuidora.Domain.Common;
 using Distribuidora.Domain.Sales;
 
@@ -15,6 +16,16 @@ public sealed class PointPaymentService(
     AuditEntryService audit,
     IDatatimeProvider datetimeProvider)
 {
+    private const string ProviderStatusCreated = "created";
+    private const string ProviderStatusAtTerminal = "at_terminal";
+    private const string ProviderStatusActionRequired = "action_required";
+    private const string ProviderStatusProcessed = "processed";
+    private const string ProviderStatusFailed = "failed";
+    private const string ProviderStatusCanceled = "canceled";
+    private const string ProviderStatusCancelled = "cancelled";
+    private const string ProviderStatusExpired = "expired";
+    private const string ProviderStatusDetailAccredited = "accredited";
+
     private static readonly PointPaymentStatus[] ActiveStatuses =
         [PointPaymentStatus.Creating, PointPaymentStatus.Pending, PointPaymentStatus.AtTerminal,
             PointPaymentStatus.ActionRequired, PointPaymentStatus.ReconciliationRequired];
@@ -44,11 +55,11 @@ public sealed class PointPaymentService(
         var previousStatusDetail = payment.StatusDetail;
         var previousCompletedAt = payment.CompletedAt;
         var cancellationRequested = string.Equals(
-            payment.StatusDetail, "cancellation_requested", StringComparison.Ordinal);
+            payment.StatusDetail, PointPaymentStatusDetails.CancellationRequested, StringComparison.Ordinal);
         ApplyOrderState(payment, order);
         if (cancellationRequested && payment.Status is PointPaymentStatus.Pending or
                 PointPaymentStatus.AtTerminal or PointPaymentStatus.ActionRequired)
-            payment.StatusDetail = "cancellation_requested";
+            payment.StatusDetail = PointPaymentStatusDetails.CancellationRequested;
         if (payment.Status == PointPaymentStatus.Cancelled)
             payment.CompletedAt ??= datetimeProvider.UtcNow;
         if (payment.Status == previousStatus &&
@@ -116,7 +127,7 @@ public sealed class PointPaymentService(
             // The remote order may have been accepted even if the local response/save failed.
             // Keep the same entity and idempotency key so a retry cannot create a second charge.
             payment.Status = PointPaymentStatus.ReconciliationRequired;
-            payment.StatusDetail = "order_creation_result_unknown";
+            payment.StatusDetail = PointPaymentStatusDetails.OrderCreationResultUnknown;
             payment.UpdatedAt = datetimeProvider.UtcNow;
             payment.UpdatedBy = actorId;
             await db.SaveChangesAsync(CancellationToken.None);
@@ -154,7 +165,7 @@ public sealed class PointPaymentService(
         if (payment.Status == PointPaymentStatus.Cancelled)
             payment.CompletedAt = datetimeProvider.UtcNow;
         else
-            payment.StatusDetail = "cancellation_requested";
+            payment.StatusDetail = PointPaymentStatusDetails.CancellationRequested;
         payment.UpdatedAt = datetimeProvider.UtcNow;
         payment.UpdatedBy = actorId;
         audit.Add(payment.Status == PointPaymentStatus.Cancelled
@@ -194,13 +205,13 @@ public sealed class PointPaymentService(
         }
 
         var transaction = order.Payments.SingleOrDefault(x =>
-            string.Equals(x.Status, "processed", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(x.StatusDetail, "accredited", StringComparison.OrdinalIgnoreCase));
+            string.Equals(x.Status, ProviderStatusProcessed, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.StatusDetail, ProviderStatusDetailAccredited, StringComparison.OrdinalIgnoreCase));
         var paidAmount = transaction?.PaidAmount ?? order.TotalPaidAmount ?? transaction?.Amount;
         if (transaction is null || paidAmount != pointPayment.Amount)
         {
             pointPayment.Status = PointPaymentStatus.ReconciliationRequired;
-            pointPayment.StatusDetail = "approved_amount_mismatch";
+            pointPayment.StatusDetail = PointPaymentStatusDetails.ApprovedAmountMismatch;
             await db.SaveChangesAsync(cancellationToken);
             return;
         }
@@ -214,7 +225,7 @@ public sealed class PointPaymentService(
                 if (!sale.Payments.Any(x => x.Reference == reference))
                 {
                     await sales.RegisterPaymentAsync(sale.Id, new Contracts.Requests.SalePaymentRequest(
-                        "card", pointPayment.Amount, reference), pointPayment.InitiatedBy, requestId, token);
+                        PaymentMethodCodes.Card, pointPayment.Amount, reference), pointPayment.InitiatedBy, requestId, token);
                 }
                 if (sale.Status == DocumentStatus.Draft)
                     await sales.ConfirmAsync(sale.Id, pointPayment.InitiatedBy, requestId, token);
@@ -223,7 +234,7 @@ public sealed class PointPaymentService(
                 pointPayment.PaymentMethodId = transaction.PaymentMethodId;
                 pointPayment.Installments = transaction.Installments;
                 pointPayment.CompletedAt = datetimeProvider.UtcNow;
-                pointPayment.StatusDetail = "accredited";
+                pointPayment.StatusDetail = PointPaymentStatusDetails.Accredited;
                 audit.Add("PointPaymentApproved", "sales", nameof(PointPayment), pointPayment.Id,
                     pointPayment.InitiatedBy, requestId);
                 await db.SaveChangesAsync(token);
@@ -233,7 +244,7 @@ public sealed class PointPaymentService(
         catch (Exception ex) when (ex is DomainRuleException or ConflictException)
         {
             pointPayment.Status = PointPaymentStatus.ReconciliationRequired;
-            pointPayment.StatusDetail = "sale_confirmation_failed";
+            pointPayment.StatusDetail = PointPaymentStatusDetails.SaleConfirmationFailed;
             pointPayment.UpdatedAt = datetimeProvider.UtcNow;
             await db.SaveChangesAsync(CancellationToken.None);
         }
@@ -244,13 +255,13 @@ public sealed class PointPaymentService(
         payment.StatusDetail = order.StatusDetail;
         payment.Status = order.Status.ToLowerInvariant() switch
         {
-            "created" => PointPaymentStatus.Pending,
-            "at_terminal" => PointPaymentStatus.AtTerminal,
-            "action_required" => PointPaymentStatus.ActionRequired,
-            "processed" when order.StatusDetail is "accredited" or "processed" => PointPaymentStatus.Approved,
-            "failed" => PointPaymentStatus.Failed,
-            "canceled" or "cancelled" => PointPaymentStatus.Cancelled,
-            "expired" => PointPaymentStatus.Expired,
+            ProviderStatusCreated => PointPaymentStatus.Pending,
+            ProviderStatusAtTerminal => PointPaymentStatus.AtTerminal,
+            ProviderStatusActionRequired => PointPaymentStatus.ActionRequired,
+            ProviderStatusProcessed when order.StatusDetail is ProviderStatusDetailAccredited or ProviderStatusProcessed => PointPaymentStatus.Approved,
+            ProviderStatusFailed => PointPaymentStatus.Failed,
+            ProviderStatusCanceled or ProviderStatusCancelled => PointPaymentStatus.Cancelled,
+            ProviderStatusExpired => PointPaymentStatus.Expired,
             _ => payment.Status
         };
     }

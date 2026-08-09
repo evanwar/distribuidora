@@ -4,6 +4,7 @@ using Distribuidora.Application.Features.Audits;
 using Distribuidora.Application.Specifications;
 using Distribuidora.Contracts.Requests;
 using Distribuidora.Domain.Catalogs;
+using Distribuidora.Domain.Fiscal;
 
 namespace Distribuidora.Application.Features.Customers;
 
@@ -67,8 +68,8 @@ public sealed class CustomerService(
         if (hasFiscalProfileData)
         {
             if (string.IsNullOrWhiteSpace(request.TaxId) || string.IsNullOrWhiteSpace(request.FiscalLegalName) ||
-                request.FiscalZipCode?.Length != 5 || !request.FiscalZipCode.All(char.IsDigit) ||
-                request.TaxRegimeCode?.Length != 3 || !request.TaxRegimeCode.All(char.IsDigit))
+                !FiscalDataRules.IsNumericCode(request.FiscalZipCode, FiscalDataRules.PostalCodeLength) ||
+                !FiscalDataRules.IsNumericCode(request.TaxRegimeCode, FiscalDataRules.TaxRegimeCodeLength))
                 throw new ArgumentException("RFC, fiscal legal name, five-digit fiscal ZIP code and three-digit tax regime are required for a fiscal profile.");
 
             var profile = customer.FiscalProfile ?? new CustomerFiscalProfile
@@ -78,8 +79,8 @@ public sealed class CustomerService(
             };
             profile.TaxId = request.TaxId.Trim().ToUpperInvariant();
             profile.LegalName = request.FiscalLegalName.Trim().ToUpperInvariant();
-            profile.FiscalZipCode = request.FiscalZipCode;
-            profile.TaxRegimeCode = request.TaxRegimeCode;
+            profile.FiscalZipCode = request.FiscalZipCode!;
+            profile.TaxRegimeCode = request.TaxRegimeCode!;
             profile.DefaultCfdiUseCode = NullIfWhiteSpace(request.DefaultCfdiUseCode)?.ToUpperInvariant();
             profile.InvoiceEmail = NullIfWhiteSpace(request.InvoiceEmail);
             if (!profile.IsComplete())

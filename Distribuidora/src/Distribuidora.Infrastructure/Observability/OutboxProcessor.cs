@@ -14,9 +14,14 @@ public sealed class OutboxProcessor(
     ILogger<OutboxProcessor> logger,
     IDatatimeProvider datetimeProvider) : BackgroundService
 {
+    private const int PollingIntervalSeconds = 10;
+    private const int BatchSize = 50;
+    private const int MaximumRetryAttempts = 10;
+    private const int MaximumBackoffExponent = 8;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(PollingIntervalSeconds));
         do
         {
             try
@@ -39,8 +44,8 @@ public sealed class OutboxProcessor(
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var messages = await db.Query(Specification.Create<OutboxMessage>(
-                x => x.ProcessedAt == null && x.RetryCount < 10))
-            .OrderBy(x => x.OccurredAt).Take(50)
+                x => x.ProcessedAt == null && x.RetryCount < MaximumRetryAttempts))
+            .OrderBy(x => x.OccurredAt).Take(BatchSize)
             .ToArrayAsync(ct);
         foreach (var message in messages)
         {
@@ -49,7 +54,7 @@ public sealed class OutboxProcessor(
                 var eventLog = await db.Query(Specification.Create<SystemEventLog>(
                     x => x.EventId == message.EventId)).SingleAsync(ct);
                 var utcNow = datetimeProvider.UtcNow;
-                eventLog.Status = "Processed";
+                eventLog.Status = SystemEventStatuses.Processed;
                 eventLog.AttemptCount = message.RetryCount + 1;
                 eventLog.ProcessedAt = utcNow;
                 eventLog.LastAttemptAt = utcNow;
@@ -67,10 +72,14 @@ public sealed class OutboxProcessor(
                 if (eventLog is not null)
                 {
                     var utcNow = datetimeProvider.UtcNow;
-                    eventLog.Status = message.RetryCount >= 10 ? "DeadLetter" : "Failed";
+                    eventLog.Status = message.RetryCount >= MaximumRetryAttempts
+                        ? SystemEventStatuses.DeadLetter
+                        : SystemEventStatuses.Failed;
                     eventLog.AttemptCount = message.RetryCount;
                     eventLog.LastAttemptAt = utcNow;
-                    eventLog.NextAttemptAt = message.RetryCount >= 10 ? null : utcNow.AddSeconds(Math.Pow(2, Math.Min(message.RetryCount, 8)));
+                    eventLog.NextAttemptAt = message.RetryCount >= MaximumRetryAttempts
+                        ? null
+                        : utcNow.AddSeconds(Math.Pow(2, Math.Min(message.RetryCount, MaximumBackoffExponent)));
                     eventLog.Error = ex.GetBaseException().Message;
                 }
                 await db.SaveChangesAsync(ct);

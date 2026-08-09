@@ -138,6 +138,9 @@ public sealed class MercadoPagoPointClient(HttpClient httpClient, IOptions<Merca
 public sealed class MercadoPagoWebhookValidator(IOptions<MercadoPagoPointOptions> options)
     : IMercadoPagoWebhookValidator
 {
+    private const int SignaturePairPartCount = 2;
+    private const int UnixMillisecondsTimestampLength = 13;
+
     private readonly MercadoPagoPointOptions _options = options.Value;
 
     public bool IsExpectedApplication(string? applicationId) =>
@@ -152,7 +155,7 @@ public sealed class MercadoPagoWebhookValidator(IOptions<MercadoPagoPointOptions
         foreach (var part in signature.Split(','))
         {
             var pair = part.Split('=', 2, StringSplitOptions.TrimEntries);
-            if (pair.Length != 2) continue;
+            if (pair.Length != SignaturePairPartCount) continue;
             if (pair[0] == "ts") timestamp = pair[1];
             if (pair[0] == "v1") suppliedHash = pair[1];
         }
@@ -161,7 +164,7 @@ public sealed class MercadoPagoWebhookValidator(IOptions<MercadoPagoPointOptions
         DateTimeOffset signedAt;
         try
         {
-            signedAt = timestamp.Length >= 13
+            signedAt = timestamp.Length >= UnixMillisecondsTimestampLength
                 ? DateTimeOffset.FromUnixTimeMilliseconds(unixTimestamp)
                 : DateTimeOffset.FromUnixTimeSeconds(unixTimestamp);
         }

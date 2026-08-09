@@ -27,6 +27,9 @@ public sealed record TraceItem(
 
 public sealed class LogQueryService(ILogQueryStore logs, IAppDbContext db, IDatatimeProvider datetimeProvider)
 {
+    private const int MaximumTraceItems = 2_000;
+    private const int MaximumQueryRangeDays = 93;
+
     public ActivityLogItem ActivityById(Guid id)
     {
         var x = logs.Query(Specification.Create<UserActivityLog>(x => x.Id == id)).SingleOrDefault() ?? throw new NotFoundException("Activity log not found.");
@@ -154,38 +157,39 @@ public sealed class LogQueryService(ILogQueryStore logs, IAppDbContext db, IData
                 (operation == null || x.OperationId == operation) &&
                 (correlation == null || x.CorrelationId == correlation) &&
                 (folio == null || x.ReferenceFolio == folio) &&
-                eventId == null)).Take(2000).AsEnumerable()
+                eventId == null)).Take(MaximumTraceItems).AsEnumerable()
             .Select(x => new TraceItem(x.Id, x.OccurredAt, "UserActivity", x.Action, x.Succeeded ? "Succeeded" : "Failed", x.EntityName, x.EntityId, x.CorrelationId, x.OperationId, x.TransactionId, null, x.CausationId, x.ReferenceFolio)));
         result.AddRange(db.Query(Specification.Create<AuditLog>(x =>
                 (operation == null || x.OperationId == operation) &&
                 (correlation == null || x.CorrelationId == correlation) &&
                 (folio == null || x.ReferenceFolio == folio) &&
-                (eventId == null || x.EventId == eventId))).Take(2000).AsEnumerable()
+                (eventId == null || x.EventId == eventId))).Take(MaximumTraceItems).AsEnumerable()
             .Select(x => new TraceItem(x.Id, x.OccurredAt, "Audit", x.Action, "Committed", x.EntityName, x.EntityId?.ToString(), x.CorrelationId, x.OperationId, x.TransactionId, x.EventId, x.CausationId, x.ReferenceFolio)));
         result.AddRange(logs.Query(Specification.Create<SystemErrorLog>(x =>
                 (operation == null || x.OperationId == operation) &&
                 (correlation == null || x.CorrelationId == correlation) &&
                 (folio == null || x.ReferenceFolio == folio) &&
-                (eventId == null || x.EventId == eventId))).Take(2000).AsEnumerable()
+                (eventId == null || x.EventId == eventId))).Take(MaximumTraceItems).AsEnumerable()
             .Select(x => new TraceItem(x.Id, x.OccurredAt, "SystemError", x.ErrorCode ?? x.ExceptionType, x.IsResolved ? "Resolved" : "Open", null, null, x.CorrelationId, x.OperationId, x.TransactionId, x.EventId, x.CausationId, x.ReferenceFolio)));
         result.AddRange(logs.Query(Specification.Create<SystemEventLog>(x =>
                 (operation == null || x.OperationId == operation) &&
                 (correlation == null || x.CorrelationId == correlation) &&
                 (folio == null || x.ReferenceFolio == folio) &&
-                (eventId == null || x.EventId == eventId))).Take(2000).AsEnumerable()
+                (eventId == null || x.EventId == eventId))).Take(MaximumTraceItems).AsEnumerable()
             .Select(x => new TraceItem(x.Id, x.CreatedAt, "SystemEvent", x.EventName, x.Status, x.AggregateType, x.AggregateId, x.CorrelationId, x.OperationId, x.TransactionId, x.EventId, x.CausationId, x.ReferenceFolio)));
         result.AddRange(db.Query(Specification.Create<Distribuidora.Domain.Inventory.InventoryMovement>(x =>
                 (operation == null || x.OperationId == operation) &&
                 (correlation == null || x.CorrelationId == correlation) &&
                 (folio == null || x.Folio == folio) &&
-                eventId == null)).Take(2000).AsEnumerable()
+                eventId == null)).Take(MaximumTraceItems).AsEnumerable()
             .Select(x => new TraceItem(x.Id, x.Date, "InventoryMovement", x.MovementType.ToString(), "Committed", nameof(x), x.Id.ToString(), x.CorrelationId, x.OperationId, x.TransactionId, null, null, x.Folio)));
-        return result.OrderBy(x => x.OccurredAt).ThenBy(x => x.Id).Take(2000).ToArray();
+        return result.OrderBy(x => x.OccurredAt).ThenBy(x => x.Id).Take(MaximumTraceItems).ToArray();
     }
 
     private static void Validate(DateTimeOffset from, DateTimeOffset to)
     {
         if (from > to) throw new ArgumentException("From date must be before to date.");
-        if (to - from > TimeSpan.FromDays(93)) throw new ArgumentException("Date range cannot exceed 93 days.");
+        if (to - from > TimeSpan.FromDays(MaximumQueryRangeDays))
+            throw new ArgumentException($"Date range cannot exceed {MaximumQueryRangeDays} days.");
     }
 }

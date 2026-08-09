@@ -2,6 +2,7 @@ using Distribuidora.Application.Abstractions;
 using Distribuidora.Application.Common;
 using Distribuidora.Application.Features.Audits;
 using Distribuidora.Application.Specifications;
+using Distribuidora.Application.Security;
 using Distribuidora.Contracts.Requests;
 using Distribuidora.Domain.Security;
 
@@ -13,6 +14,8 @@ public sealed class IdentityAccessService(
     IDatatimeProvider datetimeProvider,
     AuditEntryService audit)
 {
+    private const int MinimumActiveAdministratorCount = 1;
+
     public IReadOnlyCollection<User> GetUsers() =>
         db.Query(Specification.All<User>()).OrderBy(x => x.Username).ToArray();
 
@@ -25,8 +28,8 @@ public sealed class IdentityAccessService(
         if (db.Query(Specification.Create<User>(
                 x => x.Username == request.Username || x.Email == request.Email)).Any())
             throw new ConflictException("Username or email already exists.");
-        if (request.Password.Length < 8)
-            throw new ArgumentException("Password must contain at least 8 characters.");
+        if (request.Password.Length < AuthenticationDefaults.MinimumPasswordLength)
+            throw new ArgumentException($"Password must contain at least {AuthenticationDefaults.MinimumPasswordLength} characters.");
 
         var user = new User
         {
@@ -56,9 +59,10 @@ public sealed class IdentityAccessService(
         var user = db.Query(Specification.Create<User>(x => x.Id == id)).SingleOrDefault()
                    ?? throw new NotFoundException("User not found.");
         if (!request.Active &&
-            user.Roles.Any(x => x.Name == "Administrator") &&
+            user.Roles.Any(x => x.Name == SecurityRoleNames.Administrator) &&
             db.Query(Specification.Create<User>(
-                x => x.Active && x.Roles.Any(role => role.Name == "Administrator"))).Count() == 1)
+                x => x.Active && x.Roles.Any(role => role.Name == SecurityRoleNames.Administrator))).Count() ==
+            MinimumActiveAdministratorCount)
             throw new ConflictException("The last active administrator cannot be deactivated.");
 
         user.Name = request.Name.Trim();

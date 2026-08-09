@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using Distribuidora.Api.Auth;
+using Distribuidora.Api.Common;
 using Distribuidora.Api.Middleware;
 using Distribuidora.Application;
 using Distribuidora.Application.Abstractions;
@@ -21,8 +22,10 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddScoped<FluentValidationActionFilter>();
 builder.Services.AddControllers(options =>
     {
+        options.Filters.AddService<FluentValidationActionFilter>();
         foreach (var status in new[]
                  {
                      StatusCodes.Status400BadRequest,
@@ -55,7 +58,11 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "Distribuidora Counter Sales API", Version = "v1" });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT", In = ParameterLocation.Header
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
     });
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -70,6 +77,8 @@ if (string.IsNullOrWhiteSpace(jwtKey))
         throw new InvalidOperationException("Jwt:Key must be supplied by a secret provider outside Development.");
     jwtKey = "local-development-key-not-for-production-123456789";
 }
+if (Encoding.UTF8.GetByteCount(jwtKey) < AuthenticationDefaults.MinimumJwtSigningKeyBytes)
+    throw new InvalidOperationException($"Jwt:Key must contain at least {AuthenticationDefaults.MinimumJwtSigningKeyBytes} bytes.");
 if (!builder.Environment.IsDevelopment() && jwtKey.Contains("development", StringComparison.OrdinalIgnoreCase))
     throw new InvalidOperationException("A development JWT key cannot be used outside Development.");
 builder.Services.AddRateLimiter(options =>
@@ -79,7 +88,9 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
+            PermitLimit = AuthenticationDefaults.LoginPermitLimit,
+            Window = TimeSpan.FromMinutes(AuthenticationDefaults.LoginRateLimitWindowMinutes),
+            QueueLimit = 0,
             AutoReplenishment = true
         }));
 });
@@ -87,11 +98,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "Distribuidora.Api",
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "Distribuidora.Client",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ClockSkew = TimeSpan.FromMinutes(1)
+        ClockSkew = TimeSpan.FromMinutes(AuthenticationDefaults.JwtClockSkewMinutes)
     };
     options.Events = new JwtBearerEvents
     {

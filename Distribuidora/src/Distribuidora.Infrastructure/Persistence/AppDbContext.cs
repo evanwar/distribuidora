@@ -84,7 +84,7 @@ public sealed class AppDbContext(
                 EventId = eventId,
                 EventName = domainEvent.GetType().FullName ?? domainEvent.GetType().Name,
                 Payload = payload,
-                Status = "Pending",
+                Status = SystemEventStatuses.Pending,
                 CreatedAt = domainEvent.OccurredAt,
                 CorrelationId = trace.CorrelationId,
                 OperationId = trace.OperationId,

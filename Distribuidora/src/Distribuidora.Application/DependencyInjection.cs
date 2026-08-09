@@ -12,6 +12,9 @@ using Distribuidora.Application.Features.Reports;
 using Distribuidora.Application.Features.Sales;
 using Distribuidora.Application.Features.Suppliers;
 using Distribuidora.Application.Features.Warehouses;
+using Distribuidora.Application.Common;
+using Distribuidora.Contracts.Requests;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Distribuidora.Application;
@@ -19,7 +22,12 @@ namespace Distribuidora.Application;
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services) =>
-        services.AddScoped<AuthService>()
+        services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>()
+            .AddScoped<IValidator<RefreshRequest>, RefreshRequestValidator>()
+            .AddScoped<IValidator<ProductRequest>, ProductRequestValidator>()
+            .AddScoped<IValidator<CreateSaleRequest>, CreateSaleRequestValidator>()
+            .AddScoped<IValidator<CreateReceiptRequest>, CreateReceiptRequestValidator>()
+            .AddScoped<AuthService>()
             .AddScoped<IdentityAccessService>()
             .AddScoped<ProductService>()
             .AddScoped<ReferenceDataService>()

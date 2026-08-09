@@ -13,6 +13,8 @@ namespace Distribuidora.Infrastructure;
 
 public static class DependencyInjection
 {
+    private const int MercadoPagoHttpTimeoutSeconds = 20;
+
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Default");
@@ -39,7 +41,7 @@ public static class DependencyInjection
         {
             var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MercadoPagoPointOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(20);
+            client.Timeout = TimeSpan.FromSeconds(MercadoPagoHttpTimeoutSeconds);
         });
         services.AddSingleton<IMercadoPagoWebhookValidator, MercadoPagoWebhookValidator>();
         services.AddFiscalApi(settings =>
@@ -50,8 +52,12 @@ public static class DependencyInjection
             settings.ApiVersion = "v4";
             settings.TimeZone = configuration["ElectronicInvoicing:FiscalApi:TimeZone"] ?? "America/Mexico_City";
         });
-        var providerName = configuration["ElectronicInvoicing:Provider"] ?? "FiscalApi";
-        if (!string.Equals(providerName, "FiscalApi", StringComparison.OrdinalIgnoreCase))
+        var providerName = configuration["ElectronicInvoicing:Provider"] ??
+                           FiscalApiElectronicInvoicingProvider.ProviderName;
+        if (!string.Equals(
+                providerName,
+                FiscalApiElectronicInvoicingProvider.ProviderName,
+                StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Electronic invoicing provider '{providerName}' is not registered.");
         services.AddSingleton<IElectronicInvoicingProfile>(new ElectronicInvoicingProfile(
             configuration["ElectronicInvoicing:IssuerProviderId"] ?? "",

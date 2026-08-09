@@ -1,4 +1,5 @@
 using Distribuidora.Domain.Catalogs;
+using Distribuidora.Domain.Fiscal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,11 +23,11 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>, 
     {
         builder.ToTable("customer_fiscal_profiles", "catalogs");
         builder.Audit();
-        builder.Property(x => x.TaxId).HasMaxLength(13).IsRequired();
-        builder.Property(x => x.LegalName).HasMaxLength(254).IsRequired();
-        builder.Property(x => x.FiscalZipCode).HasMaxLength(5).IsRequired();
-        builder.Property(x => x.TaxRegimeCode).HasMaxLength(3).IsRequired();
-        builder.Property(x => x.DefaultCfdiUseCode).HasMaxLength(4);
+        builder.Property(x => x.TaxId).HasMaxLength(FiscalDataRules.TaxIdMaximumLength).IsRequired();
+        builder.Property(x => x.LegalName).HasMaxLength(FiscalDataRules.LegalNameMaximumLength).IsRequired();
+        builder.Property(x => x.FiscalZipCode).HasMaxLength(FiscalDataRules.PostalCodeLength).IsRequired();
+        builder.Property(x => x.TaxRegimeCode).HasMaxLength(FiscalDataRules.TaxRegimeCodeLength).IsRequired();
+        builder.Property(x => x.DefaultCfdiUseCode).HasMaxLength(FiscalDataRules.CfdiUseCodeMaximumLength);
         builder.Property(x => x.InvoiceEmail).HasMaxLength(254);
         builder.HasIndex(x => x.CustomerId).IsUnique();
         builder.HasIndex(x => x.TaxId).IsUnique();

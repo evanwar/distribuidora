@@ -37,6 +37,8 @@ public sealed class DatatimeProvider : IDatatimeProvider
 
 public sealed class SensitiveDataSanitizer : ISensitiveDataSanitizer
 {
+    private const int MaximumSanitizedTextLength = 16_000;
+
     private static readonly string[] Denied =
     [
         "password", "passwd", "secret", "token", "authorization", "cookie",
@@ -67,7 +69,9 @@ public sealed class SensitiveDataSanitizer : ISensitiveDataSanitizer
                 result,
                 $@"(?i)({System.Text.RegularExpressions.Regex.Escape(denied)}\s*[:=]\s*)[^\s,;]+",
                 "$1[REDACTED]");
-        return result.Length <= 16_000 ? result : result[..16_000];
+        return result.Length <= MaximumSanitizedTextLength
+            ? result
+            : result[..MaximumSanitizedTextLength];
     }
 
     private static void Sanitize(JsonNode? node)
