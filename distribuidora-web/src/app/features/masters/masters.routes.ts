@@ -62,7 +62,7 @@ const warehouses: EntityResourceDefinition = {
       required: true,
       options: [
         { value: 0, label: 'Central' },
-        { value: 1, label: 'Secundario' },
+        { value: 1, label: 'Mostrador' },
       ],
     },
     { key: 'active', label: 'Activo', type: 'boolean', defaultValue: true },

@@ -1,19 +1,27 @@
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink, type Params } from '@angular/router';
+import { LanguageService } from '../../../core/i18n/language.service';
+import { TranslationKey } from '../../../core/i18n/translation.catalog';
 import { UiAlertComponent } from '../../../shared/ui/alert/ui-alert.component';
 import { UiButtonComponent } from '../../../shared/ui/button/ui-button.component';
 import { UiFeedbackComponent } from '../../../shared/ui/feedback/ui-feedback.component';
 import { UiIconComponent } from '../../../shared/ui/icon/ui-icon.component';
 import { UiPageHeaderComponent } from '../../../shared/ui/page-header/ui-page-header.component';
 import { DashboardStore } from '../data-access/dashboard.store';
-import { LanguageService } from '../../../core/i18n/language.service';
-import { TranslationKey } from '../../../core/i18n/translation.catalog';
+
+interface AgingSegment {
+  readonly label: string;
+  readonly value: number;
+  readonly percent: number;
+  readonly color: string;
+}
 
 @Component({
   selector: 'app-dashboard-page',
   imports: [
     CurrencyPipe,
+    DatePipe,
     DecimalPipe,
     UiAlertComponent,
     UiButtonComponent,
@@ -24,7 +32,7 @@ import { TranslationKey } from '../../../core/i18n/translation.catalog';
   ],
   providers: [DashboardStore],
   template: `
-    <div class="page">
+    <div class="page dashboard-page">
       <app-ui-page-header
         [eyebrow]="i18n.translate('dashboard.eyebrow')"
         [title]="i18n.translate('dashboard.title')"
@@ -65,10 +73,23 @@ import { TranslationKey } from '../../../core/i18n/translation.catalog';
           />
         </section>
       } @else {
+        <section class="executive-hero">
+          <div>
+            <span>{{ text('Pulso operativo', 'Operational pulse') }}</span>
+            <h2>{{ executiveTitle() }}</h2>
+            <p>{{ executiveMessage() }}</p>
+          </div>
+          <a routerLink="/operations/reports" class="hero-action">
+            {{ text('Explorar reportes', 'Explore reports') }}
+            <app-ui-icon name="open" />
+          </a>
+        </section>
+
         <section class="metrics" [attr.aria-label]="i18n.translate('dashboard.indicators')">
-          @for (metric of store.metrics(); track metric.key) {
+          @for (metric of store.metrics(); track metric.key; let index = $index) {
             <a
-              class="surface metric"
+              class="metric"
+              [class]="'metric metric--' + index"
               [routerLink]="destinationFor(metric.key)"
               [queryParams]="queryParamsFor(metric.key)"
               [attr.aria-label]="actionLabelFor(metric.key) + ': ' + metric.value"
@@ -77,12 +98,10 @@ import { TranslationKey } from '../../../core/i18n/translation.catalog';
               <div class="metric__content">
                 <span>{{ i18n.translate(metric.label) }}</span>
                 <strong>
-                  @if (metric.format === 'currency' && isNumber(metric.value)) {
+                  @if (metric.format === 'currency') {
                     {{ metric.value | currency: 'MXN' : 'symbol' : '1.2-2' }}
-                  } @else if (metric.format === 'number' && isNumber(metric.value)) {
-                    {{ metric.value | number: '1.0-2' }}
                   } @else {
-                    {{ metric.value }}
+                    {{ metric.value | number: '1.0-2' }}
                   }
                 </strong>
                 <span class="metric__action">
@@ -93,81 +112,146 @@ import { TranslationKey } from '../../../core/i18n/translation.catalog';
             </a>
           }
         </section>
+
+        <section class="analytics-grid">
+          <article class="surface panel sales-panel">
+            <header class="panel__header">
+              <div>
+                <span>{{ text('Últimos 7 días', 'Last 7 days') }}</span>
+                <h2>{{ text('Ritmo de ventas', 'Sales pace') }}</h2>
+                <p>{{ text('Ingreso confirmado por día', 'Confirmed revenue by day') }}</p>
+              </div>
+              <strong>{{ weeklySales() | currency: 'MXN' : 'symbol' : '1.0-0' }}</strong>
+            </header>
+            @if (store.salesTrend().length > 0) {
+              <div
+                class="sales-chart"
+                role="img"
+                [attr.aria-label]="
+                  text('Ventas de los últimos siete días', 'Sales for the last seven days')
+                "
+              >
+                @for (day of store.salesTrend(); track day.date) {
+                  <div class="sales-column">
+                    <span class="sales-column__value">{{
+                      day.sales | currency: 'MXN' : 'symbol' : '1.0-0'
+                    }}</span>
+                    <div class="sales-column__track">
+                      <i [style.height.%]="salesHeight(day.sales)"><span></span></i>
+                    </div>
+                    <strong>{{ day.date | date: 'EEE' : undefined : i18n.locale() }}</strong>
+                    <small>{{ day.transactions }} {{ text('ops.', 'txns') }}</small>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="chart-empty">
+                <app-ui-icon name="reports" />
+                <span>{{
+                  text(
+                    'La tendencia aparecerá con la nueva respuesta del servidor.',
+                    'The trend will appear with the new server response.'
+                  )
+                }}</span>
+              </div>
+            }
+          </article>
+
+          <article class="surface panel inventory-panel">
+            <header class="panel__header">
+              <div>
+                <span>{{ text('Inventario', 'Inventory') }}</span>
+                <h2>{{ text('Salud del catálogo', 'Catalog health') }}</h2>
+                <p>{{ text('Productos por nivel de riesgo', 'Products by risk level') }}</p>
+              </div>
+            </header>
+            <div class="health-content">
+              <div
+                class="health-donut"
+                [style.background]="inventoryDonut()"
+                role="img"
+                [attr.aria-label]="inventoryHealthLabel()"
+              >
+                <div>
+                  <strong>{{ inventoryProducts() }}</strong
+                  ><span>{{ text('productos', 'products') }}</span>
+                </div>
+              </div>
+              <div class="health-legend">
+                <div>
+                  <i class="healthy"></i><span>{{ text('Saludables', 'Healthy') }}</span
+                  ><strong>{{ store.inventoryHealth().healthyProducts }}</strong>
+                </div>
+                <div>
+                  <i class="warning"></i><span>{{ text('Stock bajo', 'Low stock') }}</span
+                  ><strong>{{ store.inventoryHealth().lowStockProducts }}</strong>
+                </div>
+                <div>
+                  <i class="danger"></i><span>{{ text('Agotados', 'Out of stock') }}</span
+                  ><strong>{{ store.inventoryHealth().outOfStockProducts }}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="unit-summary">
+              <span
+                ><small>{{ text('Disponibles', 'Available') }}</small
+                ><strong>{{
+                  store.inventoryHealth().availableUnits | number: '1.0-2'
+                }}</strong></span
+              >
+              <span
+                ><small>{{ text('Reservadas', 'Reserved') }}</small
+                ><strong>{{
+                  store.inventoryHealth().reservedUnits | number: '1.0-2'
+                }}</strong></span
+              >
+            </div>
+          </article>
+
+          <article class="surface panel aging-panel">
+            <header class="panel__header">
+              <div>
+                <span>{{ text('Cobranza', 'Collections') }}</span>
+                <h2>{{ text('Antigüedad de cartera', 'Receivables aging') }}</h2>
+                <p>
+                  {{
+                    text('Concentración del saldo pendiente', 'Outstanding balance concentration')
+                  }}
+                </p>
+              </div>
+              <strong>{{ agingTotal() | currency: 'MXN' : 'symbol' : '1.0-0' }}</strong>
+            </header>
+            <div
+              class="aging-bar"
+              role="img"
+              [attr.aria-label]="
+                text('Distribución de cartera por antigüedad', 'Receivables distribution by age')
+              "
+            >
+              @for (segment of agingSegments(); track segment.label) {
+                @if (segment.percent > 0) {
+                  <i [style.width.%]="segment.percent" [style.background]="segment.color"></i>
+                }
+              }
+            </div>
+            <div class="aging-list">
+              @for (segment of agingSegments(); track segment.label) {
+                <div>
+                  <i [style.background]="segment.color"></i>
+                  <span
+                    ><strong>{{ segment.label }}</strong
+                    ><small>{{ segment.value | currency: 'MXN' : 'symbol' : '1.0-0' }}</small></span
+                  >
+                  <b>{{ segment.percent | number: '1.0-0' }}%</b>
+                </div>
+              }
+            </div>
+          </article>
+        </section>
       }
     </div>
   `,
-  styles: `
-    .metrics {
-      display: grid;
-      gap: var(--space-4);
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-    }
-    .metric {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      gap: var(--space-4);
-      min-height: 7.5rem;
-      padding: var(--space-5);
-      color: inherit;
-      text-decoration: none;
-      transition:
-        border-color 140ms ease,
-        box-shadow 140ms ease,
-        transform 140ms ease;
-    }
-    .metric:hover {
-      border-color: color-mix(in srgb, var(--app-primary) 35%, var(--app-border));
-      box-shadow: var(--app-shadow-navigation);
-      transform: translateY(-2px);
-    }
-    .metric:focus-visible {
-      outline: 3px solid color-mix(in srgb, var(--app-primary) 38%, transparent);
-      outline-offset: 3px;
-    }
-    .metric__icon {
-      display: grid;
-      width: 3rem;
-      height: 3rem;
-      place-items: center;
-      border-radius: var(--app-radius-sm);
-      background: var(--app-surface-muted);
-      color: var(--app-primary);
-    }
-    .metric__icon app-ui-icon {
-      width: 1.5rem;
-      height: 1.5rem;
-    }
-    .metric__content {
-      display: grid;
-      gap: var(--space-2);
-      min-width: 0;
-    }
-    .metric__content > span:first-child {
-      color: var(--app-text-muted);
-    }
-    .metric strong {
-      font-size: clamp(1.55rem, 5vw, 2.2rem);
-      font-variant-numeric: tabular-nums;
-    }
-    .metric__action {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-1);
-      color: var(--app-primary-strong);
-      font-size: 0.82rem;
-      font-weight: 700;
-    }
-    .metric__action app-ui-icon {
-      width: 1rem;
-      height: 1rem;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .metric {
-        transition: none;
-      }
-    }
-  `,
+  styleUrl: './dashboard.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardPage implements OnInit {
@@ -175,21 +259,86 @@ export class DashboardPage implements OnInit {
   protected readonly i18n = inject(LanguageService);
   private readonly today = localDate(new Date());
 
+  protected readonly weeklySales = computed(() =>
+    this.store.salesTrend().reduce((total, day) => total + day.sales, 0),
+  );
+  protected readonly inventoryProducts = computed(() => {
+    const health = this.store.inventoryHealth();
+    return health.healthyProducts + health.lowStockProducts + health.outOfStockProducts;
+  });
+  protected readonly agingTotal = computed(() => {
+    const aging = this.store.receivablesAging();
+    return aging.current + aging.days1To30 + aging.days31To60 + aging.days61To90 + aging.over90;
+  });
+  protected readonly agingSegments = computed<readonly AgingSegment[]>(() => {
+    const aging = this.store.receivablesAging();
+    const total = this.agingTotal();
+    const values = [
+      [this.text('Al corriente', 'Current'), aging.current, '#35d2b1'],
+      [this.text('1–30 días', '1–30 days'), aging.days1To30, '#73a5ff'],
+      [this.text('31–60 días', '31–60 days'), aging.days31To60, '#6c7cff'],
+      [this.text('61–90 días', '61–90 days'), aging.days61To90, '#ffb84d'],
+      [this.text('+90 días', '+90 days'), aging.over90, '#ff6b8a'],
+    ] as const;
+    return values.map(([label, value, color]) => ({
+      label,
+      value,
+      color,
+      percent: total > 0 ? (value / total) * 100 : 0,
+    }));
+  });
+
   ngOnInit(): void {
     this.store.load();
   }
 
-  protected isNumber(value: string | number): value is number {
-    return typeof value === 'number';
+  protected text(spanish: string, english: string): string {
+    return this.i18n.language() === 'en' ? english : spanish;
+  }
+
+  protected executiveTitle(): string {
+    const sales = this.store.metrics().find((metric) => metric.key === 'todaySales')?.value ?? 0;
+    return sales > 0
+      ? this.text('El negocio ya está en movimiento', 'Business is already moving')
+      : this.text('Todo listo para comenzar el día', 'Everything is ready to start the day');
+  }
+
+  protected executiveMessage(): string {
+    const transactions =
+      this.store.metrics().find((metric) => metric.key === 'todayTransactions')?.value ?? 0;
+    const lowStock =
+      this.store.metrics().find((metric) => metric.key === 'lowStockProducts')?.value ?? 0;
+    return this.text(
+      `${transactions} operaciones registradas hoy · ${lowStock} productos requieren atención`,
+      `${transactions} transactions recorded today · ${lowStock} products need attention`,
+    );
+  }
+
+  protected salesHeight(value: number): number {
+    const maximum = Math.max(...this.store.salesTrend().map((day) => day.sales), 0);
+    return value > 0 && maximum > 0 ? Math.max(8, (value / maximum) * 100) : 3;
+  }
+
+  protected inventoryDonut(): string {
+    const health = this.store.inventoryHealth();
+    const total = this.inventoryProducts();
+    if (total <= 0) return 'conic-gradient(#e5ebf3 0 100%)';
+    const healthy = (health.healthyProducts / total) * 100;
+    const low = (health.lowStockProducts / total) * 100;
+    return `conic-gradient(#35d2b1 0 ${healthy}%, #ffb84d ${healthy}% ${healthy + low}%, #ff6b8a ${healthy + low}% 100%)`;
+  }
+
+  protected inventoryHealthLabel(): string {
+    const health = this.store.inventoryHealth();
+    return this.text(
+      `${health.healthyProducts} saludables, ${health.lowStockProducts} con stock bajo y ${health.outOfStockProducts} agotados`,
+      `${health.healthyProducts} healthy, ${health.lowStockProducts} low stock and ${health.outOfStockProducts} out of stock`,
+    );
   }
 
   protected destinationFor(key: string): string {
-    if (key === 'todaySales' || key === 'todayTransactions') {
-      return '/operations/counter-sales';
-    }
-    if (key === 'inventoryUnits' || key === 'lowStockProducts') {
-      return '/operations/inventory';
-    }
+    if (key === 'todaySales' || key === 'todayTransactions') return '/operations/counter-sales';
+    if (key === 'inventoryUnits' || key === 'lowStockProducts') return '/operations/inventory';
     if (key === 'receivables') return '/operations/receivables';
     return '/operations/reports';
   }

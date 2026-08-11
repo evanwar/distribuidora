@@ -19,7 +19,9 @@ test('language selection persists and is sent to the API', async ({ page }) => {
   await expect(page.getByLabel('Username')).toBeVisible();
   await page.getByLabel('Username').fill('admin');
   await page.getByLabel('Password').fill('test-only');
-  const loginRequest = page.waitForRequest((request) => request.url().includes('/api/v1/auth/login'));
+  const loginRequest = page.waitForRequest((request) =>
+    request.url().includes('/api/v1/auth/login'),
+  );
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   expect((await loginRequest).headers()['accept-language']).toBe('en-US');
@@ -115,7 +117,9 @@ test('payment terminals can be administered without horizontal overflow', async 
   await page.getByRole('button', { name: 'Entrar' }).click();
   await navigateFromShell(page, 'Terminales de pago');
 
-  await expect(page.getByRole('heading', { name: 'Terminales de pago', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Terminales de pago', exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Mostrador principal')).toBeVisible();
   await expect(page.getByText('Predeterminada', { exact: true })).toBeVisible();
 
@@ -162,6 +166,35 @@ test('products render the paged backend response', async ({ page }) => {
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   expect(overflow).toBe(false);
+});
+
+test('product aliases load products from the paged catalog', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/login');
+  await page.getByLabel('Usuario').fill('admin');
+  await page.getByLabel(/Contrase/).fill('test-only');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await navigateFromShell(page, 'Otros catálogos');
+
+  await page.getByRole('link', { name: /Aliases de producto/ }).click();
+  await page.getByRole('button', { name: 'Nuevo alias' }).first().click();
+  const product = page.getByRole('combobox', { name: 'Producto' });
+  await product.click();
+  await expect(page.getByRole('option', { name: 'ARZ-001 · Arroz premium' })).toBeVisible();
+});
+
+test('paged operational logs render their records', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/login');
+  await page.getByLabel('Usuario').fill('admin');
+  await page.getByLabel(/Contrase/).fill('test-only');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await navigateFromShell(page, 'Auditoría y soporte');
+
+  await page.getByRole('button', { name: /Actividad de usuarios/ }).click();
+  await page.getByRole('button', { name: 'Consultar', exact: true }).click();
+  await expect(page.getByText('CreatedSale')).toBeVisible();
+  await expect(page.getByText('pageSize')).toHaveCount(0);
 });
 
 test('purchase lookup explains an empty catalog and offers the next step', async ({ page }) => {
@@ -226,7 +259,9 @@ test('every primary module remains usable without global overflow', async ({ pag
   await page.getByLabel('Usuario').fill('admin');
   await page.getByLabel(/Contrase/).fill('test-only');
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Centro de operación', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Centro de operación', exact: true }),
+  ).toBeVisible();
 
   const modules = [
     ['/dashboard', 'Centro de operación'],
@@ -255,7 +290,9 @@ test('every primary module remains usable without global overflow', async ({ pag
   }
 });
 
-test('English covers every primary module instead of only the application shell', async ({ page }) => {
+test('English covers every primary module instead of only the application shell', async ({
+  page,
+}) => {
   await mockApi(page);
   await page.goto('/login');
   await page.getByRole('button', { name: 'Idioma' }).click();
@@ -282,7 +319,8 @@ test('English covers every primary module instead of only the application shell'
     ['/operations/administration/payment-terminals', 'Payment terminals'],
   ] as const;
 
-  const untranslatedShellCopy = /Selecciona una tarea|Elige una opción|Consultar el catálogo|Nueva terminal|Agregar productos|Buscar clientes/;
+  const untranslatedShellCopy =
+    /Selecciona una tarea|Elige una opción|Consultar el catálogo|Nueva terminal|Agregar productos|Buscar clientes/;
   for (const [path, heading] of modules) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
@@ -311,6 +349,29 @@ async function mockApi(page: import('@playwright/test').Page): Promise<void> {
         inventoryUnits: 240,
         lowStockProducts: 2,
         receivables: 350,
+        salesTrend: [
+          { date: '2026-08-05', sales: 780, transactions: 5 },
+          { date: '2026-08-06', sales: 1100, transactions: 7 },
+          { date: '2026-08-07', sales: 920, transactions: 6 },
+          { date: '2026-08-08', sales: 1680, transactions: 10 },
+          { date: '2026-08-09', sales: 1340, transactions: 9 },
+          { date: '2026-08-10', sales: 1940, transactions: 12 },
+          { date: '2026-08-11', sales: 1250, transactions: 8 },
+        ],
+        inventoryHealth: {
+          healthyProducts: 21,
+          lowStockProducts: 2,
+          outOfStockProducts: 1,
+          availableUnits: 214,
+          reservedUnits: 26,
+        },
+        receivablesAging: {
+          current: 180,
+          days1To30: 90,
+          days31To60: 45,
+          days61To90: 25,
+          over90: 10,
+        },
       };
     } else if (path === '/api/v1/products') {
       data = {
@@ -413,6 +474,20 @@ async function mockApi(page: import('@playwright/test').Page): Promise<void> {
           reservedQuantity: 0,
         },
       ];
+    } else if (path === '/api/v1/logs/activity') {
+      data = {
+        items: [
+          {
+            id: 'activity-1',
+            action: 'CreatedSale',
+            module: 'Sales',
+            succeeded: true,
+          },
+        ],
+        page: 1,
+        pageSize: 50,
+        total: 1,
+      };
     }
 
     await route.fulfill({

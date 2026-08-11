@@ -91,6 +91,7 @@ export const englishUiText: Readonly<Record<string, string>> = {
   'Permite decimales': 'Allows decimals',
   'Tipo': 'Type',
   'Central': 'Central',
+  'Mostrador': 'Counter',
   'Secundario': 'Secondary',
 
   'Información comercial y condiciones de crédito de cada cliente.': 'Commercial information and credit terms for each customer.',

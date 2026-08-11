@@ -86,15 +86,48 @@ public sealed class ReportService(IAppDbContext db)
     public DashboardResponse Dashboard(DateTimeOffset now)
     {
         var start = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, now.Offset);
+        var trendStart = start.AddDays(-6);
         var sales = db.Query(Specification.Create<Domain.Sales.CounterSale>(
-            x => x.SaleDate >= start && x.Status == DocumentStatus.Confirmed));
+                x => x.SaleDate >= trendStart && x.Status == DocumentStatus.Confirmed))
+            .ToArray();
+        var todaySales = sales.Where(x => x.SaleDate >= start).ToArray();
+        var balances = db.Query(Specification.All<Domain.Inventory.StockBalance>()).ToArray();
+        var lowStock = LowStock();
+        var outOfStockProductIds = lowStock
+            .Where(x => x.Quantity <= 0)
+            .Select(x => x.ProductId)
+            .Distinct()
+            .ToHashSet();
+        var lowStockProductIds = lowStock.Select(x => x.ProductId).Distinct().ToHashSet();
+        var activeProductCount = db.Query(Specification.Create<Domain.Catalogs.Product>(x => x.Active)).Count();
+        var salesTrend = Enumerable.Range(0, 7)
+            .Select(offset => trendStart.AddDays(offset))
+            .Select(day =>
+            {
+                var nextDay = day.AddDays(1);
+                var daySales = sales.Where(x => x.SaleDate >= day && x.SaleDate < nextDay).ToArray();
+                return new DashboardSalesDayResponse(
+                    DateOnly.FromDateTime(day.Date),
+                    daySales.Sum(x => x.Total),
+                    daySales.Length);
+            })
+            .ToArray();
+        var aging = ReceivablesAging(now);
         return new(
-            sales.Sum(x => x.Total),
-            sales.Count(),
-            db.Query(Specification.All<Domain.Inventory.StockBalance>()).Sum(x => x.Quantity),
-            LowStock().Count,
+            todaySales.Sum(x => x.Total),
+            todaySales.Length,
+            balances.Sum(x => x.Quantity),
+            lowStockProductIds.Count,
             db.Query(Specification.Create<AccountReceivable>(
-                x => x.Status != ReceivableStatus.Paid && x.Status != ReceivableStatus.Cancelled)).Sum(x => x.Balance));
+                x => x.Status != ReceivableStatus.Paid && x.Status != ReceivableStatus.Cancelled)).Sum(x => x.Balance),
+            salesTrend,
+            new DashboardInventoryHealthResponse(
+                Math.Max(0, activeProductCount - lowStockProductIds.Count),
+                Math.Max(0, lowStockProductIds.Count - outOfStockProductIds.Count),
+                outOfStockProductIds.Count,
+                balances.Sum(x => Math.Max(0, x.Quantity - x.ReservedQuantity)),
+                balances.Sum(x => x.ReservedQuantity)),
+            aging);
     }
 
     private static void ValidateRange(DateTimeOffset from, DateTimeOffset to)

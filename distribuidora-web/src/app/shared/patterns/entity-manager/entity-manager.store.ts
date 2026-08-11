@@ -144,8 +144,15 @@ function finiteNumber(value: unknown): number | undefined {
 }
 
 function toOptions(value: unknown, field: EntityFieldDefinition): readonly EntityOption[] {
-  if (!Array.isArray(value)) return [];
-  return value
+  const collection = Array.isArray(value)
+    ? value
+    : value &&
+        typeof value === 'object' &&
+        Array.isArray((value as Record<string, unknown>)['items'])
+      ? ((value as Record<string, unknown>)['items'] as readonly unknown[])
+      : [];
+
+  return collection
     .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
     .map((item) => {
       const primary = String(item[field.optionLabelKey ?? 'name'] ?? '');

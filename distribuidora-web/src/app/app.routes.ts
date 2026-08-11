@@ -1,3 +1,4 @@
+import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 
@@ -10,6 +11,7 @@ export const routes: Routes = [
   },
   {
     path: 'design-system',
+    canMatch: [() => isDevMode()],
     loadComponent: () =>
       import('./features/design-system/pages/design-system-gallery.page').then(
         (m) => m.DesignSystemGalleryPage,

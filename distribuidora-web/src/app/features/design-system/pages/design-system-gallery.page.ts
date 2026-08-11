@@ -38,14 +38,28 @@ import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-
       <section class="surface sample">
         <h2>Acciones</h2>
         <div class="row">
-          <app-ui-button label="Guardar cliente" icon="add" />
-          <app-ui-button label="Editar" variant="outlined" />
-          <app-ui-button label="Cancelar venta" variant="outlined" tone="danger" />
+          <app-ui-button label="Guardar cliente" icon="add" (pressed)="record('Guardar cliente')" />
+          <app-ui-button label="Editar" variant="outlined" (pressed)="record('Editar')" />
+          <app-ui-button
+            label="Cancelar venta"
+            variant="outlined"
+            tone="danger"
+            (pressed)="record('Cancelar venta')"
+          />
           <app-ui-button label="Procesando" [loading]="true" />
           <app-ui-button label="No disponible" [disabled]="true" />
-          <app-ui-icon-button icon="edit" ariaLabel="Editar registro" />
+          <app-ui-icon-button
+            icon="edit"
+            ariaLabel="Editar registro"
+            (pressed)="record('Editar registro')"
+          />
           <app-ui-icon-button icon="close" ariaLabel="Cerrar" [disabled]="true" />
         </div>
+        @if (lastAction()) {
+          <p class="interaction-result" aria-live="polite">
+            Acción ejecutada: {{ lastAction() }} ({{ interactions() }})
+          </p>
+        }
       </section>
 
       <section class="surface sample">
@@ -82,6 +96,7 @@ import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-
           tone="danger"
           correlationId="demo-correlation-id"
           actionLabel="Reintentar"
+          (action)="record('Reintentar')"
         />
       </section>
 
@@ -91,7 +106,7 @@ import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-
           title="Todavía no hay movimientos"
           message="Los movimientos aparecerán después de confirmar una operación."
           actionLabel="Crear operación"
-          (action)="interactions.update((value) => value + 1)"
+          (action)="record('Crear operación')"
         />
       </section>
 
@@ -101,10 +116,20 @@ import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-
           [rows]="sampleRows"
           [columns]="sampleColumns"
           activeKey="active"
+          (edit)="record('Editar fila')"
         />
         <app-ui-action-bar>
-          <app-ui-button label="Cancelar" variant="text" tone="neutral" />
-          <app-ui-button label="Guardar cambios" icon="check" />
+          <app-ui-button
+            label="Cancelar"
+            variant="text"
+            tone="neutral"
+            (pressed)="record('Cancelar cambios')"
+          />
+          <app-ui-button
+            label="Guardar cambios"
+            icon="check"
+            (pressed)="record('Guardar cambios')"
+          />
         </app-ui-action-bar>
       </section>
     </main>
@@ -119,11 +144,13 @@ import { UiStatusChipComponent } from '../../../shared/ui/status-chip/ui-status-
     .icon-grid span { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: var(--app-radius-sm); background: var(--app-surface-muted); color: var(--app-primary); }
     .icon-grid app-ui-icon { width: 1.5rem; height: 1.5rem; }
     .icon-grid small { color: var(--app-text-muted); }
+    .interaction-result { margin: 0; color: var(--app-text-muted); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DesignSystemGalleryPage {
   protected readonly interactions = signal(0);
+  protected readonly lastAction = signal('');
   protected readonly icons: readonly { name: UiIconName; label: string }[] = [
     { name: 'add', label: 'Agregar' },
     { name: 'edit', label: 'Editar' },
@@ -141,4 +168,9 @@ export class DesignSystemGalleryPage {
     { key: 'sku', label: 'SKU', priority: 'primary' },
     { key: 'name', label: 'Nombre', priority: 'secondary' },
   ];
+
+  protected record(action: string): void {
+    this.lastAction.set(action);
+    this.interactions.update((value) => value + 1);
+  }
 }

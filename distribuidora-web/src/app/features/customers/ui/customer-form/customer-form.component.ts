@@ -110,7 +110,10 @@ export class CustomerFormComponent implements OnChanges {
 
   protected readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    taxId: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^[A-Z&Ã‘]{3,4}\d{6}[A-Z0-9]{3}$/i)] }),
+    taxId: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.pattern(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i)],
+    }),
     fiscalLegalName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(254)] }),
     fiscalZipCode: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^$|^\d{5}$/)] }),
     taxRegimeCode: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^$|^\d{3}$/)] }),

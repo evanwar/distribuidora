@@ -26,7 +26,14 @@ import { OperationWorkbenchStore } from '../data-access/operation-workbench.stor
 import { BUSINESS_FIELDS, BUSINESS_MODULES, BUSINESS_TITLES } from './business-workspace.config';
 import { BusinessField, BusinessLineField, BusinessResultRow } from './business-workspace.models';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { BUSINESS_MODULES_EN, BUSINESS_TITLES_EN, businessText } from './business-workspace.i18n';
+import {
+  BUSINESS_MODULES_EN,
+  BUSINESS_TITLES_EN,
+  businessText,
+  permissionText,
+  systemRoleText,
+} from './business-workspace.i18n';
+import { ReportVisualizationComponent } from './report-visualization.component';
 
 type FieldValue =
   string | number | boolean | readonly string[] | readonly Record<string, string | number>[];
@@ -48,6 +55,7 @@ type FieldValue =
     UiIconButtonComponent,
     UiPageHeaderComponent,
     UiStatusChipComponent,
+    ReportVisualizationComponent,
   ],
   providers: [OperationWorkbenchStore],
   template: `
@@ -95,7 +103,9 @@ type FieldValue =
             <app-ui-feedback
               kind="empty"
               [title]="text('Selecciona una tarea')"
-              [message]="text('Elige una opción para consultar información o realizar una operación.')"
+              [message]="
+                text('Elige una opción para consultar información o realizar una operación.')
+              "
             />
           } @else {
             <header class="task-panel__header">
@@ -160,10 +170,14 @@ type FieldValue =
                             @if (store.lookupLoading()) {
                               <mat-option disabled>{{ text('Cargando opciones…') }}</mat-option>
                             } @else if (store.optionsFor(field).length === 0) {
-                              <mat-option disabled>{{ text('No hay registros disponibles') }}</mat-option>
+                              <mat-option disabled>{{
+                                text('No hay registros disponibles')
+                              }}</mat-option>
                             }
                             @for (option of store.optionsFor(field); track option.value) {
-                              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                              <mat-option [value]="option.value">{{
+                                optionText(field, option.value, option.label)
+                              }}</mat-option>
                             }
                           </mat-select>
                         } @else if (field.type === 'textarea') {
@@ -355,7 +369,14 @@ type FieldValue =
                     ><app-ui-icon name="check" /> {{ text('Operación completada') }}</span
                   >
                 </div>
-                @if (resultRows().length === 0) {
+                @if (isReportResult()) {
+                  <app-report-visualization
+                    [operationId]="selected()!.id"
+                    [result]="store.result()"
+                    [locale]="i18n.locale()"
+                    [english]="english"
+                  />
+                } @else if (resultRows().length === 0) {
                   <div class="completed-message">
                     <span><app-ui-icon name="check" /></span>
                     <strong>{{ text('La operación se completó correctamente.') }}</strong>
@@ -387,7 +408,7 @@ type FieldValue =
 export class BusinessWorkspacePage {
   private readonly route = inject(ActivatedRoute);
   protected readonly i18n = inject(LanguageService);
-  private readonly english = this.i18n.language() === 'en';
+  protected readonly english = this.i18n.language() === 'en';
   protected readonly store = inject(OperationWorkbenchStore);
   protected readonly definition =
     (this.english ? BUSINESS_MODULES_EN : BUSINESS_MODULES)[
@@ -429,6 +450,7 @@ export class BusinessWorkspacePage {
   protected readonly resultRows = computed(() =>
     toResultRows(this.store.result(), this.english, this.i18n.locale()),
   );
+  protected readonly isReportResult = computed(() => /^(DSH|RPT)-/.test(this.selected()?.id ?? ''));
 
   constructor() {
     effect(() => {
@@ -452,6 +474,9 @@ export class BusinessWorkspacePage {
     const requestedOperation = this.route.snapshot.queryParamMap.get('operation');
     const operation = this.operations().find((item) => item.id === requestedOperation);
     if (operation) this.select(operation);
+    else if (this.definition.key === 'F08' && this.operations().length > 0) {
+      this.select(this.operations()[0]);
+    }
   }
 
   protected operationsFor(group: string): readonly EndpointDefinition[] {
@@ -466,7 +491,8 @@ export class BusinessWorkspacePage {
   }
 
   protected titleFor(operation: EndpointDefinition): string {
-    if (this.english) return BUSINESS_TITLES_EN[operation.id] ?? sentenceCase(operation.description, 'en-US');
+    if (this.english)
+      return BUSINESS_TITLES_EN[operation.id] ?? sentenceCase(operation.description, 'en-US');
     return BUSINESS_TITLES[operation.id] ?? sentenceCase(operation.description, 'es-MX');
   }
 
@@ -475,7 +501,8 @@ export class BusinessWorkspacePage {
   }
 
   protected fullDescription(operation: EndpointDefinition): string {
-    if (this.english) return `Use this task to ${this.titleFor(operation).toLocaleLowerCase('en-US')}.`;
+    if (this.english)
+      return `Use this task to ${this.titleFor(operation).toLocaleLowerCase('en-US')}.`;
     return sentenceCase(operation.description)
       .replace(/\s+según DTO/gi, '')
       .replace(/\s+y deep link/gi, '')
@@ -565,6 +592,16 @@ export class BusinessWorkspacePage {
       return this.text('No hay registros disponibles para seleccionar.');
     }
     return this.text('Abre la lista; con ella abierta puedes escribir para localizar una opción.');
+  }
+
+  protected optionText(
+    field: BusinessField | BusinessLineField,
+    value: string | number,
+    label: string,
+  ): string {
+    if (field.key === 'permissionKeys') return permissionText(String(value), this.english);
+    if (field.optionsEndpoint === '/api/v1/roles') return systemRoleText(label, this.english);
+    return label;
   }
 
   protected emptyLookupTitle(): string {
@@ -800,9 +837,19 @@ function sentenceCase(value: string, locale = 'es-MX'): string {
   return `${value.charAt(0).toLocaleUpperCase(locale)}${value.slice(1)}`;
 }
 
-function toResultRows(result: unknown, english: boolean, locale: string): readonly BusinessResultRow[] {
+export function toResultRows(
+  result: unknown,
+  english: boolean,
+  locale: string,
+): readonly BusinessResultRow[] {
   if (result === null || result === undefined) return [];
-  const collection = Array.isArray(result) ? result : [result];
+  const collection = Array.isArray(result)
+    ? result
+    : result &&
+        typeof result === 'object' &&
+        Array.isArray((result as Record<string, unknown>)['items'])
+      ? ((result as Record<string, unknown>)['items'] as readonly unknown[])
+      : [result];
   return collection
     .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
     .slice(0, 100)
@@ -843,8 +890,10 @@ function fieldLabel(key: string, english: boolean): string {
     description: 'Descripción',
     code: 'Código',
     module: 'Módulo',
+    action: 'Acción',
   };
-  const label = labels[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase());
+  const label =
+    labels[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase());
   return businessText(label, english);
 }
 
