@@ -10,6 +10,7 @@ using Distribuidora.Domain.Inventory;
 using Distribuidora.Domain.Purchases;
 using Distribuidora.Domain.Sales;
 using Distribuidora.Domain.Security;
+using Distribuidora.Infrastructure.Observability;
 using Microsoft.EntityFrameworkCore;
 
 namespace Distribuidora.Infrastructure.Persistence;
@@ -18,8 +19,10 @@ public sealed class AppDbContext(
     DbContextOptions<AppDbContext> options,
     IRequestTraceContext trace,
     ISensitiveDataSanitizer sanitizer,
-    IDatatimeProvider datetimeProvider) : DbContext(options), IAppDbContext
+    IDatatimeProvider datetimeProvider,
+    OutboxWakeSignal outboxWakeSignal) : DbContext(options), IAppDbContext
 {
+    private bool _outboxNotificationPending;
     private DbSet<AuditLog> AuditLogSet => Set<AuditLog>();
     private DbSet<SystemEventLog> SystemEventLogSet => Set<SystemEventLog>();
     private DbSet<OutboxMessage> OutboxMessageSet => Set<OutboxMessage>();
@@ -33,6 +36,7 @@ public sealed class AppDbContext(
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("pg_trgm");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
     }
@@ -96,6 +100,11 @@ public sealed class AppDbContext(
         }
         var result = await base.SaveChangesAsync(cancellationToken);
         foreach (var entry in ChangeTracker.Entries<Entity>()) entry.Entity.ClearDomainEvents();
+        if (events.Length > 0)
+        {
+            if (Database.CurrentTransaction is null) outboxWakeSignal.Notify();
+            else _outboxNotificationPending = true;
+        }
         return result;
     }
 
@@ -109,11 +118,14 @@ public sealed class AppDbContext(
         {
             var result = await action(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            if (_outboxNotificationPending) outboxWakeSignal.Notify();
+            _outboxNotificationPending = false;
             return result;
         }
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
+            _outboxNotificationPending = false;
             throw;
         }
         finally

@@ -2,6 +2,7 @@ using Distribuidora.Application.Abstractions;
 using Distribuidora.Application.Specifications;
 using Distribuidora.Domain.Audits;
 using Distribuidora.Infrastructure.Persistence;
+using Distribuidora.Application.Realtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,21 +13,21 @@ namespace Distribuidora.Infrastructure.Observability;
 public sealed class OutboxProcessor(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxProcessor> logger,
-    IDatatimeProvider datetimeProvider) : BackgroundService
+    IDatatimeProvider datetimeProvider,
+    OutboxWakeSignal wakeSignal) : BackgroundService
 {
-    private const int PollingIntervalSeconds = 10;
     private const int BatchSize = 50;
     private const int MaximumRetryAttempts = 10;
     private const int MaximumBackoffExponent = 8;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(PollingIntervalSeconds));
         do
         {
+            var processed = 0;
             try
             {
-                await ProcessBatch(stoppingToken);
+                processed = await ProcessBatch(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -36,10 +37,11 @@ public sealed class OutboxProcessor(
             {
                 logger.LogError(ex, "Outbox processing batch failed.");
             }
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+            if (processed < BatchSize) await wakeSignal.WaitAsync(stoppingToken);
+        } while (!stoppingToken.IsCancellationRequested);
     }
 
-    private async Task ProcessBatch(CancellationToken ct)
+    private async Task<int> ProcessBatch(CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -51,6 +53,14 @@ public sealed class OutboxProcessor(
         {
             try
             {
+                var publisher = scope.ServiceProvider.GetRequiredService<IRealtimeEventPublisher>();
+                await publisher.PublishAsync(new PersistedEvent(
+                    message.EventId,
+                    message.Type,
+                    message.Payload,
+                    message.OccurredAt,
+                    message.CorrelationId,
+                    message.OperationId), ct);
                 var eventLog = await db.Query(Specification.Create<SystemEventLog>(
                     x => x.EventId == message.EventId)).SingleAsync(ct);
                 var utcNow = datetimeProvider.UtcNow;
@@ -85,5 +95,6 @@ public sealed class OutboxProcessor(
                 await db.SaveChangesAsync(ct);
             }
         }
+        return messages.Length;
     }
 }

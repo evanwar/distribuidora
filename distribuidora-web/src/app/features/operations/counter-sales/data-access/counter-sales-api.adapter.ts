@@ -1,7 +1,9 @@
 import { HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { forkJoin, map, Observable } from 'rxjs';
+import { forkJoin, map, Observable, of } from 'rxjs';
 import { ApiClientService } from '../../../../core/api/api-client.service';
+import { ProductSearchAdapter } from './product-search.adapter';
+import { emptyProductSearch } from '../models/product-search.models';
 import {
   CounterSale,
   CreateCounterSale,
@@ -22,6 +24,13 @@ import {
 @Injectable()
 export class CounterSalesApiAdapter {
   private readonly api = inject(ApiClientService);
+  private readonly productSearch = inject(ProductSearchAdapter);
+
+  loadCartProducts(warehouseId: string, ids: string[]) {
+    const batches = Array.from({ length: Math.ceil(ids.length / 30) }, (_, index) => ids.slice(index * 30, (index + 1) * 30));
+    return batches.length ? forkJoin(batches.map(batch => this.productSearch.search({ ...emptyProductSearch, warehouseId }, batch)))
+      .pipe(map(pages => pages.flatMap(page => page.items))) : of([]);
+  }
 
   loadWorkspace(context?: HttpContext): Observable<{
     customers: readonly PosCustomer[];
@@ -34,9 +43,9 @@ export class CounterSalesApiAdapter {
   }> {
     return forkJoin({
       customers: this.api.get<unknown>('/api/v1/customers?limit=20', { context }),
-      products: this.api.get<unknown>('/api/v1/products?Page=1&PageSize=100', { context }),
+      products: of([]),
       warehouses: this.api.get<unknown>('/api/v1/warehouses', { context }),
-      balances: this.api.get<unknown>('/api/v1/inventory/balances', { context }),
+      balances: of([]),
       paymentMethods: this.api.get<unknown>('/api/v1/admin/payment-methods', { context }),
       paymentTerminals: this.api.get<unknown>('/api/v1/admin/payment-terminals/available', { context }),
       sales: this.api.get<unknown>('/api/v1/counter-sales', { context }),

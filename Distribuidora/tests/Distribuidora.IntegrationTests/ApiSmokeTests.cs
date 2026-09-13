@@ -71,6 +71,13 @@ public sealed class ApiSmokeTests : IClassFixture<DistribuidoraApiFactory>
     }
 
     [Fact]
+    public async Task Realtime_hub_rejects_anonymous_negotiation()
+    {
+        var response = await _client.PostAsync("/hubs/realtime/negotiate?negotiateVersion=1", null);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Login_rejects_missing_credentials_before_accessing_the_database()
     {
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { });

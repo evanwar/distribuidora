@@ -22,6 +22,7 @@ export { PaymentMethodsService } from './services/payment-methods.service';
 export { PaymentTerminalsService } from './services/payment-terminals.service';
 export { PermissionsService } from './services/permissions.service';
 export { PoliciesService } from './services/policies.service';
+export { PosProductsService } from './services/pos-products.service';
 export { ProductAliasesService } from './services/product-aliases.service';
 export { ProductsService } from './services/products.service';
 export { PurchasesService } from './services/purchases.service';

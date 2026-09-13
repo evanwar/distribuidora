@@ -36,7 +36,7 @@ import { UiStatusChipComponent } from '../../../../shared/ui/status-chip/ui-stat
 import { CounterSalesApiAdapter } from '../data-access/counter-sales-api.adapter';
 import { CounterSalesStore } from '../data-access/counter-sales.store';
 import { CounterSale, CreateCounterSale, IssueElectronicInvoice, PosCustomer } from '../models/counter-sale.models';
-import { ProductTileComponent } from '../ui/product-tile/product-tile.component';
+import { ProductPickerComponent } from './product-picker.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
 
 type SaleAction = 'payment' | 'cancel' | null;
@@ -64,7 +64,7 @@ type SaleAction = 'payment' | 'cancel' | null;
     UiIconComponent,
     UiPageHeaderComponent,
     UiStatusChipComponent,
-    ProductTileComponent,
+    ProductPickerComponent,
   ],
   providers: [CounterSalesApiAdapter, CounterSalesStore],
   template: `
@@ -179,38 +179,10 @@ type SaleAction = 'payment' | 'cancel' | null;
             </mat-card>
 
             <section class="surface product-picker">
-              <div class="section-heading">
-                <div>
-                  <h2 class="section-title">{{ text('Agregar productos') }}</h2>
-                  <p>{{ text('Busca por nombre, SKU o código de barras.') }}</p>
-                </div>
-                <span class="shortcut">{{ text('F2 Buscar') }}</span>
-              </div>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="product-search">
-                <mat-label>{{ text('Buscar producto') }}</mat-label>
-                <input
-                  matInput
-                  type="search"
-                  autocomplete="off"
-                  [placeholder]="text('Ej. ARZ-001 o arroz')"
-                  (input)="store.search(inputValue($event))"
-                />
-              </mat-form-field>
-              @if (store.products().length === 0) {
-                <div class="compact-empty">{{ text('No encontramos productos con esa búsqueda.') }}</div>
-              } @else {
-                <div class="product-grid">
-                  @for (product of store.products(); track product.id) {
-                    <app-product-tile
-                      [product]="product"
-                      [available]="store.availableStock(product.id)"
-                      [canAdd]="store.canAdd(product.id)"
-                      (add)="store.add(product)"
-                      (addAll)="store.addAll(product)"
-                    />
-                  }
-                </div>
-              }
+              <app-product-picker [warehouseId]="saleForm.controls.sourceWarehouseId.value" [lines]="store.lines()"
+                (results)="store.acceptSearchProducts($event.products, $event.warehouseId)"
+                (add)="store.addSearchProduct($event)"
+                (decrease)="store.decreaseProduct($event.id)" />
             </section>
 
             <section class="surface cart">
@@ -1301,7 +1273,7 @@ export class CounterSalesPage implements OnInit {
     const status = payment?.status.toLocaleLowerCase('en');
     if (payment?.statusDetail === 'cancellation_requested')
       return 'Cancelación enviada. Esperando confirmación de Mercado Pago para liberar la terminal.';
-    if (status === 'approved') return 'Pago aprobado. La venta quedó confirmada.';
+    if (status === 'approved') return 'Pago aprobado. Verificando la confirmación de la venta.';
     if (status === 'atterminal')
       return 'La terminal recibió el cobro. Solicita al cliente insertar, acercar o deslizar su tarjeta.';
     if (status === 'actionrequired') return 'Revisa la terminal para confirmar el resultado del cobro.';

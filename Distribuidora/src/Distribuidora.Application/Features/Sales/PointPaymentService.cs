@@ -40,38 +40,17 @@ public sealed class PointPaymentService(
     public async Task<PointPayment> RefreshForSaleAsync(
         Guid saleId,
         Guid actorId,
+        string correlationId,
         CancellationToken cancellationToken)
     {
         var payment = GetForSale(saleId);
         if (string.IsNullOrWhiteSpace(payment.OrderId) ||
-            payment.Status is PointPaymentStatus.Approved or PointPaymentStatus.Cancelled or
-                PointPaymentStatus.Failed or PointPaymentStatus.Expired)
+            IsLocallyFinalized(payment))
             return payment;
 
         var order = await pointClient.GetOrderAsync(payment.OrderId, cancellationToken);
-        if (!string.Equals(order.Id, payment.OrderId, StringComparison.Ordinal) ||
-            !string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
-            throw new ConflictException("Mercado Pago returned a different Point order while refreshing its status.");
-
-        var previousStatus = payment.Status;
-        var previousStatusDetail = payment.StatusDetail;
-        var previousCompletedAt = payment.CompletedAt;
-        var cancellationRequested = string.Equals(
-            payment.StatusDetail, PointPaymentStatusDetails.CancellationRequested, StringComparison.Ordinal);
-        ApplyOrderState(payment, order);
-        if (cancellationRequested && payment.Status is PointPaymentStatus.Pending or
-                PointPaymentStatus.AtTerminal or PointPaymentStatus.ActionRequired)
-            payment.StatusDetail = PointPaymentStatusDetails.CancellationRequested;
-        if (payment.Status == PointPaymentStatus.Cancelled)
-            payment.CompletedAt ??= datetimeProvider.UtcNow;
-        if (payment.Status == previousStatus &&
-            string.Equals(payment.StatusDetail, previousStatusDetail, StringComparison.Ordinal) &&
-            payment.CompletedAt == previousCompletedAt)
-            return payment;
-
-        payment.UpdatedAt = datetimeProvider.UtcNow;
-        payment.UpdatedBy = actorId;
-        await db.SaveChangesAsync(cancellationToken);
+        ValidateOrderIdentity(payment, order, "refreshing its status");
+        await ReconcileOrderAsync(payment, order, actorId, correlationId, cancellationToken);
         return payment;
     }
 
@@ -130,7 +109,8 @@ public sealed class PointPaymentService(
             if (!string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
                 throw new InvalidOperationException("Mercado Pago returned an unexpected external reference.");
             payment.OrderId = order.Id;
-            ApplyOrderState(payment, order);
+            if (ApplyOrderState(payment, order))
+                payment.RecordStatusChanged(datetimeProvider.UtcNow);
             payment.UpdatedAt = datetimeProvider.UtcNow;
             payment.UpdatedBy = actorId;
             audit.Add("PointPaymentStarted", "sales", nameof(PointPayment), payment.Id, actorId, correlationId);
@@ -143,6 +123,7 @@ public sealed class PointPaymentService(
             // Keep the same entity and idempotency key so a retry cannot create a second charge.
             payment.Status = PointPaymentStatus.ReconciliationRequired;
             payment.StatusDetail = PointPaymentStatusDetails.OrderCreationResultUnknown;
+            payment.RecordStatusChanged(datetimeProvider.UtcNow);
             payment.UpdatedAt = datetimeProvider.UtcNow;
             payment.UpdatedBy = actorId;
             await db.SaveChangesAsync(CancellationToken.None);
@@ -175,12 +156,15 @@ public sealed class PointPaymentService(
             !string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
             throw new ConflictException("Mercado Pago returned a different Point order during cancellation.");
 
-        ApplyOrderState(payment, order);
+        var statusChanged = ApplyOrderState(payment, order);
 
         if (payment.Status == PointPaymentStatus.Cancelled)
             payment.CompletedAt = datetimeProvider.UtcNow;
         else
             payment.StatusDetail = PointPaymentStatusDetails.CancellationRequested;
+        if (statusChanged || string.Equals(
+                payment.StatusDetail, PointPaymentStatusDetails.CancellationRequested, StringComparison.Ordinal))
+            payment.RecordStatusChanged(datetimeProvider.UtcNow);
         payment.UpdatedAt = datetimeProvider.UtcNow;
         payment.UpdatedBy = actorId;
         audit.Add(payment.Status == PointPaymentStatus.Cancelled
@@ -210,11 +194,32 @@ public sealed class PointPaymentService(
             !string.Equals(pointPayment.ExternalReference, order.ExternalReference, StringComparison.Ordinal))
             return;
 
-        ApplyOrderState(pointPayment, order);
+        await ReconcileOrderAsync(
+            pointPayment, order, pointPayment.InitiatedBy, requestId, cancellationToken);
+    }
+
+    private async Task ReconcileOrderAsync(
+        PointPayment pointPayment,
+        MercadoPagoPointOrder order,
+        Guid actorId,
+        string correlationId,
+        CancellationToken cancellationToken)
+    {
+        ValidateOrderIdentity(pointPayment, order, "reconciling its status");
+        var cancellationRequested = string.Equals(
+            pointPayment.StatusDetail, PointPaymentStatusDetails.CancellationRequested, StringComparison.Ordinal);
+        var statusChanged = ApplyOrderState(pointPayment, order);
+        if (cancellationRequested && pointPayment.Status is PointPaymentStatus.Pending or
+                PointPaymentStatus.AtTerminal or PointPaymentStatus.ActionRequired)
+            pointPayment.StatusDetail = PointPaymentStatusDetails.CancellationRequested;
+        if (pointPayment.Status == PointPaymentStatus.Cancelled)
+            pointPayment.CompletedAt ??= datetimeProvider.UtcNow;
+
         pointPayment.UpdatedAt = datetimeProvider.UtcNow;
-        pointPayment.UpdatedBy = pointPayment.InitiatedBy;
+        pointPayment.UpdatedBy = actorId;
         if (pointPayment.Status != PointPaymentStatus.Approved)
         {
+            if (statusChanged) pointPayment.RecordStatusChanged(datetimeProvider.UtcNow);
             await db.SaveChangesAsync(cancellationToken);
             return;
         }
@@ -227,12 +232,15 @@ public sealed class PointPaymentService(
         {
             pointPayment.Status = PointPaymentStatus.ReconciliationRequired;
             pointPayment.StatusDetail = PointPaymentStatusDetails.ApprovedAmountMismatch;
+            pointPayment.RecordStatusChanged(datetimeProvider.UtcNow);
             await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
         try
         {
+            var metadataChanged = !string.Equals(pointPayment.PaymentId, transaction.Id, StringComparison.Ordinal) ||
+                                  pointPayment.CompletedAt is null;
             await db.ExecuteAtomicAsync(async token =>
             {
                 var sale = sales.GetById(pointPayment.SaleId);
@@ -240,18 +248,20 @@ public sealed class PointPaymentService(
                 if (!sale.Payments.Any(x => x.Reference == reference))
                 {
                     await sales.RegisterPaymentAsync(sale.Id, new Contracts.Requests.SalePaymentRequest(
-                        PaymentMethodCodes.Card, pointPayment.Amount, reference), pointPayment.InitiatedBy, requestId, token);
+                        PaymentMethodCodes.Card, pointPayment.Amount, reference), pointPayment.InitiatedBy, correlationId, token);
                 }
                 if (sale.Status == DocumentStatus.Draft)
-                    await sales.ConfirmAsync(sale.Id, pointPayment.InitiatedBy, requestId, token);
+                    await sales.ConfirmAsync(sale.Id, pointPayment.InitiatedBy, correlationId, token);
                 pointPayment.PaymentId = transaction.Id;
                 pointPayment.PaymentMethodType = transaction.PaymentMethodType;
                 pointPayment.PaymentMethodId = transaction.PaymentMethodId;
                 pointPayment.Installments = transaction.Installments;
                 pointPayment.CompletedAt = datetimeProvider.UtcNow;
                 pointPayment.StatusDetail = PointPaymentStatusDetails.Accredited;
+                if (statusChanged || metadataChanged)
+                    pointPayment.RecordStatusChanged(datetimeProvider.UtcNow);
                 audit.Add("PointPaymentApproved", "sales", nameof(PointPayment), pointPayment.Id,
-                    pointPayment.InitiatedBy, requestId);
+                    pointPayment.InitiatedBy, correlationId);
                 await db.SaveChangesAsync(token);
                 return true;
             }, cancellationToken);
@@ -261,12 +271,15 @@ public sealed class PointPaymentService(
             pointPayment.Status = PointPaymentStatus.ReconciliationRequired;
             pointPayment.StatusDetail = PointPaymentStatusDetails.SaleConfirmationFailed;
             pointPayment.UpdatedAt = datetimeProvider.UtcNow;
+            pointPayment.RecordStatusChanged(datetimeProvider.UtcNow);
             await db.SaveChangesAsync(CancellationToken.None);
         }
     }
 
-    private static void ApplyOrderState(PointPayment payment, MercadoPagoPointOrder order)
+    private static bool ApplyOrderState(PointPayment payment, MercadoPagoPointOrder order)
     {
+        var previousStatus = payment.Status;
+        var previousDetail = payment.StatusDetail;
         payment.StatusDetail = order.StatusDetail;
         payment.Status = order.Status.ToLowerInvariant() switch
         {
@@ -279,5 +292,32 @@ public sealed class PointPaymentService(
             ProviderStatusExpired => PointPaymentStatus.Expired,
             _ => payment.Status
         };
+        return payment.Status != previousStatus ||
+               !string.Equals(payment.StatusDetail, previousDetail, StringComparison.Ordinal);
+    }
+
+    private bool IsLocallyFinalized(PointPayment payment)
+    {
+        if (payment.Status is PointPaymentStatus.Cancelled or PointPaymentStatus.Failed or PointPaymentStatus.Expired)
+            return true;
+        if (payment.Status != PointPaymentStatus.Approved ||
+            string.IsNullOrWhiteSpace(payment.PaymentId) || payment.CompletedAt is null ||
+            string.IsNullOrWhiteSpace(payment.OrderId))
+            return false;
+
+        var sale = sales.GetById(payment.SaleId);
+        var expectedReference = $"{payment.OrderId}:{payment.PaymentId}";
+        return sale.Status == DocumentStatus.Confirmed && sale.Balance == 0 &&
+               sale.Payments.Any(x => string.Equals(x.Reference, expectedReference, StringComparison.Ordinal));
+    }
+
+    private static void ValidateOrderIdentity(
+        PointPayment payment,
+        MercadoPagoPointOrder order,
+        string operation)
+    {
+        if (!string.Equals(order.Id, payment.OrderId, StringComparison.Ordinal) ||
+            !string.Equals(order.ExternalReference, payment.ExternalReference, StringComparison.Ordinal))
+            throw new ConflictException($"Mercado Pago returned a different Point order while {operation}.");
     }
 }

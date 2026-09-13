@@ -373,6 +373,12 @@ async function mockApi(page: import('@playwright/test').Page): Promise<void> {
           over90: 10,
         },
       };
+    } else if (path === '/api/v1/pos-products/facets') {
+      data = { items: [{ id: 'category-1', name: 'Abarrotes' }], page: 1, total: 1 };
+    } else if (path === '/api/v1/pos-products') {
+      data = { items: [{ id: 'product-1', name: 'Arroz premium', sku: 'ARZ-001', barcode: '750000000001',
+        price: 45.5, availableStock: 2, minimumStock: 1, categoryId: 'category-1', categoryName: 'Abarrotes',
+        brandId: 'brand-1', brandName: 'Premium', favorite: false, soldQuantity: 3 }], page: 1, total: 1 };
     } else if (path === '/api/v1/products') {
       data = {
         items: [

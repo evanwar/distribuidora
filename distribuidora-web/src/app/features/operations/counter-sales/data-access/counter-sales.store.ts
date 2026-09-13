@@ -6,6 +6,7 @@ import {
   distinctUntilChanged,
   EMPTY,
   finalize,
+  filter,
   last,
   Observable,
   Subject,
@@ -13,10 +14,11 @@ import {
   tap,
   takeUntil,
   takeWhile,
-  timer,
 } from 'rxjs';
 import { ApiError } from '../../../../core/error-handling/api-error.model';
 import { OperationContextService } from '../../../../core/observability/operation-context.service';
+import { RealtimeService } from '../../../../core/realtime/realtime.service';
+import { SearchProduct } from '../models/product-search.models';
 import { CounterSalesApiAdapter } from './counter-sales-api.adapter';
 import {
   CounterSale,
@@ -38,6 +40,7 @@ import {
 export class CounterSalesStore {
   private readonly api = inject(CounterSalesApiAdapter);
   private readonly operations = inject(OperationContextService);
+  private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly operation = this.operations.restoreOrStart('POS', 'counter-sales');
   private readonly customersState = signal<readonly PosCustomer[]>([]);
@@ -47,6 +50,8 @@ export class CounterSalesStore {
   private readonly productsState = signal<readonly PosProduct[]>([]);
   private readonly warehousesState = signal<readonly PosWarehouse[]>([]);
   private readonly balancesState = signal<readonly PosStockBalance[]>([]);
+  private readonly cartStockRequests = new Subject<string>();
+  private readonly cartStockLoading = signal(false);
   private readonly activeWarehouseIdState = signal('');
   private readonly paymentMethodsState = signal<readonly PosPaymentMethod[]>([]);
   private readonly paymentTerminalsState = signal<readonly PosPaymentTerminal[]>([]);
@@ -105,6 +110,25 @@ export class CounterSalesStore {
   }
 
   constructor() {
+    this.cartStockRequests.pipe(switchMap(warehouseId => {
+      this.cartStockLoading.set(true);
+      const ids = this.linesState().map(line => line.productId);
+      return this.api.loadCartProducts(warehouseId, ids).pipe(tap(products => {
+        if (warehouseId !== this.activeWarehouseIdState()) return;
+        this.balancesState.update(current => current.filter(balance => balance.warehouseId !== warehouseId || !ids.includes(balance.productId)));
+        this.acceptSearchProducts(products, warehouseId);
+        this.cartStockLoading.set(false);
+        this.linesState.update(lines => lines.map(line => {
+          const product = products.find(item => item.id === line.productId);
+          return product ? { ...line, name: product.name, sku: product.sku } : line;
+        }));
+        if (!this.hasValidStock()) this.stockNoticeState.set('La existencia cambió. Revisa las cantidades antes de cobrar. Tu venta se conservó.');
+      }), catchError((error: ApiError) => {
+        this.errorState.set(error);
+        this.stockNoticeState.set(error.message || 'No pudimos verificar la existencia. Reintenta antes de cobrar.');
+        return EMPTY;
+      }));
+    }), takeUntilDestroyed()).subscribe();
     this.customerSearchRequests
       .pipe(
         debounceTime(250),
@@ -141,7 +165,7 @@ export class CounterSalesStore {
           this.paymentMethodsState.set(data.paymentMethods);
           this.paymentTerminalsState.set(data.paymentTerminals);
           this.salesState.set(data.sales);
-          this.reconcileLinesWithStock();
+          if (this.linesState().length && this.activeWarehouseIdState()) this.cartStockRequests.next(this.activeWarehouseIdState());
         },
         error: (error: ApiError) => this.errorState.set(error),
       });
@@ -158,7 +182,7 @@ export class CounterSalesStore {
   selectWarehouse(warehouseId: string): void {
     if (warehouseId === this.activeWarehouseIdState()) return;
     this.activeWarehouseIdState.set(warehouseId);
-    this.reconcileLinesWithStock();
+    if (this.linesState().length) this.cartStockRequests.next(warehouseId);
   }
 
   availableStock(productId: string): number {
@@ -168,13 +192,34 @@ export class CounterSalesStore {
     return Math.max(0, (balance?.quantity ?? 0) - (balance?.reservedQuantity ?? 0));
   }
 
+  acceptSearchProducts(products: readonly SearchProduct[], warehouseId: string): void {
+    if (warehouseId !== this.activeWarehouseIdState()) return;
+    const ids = new Set(products.map(product => product.id));
+    const cartIds = new Set(this.linesState().map(line => line.productId));
+    this.productsState.update(current => [...current.filter(product => cartIds.has(product.id) && !ids.has(product.id)), ...products]);
+    this.balancesState.update(current => [
+      ...current.filter(balance => balance.warehouseId === warehouseId && cartIds.has(balance.productId) && !ids.has(balance.productId)),
+      ...products.map(product => ({ warehouseId, productId: product.id, quantity: product.availableStock, reservedQuantity: 0 })),
+    ]);
+  }
+
+  addSearchProduct(product: SearchProduct): void {
+    this.acceptSearchProducts([product], this.activeWarehouseIdState());
+    this.add(product);
+  }
+
+  decreaseProduct(productId: string): void {
+    const line = this.linesState().find(item => item.productId === productId);
+    if (line) this.changeQuantity(productId, line.quantity - 1);
+  }
+
   canAdd(productId: string): boolean {
     const current = this.linesState().find((line) => line.productId === productId)?.quantity ?? 0;
-    return current < this.availableStock(productId);
+    return current + 1 <= this.availableStock(productId);
   }
 
   hasValidStock(): boolean {
-    return this.linesState().every(
+    return !this.cartStockLoading() && this.linesState().every(
       (line) => line.quantity > 0 && line.quantity <= this.availableStock(line.productId),
     );
   }
@@ -277,6 +322,7 @@ export class CounterSalesStore {
       }),
     );
     this.editingSaleIdState.set(sale.id);
+    if (this.activeWarehouseIdState()) this.cartStockRequests.next(this.activeWarehouseIdState());
     this.noticeState.set(`Editando el borrador ${sale.folio}.`);
   }
 
@@ -314,8 +360,14 @@ export class CounterSalesStore {
               this.cardPaymentState.set(payment);
               this.noticeState.set('Cobro enviado a la terminal. Esperando la tarjeta del cliente.');
             }),
-            switchMap(() =>
-              timer(0, 2000).pipe(
+            switchMap((startedPayment) =>
+              this.realtime.watch('sales').pipe(
+                filter(
+                  (change) =>
+                    change === null ||
+                    (change.entityName === 'CounterSale' && change.entityId === sale.id) ||
+                    (change.entityName === 'PointPayment' && change.entityId === startedPayment.id),
+                ),
                 switchMap(() => this.api.getCardPayment(sale.id, this.requestContext())),
                 tap((payment) => this.cardPaymentState.set(payment)),
                 takeWhile((payment) => !isTerminalPointStatus(payment.status), true),
@@ -336,12 +388,18 @@ export class CounterSalesStore {
       )
       .subscribe({
         next: (sale) => {
-          if (sale) {
+          if (sale && sale.status.toLocaleLowerCase('en') === 'confirmed' && sale.balance === 0) {
             this.noticeState.set(`Pago aprobado y venta ${sale.folio} confirmada.`);
             this.linesState.set([]);
             this.editingSaleIdState.set(null);
             completed(sale);
             this.load();
+            return;
+          }
+          if (sale) {
+            this.noticeState.set(
+              'El pago fue acreditado, pero la venta todavía no refleja la confirmación. No vuelvas a cobrar y solicita conciliación.',
+            );
             return;
           }
           this.noticeState.set(pointStatusMessage(this.cardPaymentState()));
@@ -567,38 +625,18 @@ export class CounterSalesStore {
     });
   }
 
-  private reconcileLinesWithStock(): void {
-    let adjusted = false;
-    this.linesState.update((lines) =>
-      lines.flatMap((line) => {
-        const available = this.availableStock(line.productId);
-        if (available <= 0) {
-          adjusted = true;
-          return [];
-        }
-        if (line.quantity > available) {
-          adjusted = true;
-          return [{ ...line, quantity: available }];
-        }
-        return [line];
-      }),
-    );
-    if (adjusted) {
-      this.stockNoticeState.set(
-        'Se ajustó el carrito a la existencia disponible del almacén seleccionado.',
-      );
-    }
-  }
 }
 
 function isTerminalPointStatus(status: string): boolean {
-  return ['approved', 'failed', 'cancelled', 'expired', 'actionrequired', 'reconciliationrequired'].includes(
+  return ['approved', 'failed', 'cancelled', 'expired', 'reconciliationrequired'].includes(
     status.toLocaleLowerCase('en'),
   );
 }
 
 function pointStatusMessage(payment: PointCardPayment | null): string {
   const status = payment?.status.toLocaleLowerCase('en');
+  if (status === 'approved')
+    return 'El pago fue acreditado. Verifica la venta antes de iniciar otro cobro.';
   if (status === 'cancelled') return 'El cobro fue cancelado en la terminal.';
   if (status === 'expired') return 'La orden de cobro expiró. Puedes intentarlo nuevamente.';
   if (status === 'reconciliationrequired')

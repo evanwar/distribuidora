@@ -23,11 +23,13 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddDbContext<LoggingDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<Distribuidora.Application.Features.Products.PosProducts.IPosProductStore, PosProductStore>();
         services.AddScoped<ILogQueryStore>(provider => provider.GetRequiredService<LoggingDbContext>());
         services.AddScoped<IRequestTraceContext, RequestTraceContext>();
         services.AddScoped<IRequestMetadataAccessor, HttpRequestMetadataAccessor>();
         services.AddSingleton<ISensitiveDataSanitizer, SensitiveDataSanitizer>();
         services.AddSingleton<IDatatimeProvider, DatatimeProvider>();
+        services.AddSingleton<OutboxWakeSignal>();
         services.AddScoped<PostgresLogWriter>();
         services.AddScoped<IUserActivityLogWriter>(p => p.GetRequiredService<PostgresLogWriter>());
         services.AddScoped<ISystemErrorLogWriter>(p => p.GetRequiredService<PostgresLogWriter>());

@@ -30,6 +30,7 @@ public static class DependencyInjection
             .AddScoped<AuthService>()
             .AddScoped<IdentityAccessService>()
             .AddScoped<ProductService>()
+            .AddScoped<Features.Products.PosProducts.PosProductService>()
             .AddScoped<ReferenceDataService>()
             .AddScoped<CustomerService>()
             .AddScoped<SupplierService>()

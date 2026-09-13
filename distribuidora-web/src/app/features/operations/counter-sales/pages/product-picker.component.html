@@ -1,0 +1,112 @@
+<section class="picker" aria-label="Agregar productos">
+  <div class="search-header">
+    <h2>Agregar productos</h2>
+    <p>Busca por nombre, SKU o código de barras</p>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Buscar producto</mat-label>
+      <input #searchInput matInput type="search" autocomplete="off" maxlength="160"
+        placeholder="Nombre, SKU o código de barras…" [formControl]="search"
+        [matAutocomplete]="suggestions" (keydown)="searchKey($event)" />
+      <span matTextSuffix class="shortcut">F2</span>
+      @if (search.value) { <app-ui-icon-button matSuffix icon="close" ariaLabel="Limpiar búsqueda" (pressed)="search.setValue(''); focusSearch()" /> }
+      <mat-autocomplete #suggestions="matAutocomplete" (optionSelected)="selectSuggestion($event)">
+        @if (!store.loading()) {
+          @for (product of store.products().slice(0, 6); track product.id) {
+            <mat-option [value]="{ kind: 'product', product }" [disabled]="(quantities()[product.id] || 0) + 1 > product.availableStock">{{ product.name }} · {{ product.sku }}</mat-option>
+          }
+          @for (facet of store.suggestedCategories(); track facet.id) {
+            <mat-option [value]="{ kind: 'category', facet }">Categoría: {{ facet.name }}</mat-option>
+          }
+          @for (facet of store.suggestedBrands(); track facet.id) {
+            <mat-option [value]="{ kind: 'brand', facet }">Marca: {{ facet.name }}</mat-option>
+          }
+          @if (!search.value) {
+            @for (query of store.recentQueries().slice(0, 3); track query) {
+              <mat-option [value]="{ kind: 'query', query }">Búsqueda reciente: {{ query }}</mat-option>
+            }
+          }
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+  </div>
+  <mat-chip-listbox aria-label="Colección de productos">
+    @for (collection of collections; track collection.id) {
+      <mat-chip-option [selected]="store.state().collection === collection.id" (click)="store.update({ collection: collection.id })">{{ collection.label }}</mat-chip-option>
+    }
+  </mat-chip-listbox>
+  <div class="quick-categories">
+    <mat-chip-listbox aria-label="Categorías rápidas">
+      @for (category of store.categories(); track category.id) {
+        <mat-chip-option [selected]="store.state().category?.id === category.id" (click)="store.update({ category: store.state().category?.id === category.id ? null : category })">{{ category.name }}</mat-chip-option>
+      }
+    </mat-chip-listbox>
+    <app-ui-button label="Más categorías" variant="text" (pressed)="openFacets('category')" />
+    <app-ui-button [label]="'Filtros (' + chips().length + ')'" icon="settings" variant="text" (pressed)="showFilters.set(!showFilters())" />
+  </div>
+  @if (showFilters()) {
+    <form [formGroup]="filters" (ngSubmit)="applyFilters()" class="filters">
+      <app-ui-button label="Elegir categoría" variant="outlined" (pressed)="openFacets('category')" />
+      <app-ui-button label="Elegir marca" variant="outlined" (pressed)="openFacets('brand')" />
+      <mat-form-field appearance="outline"><mat-label>Precio mínimo</mat-label><input matInput type="number" min="0" formControlName="minimumPrice" /></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Precio máximo</mat-label><input matInput type="number" min="0" formControlName="maximumPrice" /></mat-form-field>
+      <mat-checkbox formControlName="inStockOnly">Con existencia</mat-checkbox>
+      <mat-checkbox formControlName="lowStockOnly">Inventario bajo</mat-checkbox>
+      @if (filterError()) { <p role="alert">{{ filterError() }}</p> }
+      <app-ui-button label="Aplicar filtros" type="submit" />
+    </form>
+  }
+  @if (chips().length) {
+    <mat-chip-set aria-label="Filtros activos">
+      @for (chip of chips(); track chip.key) {
+        <mat-chip (removed)="removeChip(chip.key)">{{ chip.label }}<button matChipRemove [attr.aria-label]="'Quitar filtro ' + chip.label">×</button></mat-chip>
+      }
+    </mat-chip-set>
+    <app-ui-button label="Limpiar filtros" variant="text" (pressed)="clearFilters()" />
+  }
+  <div class="result-heading">
+    <div><h3>{{ heading() }}</h3><span aria-live="polite">{{ store.loading() ? 'Buscando…' : store.total() + ' resultados' }}</span></div>
+    <mat-button-toggle-group aria-label="Vista de productos" [value]="view()" (change)="view.set($event.value)">
+      <mat-button-toggle value="list">Lista</mat-button-toggle><mat-button-toggle value="grid">Cuadrícula</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+  @if (store.loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Buscando productos" />
+    <div class="skeleton" aria-hidden="true">@for (row of [1, 2, 3, 4]; track row) { <div></div> }</div>
+  } @else if (store.error()) {
+    <app-ui-feedback kind="error" title="No pudimos buscar" [message]="store.error()" />
+    <app-ui-button label="Reintentar búsqueda" variant="outlined" (pressed)="store.refresh()" />
+  } @else if (!store.products().length) {
+    <app-ui-feedback kind="empty" title="Sin resultados" [message]="search.value ? 'No encontramos resultados para “' + search.value + '”. Prueba menos palabras o cambia la categoría.' : 'No hay productos en esta selección. Prueba Todos o limpia los filtros.'" />
+    <app-ui-button label="Limpiar filtros" variant="text" (pressed)="clearFilters()" />
+    <app-ui-button label="Cambiar búsqueda" variant="text" (pressed)="focusSearch()" />
+  } @else {
+    <app-product-results [products]="store.products()" [query]="store.state().query" [view]="view()"
+      [quantities]="quantities()" [favoriteBusy]="store.favoriteBusy()"
+      (add)="addProduct($event)" (favorite)="store.favorite($event)" (decrease)="decrease.emit($event)" />
+  }
+  <div class="pagination">
+    <span>Página {{ store.state().page }}</span>
+    <app-ui-button label="Anterior" variant="text" [disabled]="store.loading() || store.state().page <= 1" (pressed)="store.update({ page: store.state().page - 1 })" />
+    <app-ui-button label="Siguiente" variant="text" [disabled]="store.loading() || store.state().page * 30 >= store.total()" (pressed)="store.update({ page: store.state().page + 1 })" />
+  </div>
+  <p class="notice" aria-live="polite" aria-atomic="true">{{ store.notice() }}</p>
+  <small>F2 Buscar · ↑ ↓ Sugerencias · Enter Agregar · Esc Cerrar o limpiar</small>
+</section>
+<ng-template #facetDialog>
+  <h2 mat-dialog-title>{{ facetKind() === 'category' ? 'Elegir categoría' : 'Elegir marca' }}</h2>
+  <mat-dialog-content>
+    <mat-form-field appearance="outline"><mat-label>Buscar {{ facetKind() === 'category' ? 'categoría' : 'marca' }}</mat-label><input matInput [formControl]="facetSearch" maxlength="160" /></mat-form-field>
+    @if (store.facetsLoading()) { <mat-progress-bar mode="indeterminate" /> }
+    @else if (store.facetError()) { <p role="alert">{{ store.facetError() }}</p><app-ui-button label="Reintentar" (pressed)="facetPage(0)" /> }
+    @else {
+      <div class="facet-options">@for (facet of store.facetResults().items; track facet.id) {
+        <app-ui-button [label]="facet.name" variant="text" (pressed)="chooseFacet(facet)" />
+      } @empty { <p>No encontramos coincidencias.</p> }</div>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <app-ui-button label="Anterior" variant="text" [disabled]="store.facetsLoading() || store.facetResults().page <= 1" (pressed)="facetPage(-1)" />
+    <app-ui-button label="Siguiente" variant="text" [disabled]="store.facetsLoading() || store.facetResults().page * 20 >= store.facetResults().total" (pressed)="facetPage(1)" />
+    <app-ui-button label="Cerrar" variant="text" mat-dialog-close />
+  </mat-dialog-actions>
+</ng-template>

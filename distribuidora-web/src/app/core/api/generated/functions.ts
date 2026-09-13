@@ -145,6 +145,12 @@ export type { ApiV1AdminPoliciesInventoryGet$Params as ApiV1AdminPoliciesInvento
 export { apiV1AdminPoliciesInventoryGet as apiV1AdminPoliciesInventoryGet } from './fn/policies/api-v-1-admin-policies-inventory-get';
 export type { ApiV1AdminPoliciesInventoryPut$Params as ApiV1AdminPoliciesInventoryPut$Params } from './fn/policies/api-v-1-admin-policies-inventory-put';
 export { apiV1AdminPoliciesInventoryPut as apiV1AdminPoliciesInventoryPut } from './fn/policies/api-v-1-admin-policies-inventory-put';
+export type { ApiV1PosProductsGet$Params as ApiV1PosProductsGet$Params } from './fn/pos-products/api-v-1-pos-products-get';
+export { apiV1PosProductsGet as apiV1PosProductsGet } from './fn/pos-products/api-v-1-pos-products-get';
+export type { ApiV1PosProductsFacetsGet$Params as ApiV1PosProductsFacetsGet$Params } from './fn/pos-products/api-v-1-pos-products-facets-get';
+export { apiV1PosProductsFacetsGet as apiV1PosProductsFacetsGet } from './fn/pos-products/api-v-1-pos-products-facets-get';
+export type { ApiV1PosProductsProductIdFavoritePut$Params as ApiV1PosProductsProductIdFavoritePut$Params } from './fn/pos-products/api-v-1-pos-products-product-id-favorite-put';
+export { apiV1PosProductsProductIdFavoritePut as apiV1PosProductsProductIdFavoritePut } from './fn/pos-products/api-v-1-pos-products-product-id-favorite-put';
 export type { ApiV1ProductAliasesGet$Params as ApiV1ProductAliasesGet$Params } from './fn/product-aliases/api-v-1-product-aliases-get';
 export { apiV1ProductAliasesGet as apiV1ProductAliasesGet } from './fn/product-aliases/api-v-1-product-aliases-get';
 export type { ApiV1ProductAliasesPost$Params as ApiV1ProductAliasesPost$Params } from './fn/product-aliases/api-v-1-product-aliases-post';

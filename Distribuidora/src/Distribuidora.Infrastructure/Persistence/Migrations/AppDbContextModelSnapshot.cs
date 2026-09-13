@@ -20,6 +20,7 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Distribuidora.Domain.AccountsReceivable.AccountReceivable", b =>
@@ -1442,6 +1443,21 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
                     b.ToTable("product_aliases", "catalogs");
                 });
 
+            modelBuilder.Entity("Distribuidora.Domain.Catalogs.ProductFavorite", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("product_favorites", "catalogs");
+                });
+
             modelBuilder.Entity("Distribuidora.Domain.Catalogs.Supplier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2785,6 +2801,21 @@ namespace Distribuidora.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Distribuidora.Domain.Catalogs.ProductFavorite", b =>
+                {
+                    b.HasOne("Distribuidora.Domain.Catalogs.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Distribuidora.Domain.Security.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Distribuidora.Domain.Inventory.InventoryAdjustmentItem", b =>

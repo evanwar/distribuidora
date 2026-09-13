@@ -10,6 +10,7 @@ export type { AssignPermissionsRequest } from './models/assign-permissions-reque
 export type { AssignSaleBillingRecipientRequest } from './models/assign-sale-billing-recipient-request';
 export type { AuthResponse } from './models/auth-response';
 export type { AuthResponseApiResponse } from './models/auth-response-api-response';
+export type { BooleanApiResponse } from './models/boolean-api-response';
 export type { CancelElectronicInvoiceRequest } from './models/cancel-electronic-invoice-request';
 export type { CancellationReasonRequest } from './models/cancellation-reason-request';
 export type { CancelRequest } from './models/cancel-request';
@@ -50,8 +51,15 @@ export type { PaymentTerminalResponseApiResponse } from './models/payment-termin
 export type { PaymentTerminalResponseIReadOnlyCollectionApiResponse } from './models/payment-terminal-response-i-read-only-collection-api-response';
 export type { PointCardPaymentResponse } from './models/point-card-payment-response';
 export type { PointCardPaymentResponseApiResponse } from './models/point-card-payment-response-api-response';
+export type { PosFacetResponse } from './models/pos-facet-response';
+export type { PosFacetResponsePagedResponse } from './models/pos-facet-response-paged-response';
+export type { PosFacetResponsePagedResponseApiResponse } from './models/pos-facet-response-paged-response-api-response';
+export type { PosProductResponse } from './models/pos-product-response';
+export type { PosProductResponsePagedResponse } from './models/pos-product-response-paged-response';
+export type { PosProductResponsePagedResponseApiResponse } from './models/pos-product-response-paged-response-api-response';
 export type { ProblemDetails } from './models/problem-details';
 export type { ProductAliasRequest } from './models/product-alias-request';
+export type { ProductFavoriteRequest } from './models/product-favorite-request';
 export type { ProductRequest } from './models/product-request';
 export type { ProductResponse } from './models/product-response';
 export type { ProductResponseApiResponse } from './models/product-response-api-response';

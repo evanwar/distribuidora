@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { NEVER, of } from 'rxjs';
+import { merge, NEVER, of, Subject } from 'rxjs';
 import { CounterSalesApiAdapter } from './counter-sales-api.adapter';
 import { CounterSalesStore } from './counter-sales.store';
+import { RealtimeChange, RealtimeService } from '../../../../core/realtime/realtime.service';
 
 describe('CounterSalesStore inventory rules', () => {
   it('uses available stock and prevents adding more units than the warehouse has', () => {
@@ -19,7 +20,7 @@ describe('CounterSalesStore inventory rules', () => {
     expect(store.stockNotice()).toContain('Sólo hay 3 unidades disponibles');
   });
 
-  it('removes unavailable lines when the source warehouse changes', () => {
+  it('preserves lines and blocks checkout when the new warehouse has no stock', () => {
     const store = configureStore();
 
     store.load();
@@ -27,9 +28,9 @@ describe('CounterSalesStore inventory rules', () => {
     store.add(product);
     store.selectWarehouse('warehouse-2');
 
-    expect(store.lines()).toEqual([]);
-    expect(store.hasValidStock()).toBe(true);
-    expect(store.stockNotice()).toContain('Se ajustó el carrito');
+    expect(store.lines()).toHaveLength(1);
+    expect(store.hasValidStock()).toBe(false);
+    expect(store.stockNotice()).toContain('Tu venta se conservó');
   });
 
   it('adds all available stock in one action and replaces the current quantity', () => {
@@ -66,10 +67,23 @@ describe('CounterSalesStore inventory rules', () => {
 
   it('waits for Point approval before completing a card sale', async () => {
     vi.useFakeTimers();
-    const { store, api } = configureStoreWithApi();
+    const { store, api, realtimeChanges } = configureStoreWithApi();
     const completed = vi.fn();
+    api.getCardPayment.mockReturnValueOnce(of({
+      id: 'point-1', saleId: 'sale-1', paymentTerminalId: 'terminal-1', orderId: 'ORD-1', amount: 45.5,
+      status: 'Pending', statusDetail: 'at_terminal', paymentId: null,
+      paymentMethodType: null, paymentMethodId: null, installments: null, completedAt: null,
+    }));
 
     store.saveCard(saleRequest, 'terminal-1', completed);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(completed).not.toHaveBeenCalled();
+    realtimeChanges.next({
+      eventId: 'event-1', channel: 'sales', eventName: 'PointPaymentStatusChanged',
+      entityName: 'PointPayment', entityId: 'point-1', occurredAt: '2026-08-01T12:00:10Z',
+      correlationId: 'correlation-1', operationId: 'operation-1',
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(api.startCardPayment).toHaveBeenCalledWith(
@@ -148,9 +162,11 @@ function configureStoreWithApi(): {
     getBillingEligibility: ReturnType<typeof vi.fn>;
     assignBillingRecipient: ReturnType<typeof vi.fn>;
   };
+  realtimeChanges: Subject<RealtimeChange>;
 } {
   const draftSale = draftSaleFixture;
   const api = {
+    loadCartProducts: vi.fn().mockReturnValue(of([])),
     loadWorkspace: vi.fn().mockReturnValue(
       of({
         customers: [],
@@ -227,10 +243,18 @@ function configureStoreWithApi(): {
       assignedBy: 'user-1', rowVersion: 0,
     })),
   };
+  const realtimeChanges = new Subject<RealtimeChange>();
   TestBed.configureTestingModule({
-    providers: [CounterSalesStore, { provide: CounterSalesApiAdapter, useValue: api }],
+    providers: [
+      CounterSalesStore,
+      { provide: CounterSalesApiAdapter, useValue: api },
+      {
+        provide: RealtimeService,
+        useValue: { watch: vi.fn().mockReturnValue(merge(of(null), realtimeChanges)) },
+      },
+    ],
   });
-  return { store: TestBed.inject(CounterSalesStore), api };
+  return { store: TestBed.inject(CounterSalesStore), api, realtimeChanges };
 }
 
 const draftSaleFixture = {

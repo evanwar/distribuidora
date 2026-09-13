@@ -79,7 +79,7 @@ public sealed class SalesController(SalesService service, PointPaymentService po
         CancellationToken cancellationToken) =>
         Ok(ApiResponse<PointCardPaymentResponse>.Ok(
             HttpResponseMapper.Map(await pointPayments.RefreshForSaleAsync(
-                id, currentUser.Id, cancellationToken)),
+                id, currentUser.Id, HttpContext.TraceIdentifier, cancellationToken)),
             HttpContext.TraceIdentifier));
 
     /// <summary>Cancels an outstanding Mercado Pago Point order and releases the terminal.</summary>

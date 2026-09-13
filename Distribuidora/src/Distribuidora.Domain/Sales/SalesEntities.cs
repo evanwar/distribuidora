@@ -151,4 +151,7 @@ public sealed class PointPayment : AuditableEntity
     public string? PaymentMethodId { get; set; }
     public int? Installments { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+
+    public void RecordStatusChanged(DateTimeOffset occurredAt) =>
+        Raise(new EntityChangedDomainEvent("PointPaymentStatusChanged", nameof(PointPayment), Id, occurredAt));
 }

@@ -235,6 +235,19 @@ public sealed class DomainRulesTests
         Assert.Equal("PaymentTerminalDeactivated", Assert.IsType<EntityChangedDomainEvent>(domainEvent).EventName);
     }
 
+    [Fact]
+    public void Point_payment_status_change_creates_a_realtime_capable_domain_event()
+    {
+        var payment = new PointPayment { SaleId = Guid.NewGuid(), Amount = 125m };
+
+        payment.RecordStatusChanged(OccurredAt);
+
+        var domainEvent = Assert.IsType<EntityChangedDomainEvent>(Assert.Single(payment.DomainEvents));
+        Assert.Equal("PointPaymentStatusChanged", domainEvent.EventName);
+        Assert.Equal(nameof(PointPayment), domainEvent.EntityName);
+        Assert.Equal(payment.Id, domainEvent.EntityId);
+    }
+
     private static CounterSale Sale(PaymentCondition condition)
     {
         var sale = new CounterSale { PaymentCondition = condition, CustomerId = condition == PaymentCondition.Cash ? null : Guid.NewGuid() };

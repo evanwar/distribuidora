@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Distribuidora Punto de Venta</title>
+  <rect width="64" height="64" rx="14" fill="#0868c2"/>
+  <path d="M17 14h18c9.4 0 17 7.6 17 17s-7.6 17-17 17H17V14Z" fill="#fff"/>
+  <path d="M25 22h9.5c5.2 0 9.5 4.3 9.5 9.5S39.7 41 34.5 41H25V22Z" fill="#0868c2"/>
+  <path d="M13 49h38v5H13z" fill="#9bd3ff"/>
+  <circle cx="51" cy="14" r="6" fill="#9bd3ff"/>
+</svg>

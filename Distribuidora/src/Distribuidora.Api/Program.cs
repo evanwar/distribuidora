@@ -10,6 +10,8 @@ using Distribuidora.Application;
 using Distribuidora.Application.Abstractions;
 using Distribuidora.Infrastructure;
 using Distribuidora.Infrastructure.Persistence;
+using Distribuidora.Api.Features.Realtime;
+using Distribuidora.Application.Realtime;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
@@ -34,6 +36,12 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.ApplyCurrentCultureToResponseHeaders = true;
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.StatefulReconnectBufferSize = 100_000;
+});
+builder.Services.AddSingleton<IRealtimeEventPublisher, SignalRRealtimeEventPublisher>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<FluentValidationActionFilter>();
 builder.Services.AddControllers(options =>
@@ -123,6 +131,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
     options.Events = new JwtBearerEvents
     {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            if (!string.IsNullOrWhiteSpace(accessToken) &&
+                context.HttpContext.Request.Path.StartsWithSegments(RealtimeHub.Route))
+                context.Token = accessToken;
+            return Task.CompletedTask;
+        },
         OnChallenge = async context =>
         {
             var messages = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizer<ApiMessages>>();
@@ -174,6 +190,7 @@ app.MapScalarApiReference(options =>
     options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
 });
 app.MapControllers();
+app.MapHub<RealtimeHub>(RealtimeHub.Route, options => options.AllowStatefulReconnects = true);
 
 if (app.Configuration.GetValue("Database:AutoMigrate", false))
 {
