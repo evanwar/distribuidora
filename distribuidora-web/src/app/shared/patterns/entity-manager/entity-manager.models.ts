@@ -23,6 +23,7 @@ export interface EntityResourceDefinition {
   title: string;
   description: string;
   singular: string;
+  createLabel?: string;
   listEndpoint: string;
   createEndpoint: string;
   updateEndpoint: string;

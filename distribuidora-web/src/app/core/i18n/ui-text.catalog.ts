@@ -140,6 +140,7 @@ export const englishUiText: Readonly<Record<string, string>> = {
   'Crédito': 'Credit',
   'Mixto': 'Mixed',
   'Agregar productos': 'Add products',
+  'Registrar producto': 'Register product',
   'Busca por nombre, SKU o código de barras.': 'Search by name, SKU, or barcode.',
   'F2 Buscar': 'F2 Search',
   'Buscar producto': 'Search product',

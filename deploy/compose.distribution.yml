@@ -1,0 +1,69 @@
+name: distribuidora
+
+services:
+  postgres:
+    image: ${REGISTRY_NAMESPACE:?Configura REGISTRY_NAMESPACE}/${REGISTRY_REPOSITORY:-distribuidora}:postgres-${POSTGRES_IMAGE_TAG:-16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-distribuidora}
+      POSTGRES_USER: ${POSTGRES_USER:-distribuidora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  api:
+    image: ${REGISTRY_NAMESPACE:?Configura REGISTRY_NAMESPACE}/${REGISTRY_REPOSITORY:-distribuidora}:api-${APP_VERSION:-1.0.0}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-distribuidora};Username=${POSTGRES_USER:-distribuidora};Password=${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD en .env};Include Error Detail=false"
+      Database__AutoMigrate: "true"
+      Logging__EnableOutboxProcessor: "true"
+      Jwt__Issuer: ${JWT_ISSUER:-Distribuidora.Api}
+      Jwt__Audience: ${JWT_AUDIENCE:-Distribuidora.Client}
+      Jwt__Key: ${JWT_KEY:?Configura JWT_KEY en .env}
+      Seed__AdminUsername: ${SEED_ADMIN_USERNAME:-admin}
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@local.test}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:?Configura SEED_ADMIN_PASSWORD en .env}
+      Seed__SyncAdminCredentials: ${SEED_SYNC_ADMIN_CREDENTIALS:-false}
+      MercadoPago__Point__AccessToken: ${MERCADO_PAGO_ACCESS_TOKEN:-}
+      MercadoPago__Point__WebhookSecret: ${MERCADO_PAGO_WEBHOOK_SECRET:-}
+      MercadoPago__Point__ApplicationId: ${MERCADO_PAGO_APPLICATION_ID:-}
+      MercadoPago__Point__TerminalId: ${MERCADO_PAGO_TERMINAL_ID:-}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  web:
+    image: ${REGISTRY_NAMESPACE:?Configura REGISTRY_NAMESPACE}/${REGISTRY_REPOSITORY:-distribuidora}:web-${APP_VERSION:-1.0.0}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-4200}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: distribuidora_postgres_data

@@ -70,6 +70,7 @@ type SaleAction = 'payment' | 'cancel' | null;
   template: `
     <div class="page pos-page">
       <app-ui-page-header
+        data-tour="pos-header"
         [eyebrow]="text('Ventas')"
         [title]="text('Punto de venta')"
         [subtitle]="text('Agrega productos, cobra y entrega el comprobante desde una sola pantalla.')"
@@ -115,7 +116,7 @@ type SaleAction = 'payment' | 'cancel' | null;
       } @else if (view() === 'sale') {
         <section class="sale-layout">
           <div class="sale-main">
-            <mat-card appearance="outlined" class="sale-settings">
+            <mat-card data-tour="pos-customer" appearance="outlined" class="sale-settings">
               <mat-card-content [formGroup]="saleForm">
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
                   <mat-label>{{ text('Almacén de salida') }}</mat-label>
@@ -185,7 +186,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                 (decrease)="store.decreaseProduct($event.id)" />
             </section>
 
-            <section class="surface cart">
+            <section data-tour="pos-cart" class="surface cart">
               <div class="section-heading">
                 <div>
                   <h2 class="section-title">{{ text('Productos de la venta') }}</h2>
@@ -263,7 +264,7 @@ type SaleAction = 'payment' | 'cancel' | null;
             </section>
           </div>
 
-          <aside class="surface checkout">
+          <aside data-tour="pos-totals" class="surface checkout">
             <div>
               <span class="checkout__eyebrow">
                 {{ text(store.editingSaleId() ? 'Editando borrador' : 'Resumen de venta') }}
@@ -300,7 +301,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                 />
               </mat-form-field>
               @if (saleForm.controls.paymentCondition.value !== 1) {
-                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-form-field data-tour="pos-payment-method" appearance="outline" subscriptSizing="dynamic">
                   <mat-label>{{ text('Forma de pago') }}</mat-label>
                   <mat-select formControlName="method">
                     @for (method of store.paymentMethods(); track method.code) {
@@ -329,7 +330,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                   </mat-form-field>
                 }
                 @if (selectedMethodRequiresReference()) {
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-form-field data-tour="pos-cash-tendered" appearance="outline" subscriptSizing="dynamic">
                     <mat-label>{{ text('Referencia') }}</mat-label>
                     <input matInput formControlName="reference" />
                   </mat-form-field>
@@ -351,7 +352,7 @@ type SaleAction = 'payment' | 'cancel' | null;
                       <mat-error>{{ text('El efectivo recibido es menor al total a cobrar.') }}</mat-error>
                     }
                   </mat-form-field>
-                  <section class="cash-change" aria-live="polite">
+                  <section data-tour="pos-change" class="cash-change" aria-live="polite">
                     <span>{{ text('Cambio a devolver') }}</span>
                     <strong class="money">{{ cashChange() | currency: 'MXN' }}</strong>
                   </section>
@@ -387,7 +388,7 @@ type SaleAction = 'payment' | 'cancel' | null;
               </section>
             }
 
-            <div class="checkout-actions">
+            <div data-tour="pos-charge-action" class="checkout-actions">
               <app-ui-button
                 [label]="text(isPointCardSelected() ? 'Cobrar en terminal' : 'Cobrar y confirmar')"
                 loadingLabel="Procesando venta…"
@@ -408,7 +409,7 @@ type SaleAction = 'payment' | 'cancel' | null;
           </aside>
         </section>
       } @else {
-        <section class="surface history">
+        <section data-tour="pos-history" class="surface history">
           <div class="section-heading">
             <div>
               <h2 class="section-title">{{ text('Ventas recientes') }}</h2>

@@ -11,11 +11,12 @@ import { LanguageService } from '../../../core/i18n/language.service';
   template: `
     <div class="page">
       <app-ui-page-header
+        data-tour="page-header"
         [eyebrow]="text('F02 · Catálogos')"
         [title]="text('Otros Catálogos')"
         [subtitle]="text('Clasificación y configuración reutilizada por productos e inventario.')"
       />
-      <section class="hub">
+      <section data-tour="masters-cards" class="hub">
         @for (item of items; track item.path) {
           <a [routerLink]="item.path">
             <mat-card appearance="outlined">

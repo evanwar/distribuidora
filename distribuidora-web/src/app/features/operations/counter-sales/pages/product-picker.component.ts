@@ -16,6 +16,7 @@ import { ProductSearchStore } from '../data-access/product-search.store';
 import { ProductCollection, ProductFacet, SearchProduct } from '../models/product-search.models';
 import { SaleLine } from '../models/counter-sale.models';
 import { ProductResultsComponent } from '../ui/product-search/product-results.component';
+import { LanguageService } from '../../../../core/i18n/language.service';
 
 @Component({
   selector: 'app-product-picker',
@@ -33,6 +34,7 @@ export class ProductPickerComponent {
   @ViewChild(MatAutocompleteTrigger) private autocomplete?: MatAutocompleteTrigger;
   @ViewChild('facetDialog') private facetDialog?: TemplateRef<unknown>;
   private readonly dialog = inject(MatDialog);
+  private readonly language = inject(LanguageService);
   protected readonly store = inject(ProductSearchStore);
   readonly warehouseId = input.required<string>();
   readonly lines = input<readonly SaleLine[]>([]);
@@ -135,4 +137,5 @@ export class ProductPickerComponent {
   }
   protected chooseFacet(facet: ProductFacet) { this.store.update({ [this.facetKind()]: facet }); this.dialog.closeAll(); }
   protected facetPage(offset: number) { this.store.facets(this.facetKind(), this.facetSearch.value, this.store.facetResults().page + offset); }
+  protected text(value: string): string { return this.language.text(value); }
 }

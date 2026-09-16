@@ -1,9 +1,9 @@
-<section class="picker" aria-label="Agregar productos">
-  <div class="search-header">
-    <h2>Agregar productos</h2>
-    <p>Busca por nombre, SKU o código de barras</p>
+<section class="picker" [attr.aria-label]="text('Agregar productos')">
+  <div data-tour="pos-product-search" class="search-header">
+    <h2>{{ text('Agregar productos') }}</h2>
+    <p>{{ text('Busca por nombre, SKU o código de barras.') }}</p>
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Buscar producto</mat-label>
+      <mat-label>{{ text('Buscar producto') }}</mat-label>
       <input #searchInput matInput type="search" autocomplete="off" maxlength="160"
         placeholder="Nombre, SKU o código de barras…" [formControl]="search"
         [matAutocomplete]="suggestions" (keydown)="searchKey($event)" />
@@ -63,7 +63,7 @@
     </mat-chip-set>
     <app-ui-button label="Limpiar filtros" variant="text" (pressed)="clearFilters()" />
   }
-  <div class="result-heading">
+  <div data-tour="pos-product-results" class="result-heading">
     <div><h3>{{ heading() }}</h3><span aria-live="polite">{{ store.loading() ? 'Buscando…' : store.total() + ' resultados' }}</span></div>
     <mat-button-toggle-group aria-label="Vista de productos" [value]="view()" (change)="view.set($event.value)">
       <mat-button-toggle value="list">Lista</mat-button-toggle><mat-button-toggle value="grid">Cuadrícula</mat-button-toggle>

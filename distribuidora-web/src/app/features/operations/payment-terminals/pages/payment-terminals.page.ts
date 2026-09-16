@@ -44,11 +44,12 @@ const PAYMENT_TERMINAL_FORM_LIMITS = {
   template: `
     <div class="page">
       <app-ui-page-header
+        data-tour="page-header"
         [eyebrow]="i18n.translate('nav.administration')"
         [title]="i18n.translate('terminal.title')"
         [subtitle]="i18n.translate('terminal.subtitle')"
       >
-        <app-ui-button
+        <app-ui-button data-tour="payment-terminals-action"
           [label]="i18n.translate('terminal.new')"
           icon="add"
           variant="outlined"
@@ -73,7 +74,7 @@ const PAYMENT_TERMINAL_FORM_LIMITS = {
       }
 
       <section class="terminal-layout">
-        <div class="surface terminal-list" aria-live="polite">
+        <div data-tour="payment-terminals-list" class="surface terminal-list" aria-live="polite">
           <div class="section-heading">
             <div>
               <h2>{{ i18n.translate('terminal.registered') }}</h2>

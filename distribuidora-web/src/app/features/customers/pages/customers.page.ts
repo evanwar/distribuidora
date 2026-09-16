@@ -32,11 +32,12 @@ import { LanguageService } from '../../../core/i18n/language.service';
   template: `
     <div class="page">
       <app-ui-page-header
+        data-tour="page-header"
         [eyebrow]="text('F02 · Catálogos')"
         [title]="text('Clientes')"
         [subtitle]="text('Información comercial y condiciones de crédito de cada cliente.')"
       >
-        <app-ui-button [label]="text('Nuevo cliente')" icon="add" (pressed)="openNew()" />
+        <app-ui-button data-tour="customers-primary-action" [label]="text('Nuevo cliente')" icon="add" (pressed)="openNew()" />
       </app-ui-page-header>
 
       @if (store.error()) {
@@ -52,7 +53,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
       }
 
       @if (editorOpen()) {
-        <mat-card appearance="outlined">
+        <mat-card data-tour="customers-editor" appearance="outlined">
           <mat-card-header>
             <mat-card-title>{{ text(selected() ? 'Editar cliente' : 'Nuevo cliente') }}</mat-card-title>
           </mat-card-header>
@@ -67,7 +68,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
         </mat-card>
       }
 
-      <section class="list-controls">
+      <section data-tour="customers-search" class="list-controls">
         <mat-form-field appearance="outline">
           <mat-label>{{ text('Buscar clientes') }}</mat-label>
           <input
@@ -99,7 +100,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
           />
         </section>
       } @else {
-        <app-responsive-data-view
+        <app-responsive-data-view data-tour="customers-list"
           [rows]="store.customers()"
           [columns]="columns"
           activeKey="active"

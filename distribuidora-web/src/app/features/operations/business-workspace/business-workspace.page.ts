@@ -61,6 +61,7 @@ type FieldValue =
   template: `
     <div class="page business-page">
       <app-ui-page-header
+        data-tour="page-header"
         [eyebrow]="definition.eyebrow"
         [title]="definition.title"
         [subtitle]="definition.description"
@@ -71,7 +72,7 @@ type FieldValue =
       }
 
       <section class="workspace">
-        <nav class="surface task-nav" [attr.aria-label]="text('Tareas disponibles')">
+        <nav data-tour="module-task-nav" class="surface task-nav" [attr.aria-label]="text('Tareas disponibles')">
           @for (group of groups(); track group) {
             <section class="task-group">
               <h2>{{ group }}</h2>
@@ -98,7 +99,7 @@ type FieldValue =
           }
         </nav>
 
-        <section class="surface task-panel">
+        <section data-tour="module-task-panel" class="surface task-panel">
           @if (!selected()) {
             <app-ui-feedback
               kind="empty"
@@ -127,7 +128,7 @@ type FieldValue =
             </header>
 
             @if (fields().length > 0) {
-              <form class="guided-form" (submit)="execute(); $event.preventDefault()">
+              <form data-tour="module-form" class="guided-form" (submit)="execute(); $event.preventDefault()">
                 <div class="form-grid">
                   @for (field of scalarFields(); track field.key) {
                     @if (field.type === 'boolean') {
@@ -308,7 +309,7 @@ type FieldValue =
                   </section>
                 }
 
-                <div class="task-panel__actions">
+                <div data-tour="module-action" class="task-panel__actions">
                   <app-ui-button
                     [label]="actionLabel(selected()!)"
                     [loading]="store.loading()"
@@ -328,7 +329,7 @@ type FieldValue =
                 />
               }
             } @else {
-              <div class="task-panel__actions">
+              <div data-tour="module-action" class="task-panel__actions">
                 <app-ui-button
                   [label]="text('Actualizar consulta')"
                   icon="refresh"
@@ -356,7 +357,7 @@ type FieldValue =
                 [message]="text('La operación está en proceso.')"
               />
             } @else if (store.result() !== null) {
-              <section class="results" aria-live="polite">
+              <section data-tour="module-results" class="results" aria-live="polite">
                 <div class="results__header">
                   <div>
                     <h3>{{ text('Resultado') }}</h3>
@@ -370,7 +371,7 @@ type FieldValue =
                   >
                 </div>
                 @if (isReportResult()) {
-                  <app-report-visualization
+                  <app-report-visualization data-tour="report-visualization"
                     [operationId]="selected()!.id"
                     [result]="store.result()"
                     [locale]="i18n.locale()"

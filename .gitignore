@@ -1,0 +1,23 @@
+.env
+deploy/.env
+deploy/backups/
+*.out.log
+*.err.log
+
+# Dependencias y salidas de herramientas locales
+**/node_modules/
+**/.angular/
+**/dist/
+**/coverage/
+**/test-results/
+**/playwright-report/
+
+# Material temporal de generación e inspección
+tmp/
+outputs/**/*.inspect.ndjson
+outputs/**/preview_*.png
+outputs/**/source_structure.json
+
+# Entregables generados localmente
+output/
+outputs/

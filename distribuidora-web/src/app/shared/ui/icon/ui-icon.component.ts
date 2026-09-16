@@ -13,6 +13,7 @@ export type UiIconName =
   | 'empty'
   | 'home'
   | 'history'
+  | 'help'
   | 'inventory'
   | 'low-stock'
   | 'masters'
@@ -45,6 +46,7 @@ const ICON_PATHS: Record<UiIconName, readonly string[]> = {
   refresh: ['M19 8a7.5 7.5 0 0 0-13-2L4 8', 'M4 4v4h4', 'M5 16a7.5 7.5 0 0 0 13 2l2-2', 'M20 20v-4h-4'],
   search: ['M10.75 17.5a6.75 6.75 0 1 0 0-13.5 6.75 6.75 0 0 0 0 13.5Z', 'm16 16 4.5 4.5'],
   history: ['M4 12a8 8 0 1 0 2.25-5.55L4 8.75', 'M4 4.5v4.25h4.25', 'M12 7.5V12l3 2'],
+  help: ['M9.25 9a2.85 2.85 0 1 1 4.7 2.15c-1.4 1-1.95 1.65-1.95 3.1', 'M12 18h.01', 'M12 3.25a8.75 8.75 0 1 0 0 17.5 8.75 8.75 0 0 0 0-17.5Z'],
   print: ['M7 9V4h10v5', 'M7 17H4V9h16v8h-3', 'M7 14h10v6H7z', 'M17 11h.01'],
   download: ['M12 3v12', 'm7.5 10.5 4.5 4.5 4.5-4.5', 'M5 20h14'],
   receipt: ['M6 3.5h12v17l-3-2-3 2-3-2-3 2z', 'M9 8h6', 'M9 12h6', 'M9 16h3'],

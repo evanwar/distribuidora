@@ -1,6 +1,6 @@
 # FILE_INDEX
 
-Total de archivos Markdown: 42
+Total de archivos Markdown: 43
 
 - `00_ORQUESTADOR.md`
 - `01_CONTEXTO_NEGOCIO_Y_ALCANCE.md`
@@ -11,6 +11,7 @@ Total de archivos Markdown: 42
 - `06_MATRIZ_ENDPOINTS_FRONTEND.md`
 - `07_ARQUITECTURA_COMPONENTES_UX.md`
 - `08_IMPLEMENTACION_CORRELATION_ID_FRONTEND.md`
+- `09_IMPLEMENTACION_TUTORIALES_DRIVERJS.md`
 - `AGENTS.md`
 - `FILE_INDEX.md`
 - `MANIFEST.md`

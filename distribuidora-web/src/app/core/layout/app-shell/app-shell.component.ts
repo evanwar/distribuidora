@@ -13,6 +13,8 @@ import { SessionService } from '../../auth/session.service';
 import { LanguageService } from '../../i18n/language.service';
 import { TranslationKey } from '../../i18n/translation.catalog';
 import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher/language-switcher.component';
+import { TutorialLauncherComponent } from '../../tutorials/ui/tutorial-launcher.component';
+import { TutorialOrchestratorService } from '../../tutorials/services/tutorial-orchestrator.service';
 
 interface NavigationItem {
   label: TranslationKey;
@@ -34,6 +36,7 @@ interface NavigationGroup {
     MatToolbarModule,
     MatTooltipModule,
     LanguageSwitcherComponent,
+    TutorialLauncherComponent,
     UiIconComponent,
     RouterLink,
     RouterLinkActive,
@@ -56,7 +59,7 @@ interface NavigationGroup {
           </span>
         </a>
 
-        <nav [attr.aria-label]="i18n.translate('app.sections')">
+        <nav data-tour="shell-navigation" [attr.aria-label]="i18n.translate('app.sections')">
           @for (group of navigation; track group.label) {
             <section>
               <h2>{{ i18n.translate(group.label) }}</h2>
@@ -94,12 +97,13 @@ interface NavigationGroup {
             </button>
           }
           <span class="toolbar-spacer"></span>
-          <app-language-switcher />
-          <span class="identity">{{ nameUpper }}</span>
-          <button matButton type="button" (click)="logout()">{{ i18n.translate('app.logout') }}</button>
+          <app-tutorial-launcher />
+          <app-language-switcher data-tour="shell-language" />
+          <span class="identity" data-tour="shell-user">{{ nameUpper }}</span>
+          <button data-tour="shell-logout" matButton type="button" (click)="logout()">{{ i18n.translate('app.logout') }}</button>
         </mat-toolbar>
 
-        <main id="main-content">
+        <main id="main-content" data-tour="page-content">
           <router-outlet />
         </main>
       </mat-sidenav-content>
@@ -260,6 +264,7 @@ interface NavigationGroup {
 export class AppShellComponent {
   private readonly breakpoint = inject(BreakpointObserver);
   private readonly router = inject(Router);
+  private readonly tutorials = inject(TutorialOrchestratorService);
   protected readonly session = inject(SessionService);
   protected readonly i18n = inject(LanguageService);
 
@@ -313,6 +318,7 @@ export class AppShellComponent {
   }
 
   protected logout(): void {
+    this.tutorials.destroy();
     this.session.logout().subscribe(() => void this.router.navigateByUrl('/login'));
   }
 

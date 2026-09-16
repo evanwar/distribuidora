@@ -154,6 +154,7 @@ test('products render the paged backend response', async ({ page }) => {
   await navigateFromShell(page, 'Productos');
 
   await expect(page.getByRole('heading', { name: 'Productos', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Registrar producto' })).toBeVisible();
   await expect(
     page.locator('td:visible, dd:visible').filter({ hasText: 'Arroz premium' }),
   ).toHaveCount(1);
@@ -288,6 +289,58 @@ test('every primary module remains usable without global overflow', async ({ pag
     );
     expect(overflow, `${path} must not overflow`).toBe(false);
   }
+});
+
+test('tutorial center starts, pauses, and resumes a safe guided tour', async ({ page }, testInfo) => {
+  await mockApi(page);
+  await page.goto('/login');
+  await page.getByLabel('Usuario').fill('admin');
+  await page.getByLabel(/Contrase/).fill('test-only');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+
+  const tutorialMutations: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/v1/') && request.method() !== 'GET') {
+      tutorialMutations.push(`${request.method()} ${new URL(request.url()).pathname}`);
+    }
+  });
+
+  await page.getByRole('button', { name: 'Tutoriales y ayuda' }).click();
+  const center = page.getByRole('dialog');
+  await expect(center.getByRole('heading', { name: 'Centro de tutoriales' })).toBeVisible();
+  await expect(center.getByText('Punto de venta', { exact: true })).toBeVisible();
+  await expect(center.getByText('Cómo registrar un cliente')).toBeVisible();
+  await expect(center.getByText('Cómo registrar un producto')).toBeVisible();
+  await expect(center.getByText('Cómo crear una compra')).toBeVisible();
+  await expect(center.getByText('Cómo cobrar con tarjeta')).toBeVisible();
+  await expect(center.getByText('PROCESO ESENCIAL')).toHaveCount(4);
+  const tutorialSearch = center.getByRole('searchbox', { name: 'Buscar un proceso' });
+  await tutorialSearch.fill('como registrar un producto');
+  await expect(center.getByText('Cómo registrar un producto')).toBeVisible();
+  await expect(center.getByText('Cómo crear una compra')).toHaveCount(0);
+  await expect(center.getByText('1 tutorial', { exact: true })).toBeVisible();
+  await center.getByRole('button', { name: 'Limpiar búsqueda' }).click();
+  if (testInfo.project.name === 'desktop') {
+    await page.screenshot({ path: 'test-results/tutorial-center-desktop.png', fullPage: true });
+  }
+  await center.getByRole('button', { name: 'Iniciar' }).first().click();
+
+  const popover = page.locator('.driver-popover.distribuidora-tour');
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText(/Paso 1 de \d+/);
+  await popover.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(popover).toContainText(/Paso 2 de \d+/);
+  await popover.getByRole('button', { name: 'Cerrar tutorial' }).click();
+  await expect(popover).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Tutoriales y ayuda' })).toBeFocused();
+
+  await page.getByRole('button', { name: 'Tutoriales y ayuda' }).click();
+  await expect(page.getByRole('button', { name: 'Continuar' }).first()).toBeVisible();
+  expect(tutorialMutations).toEqual([]);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
 });
 
 test('English covers every primary module instead of only the application shell', async ({

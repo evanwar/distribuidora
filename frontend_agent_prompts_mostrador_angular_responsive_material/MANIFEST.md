@@ -26,6 +26,7 @@ backend_contract: ASP.NET Core Web API + PostgreSQL, paquete backend MVP Mostrad
 | `06_MATRIZ_ENDPOINTS_FRONTEND.md` | Asignación verificable de las 111 operaciones a módulos y superficies UI. |
 | `07_ARQUITECTURA_COMPONENTES_UX.md` | Primitivas configurables, patrones, estética y mantenibilidad. |
 | `08_IMPLEMENTACION_CORRELATION_ID_FRONTEND.md` | Propagación de CorrelationId y OperationId, UX de referencia, integración y pruebas. |
+| `09_IMPLEMENTACION_TUTORIALES_DRIVERJS.md` | Prompt maestro para tutoriales guiados por módulo con Driver.js, permisos, progreso, accesibilidad y pruebas. |
 
 ## Módulos
 

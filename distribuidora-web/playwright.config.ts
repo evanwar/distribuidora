@@ -5,12 +5,12 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:4200',
+    baseURL: 'http://127.0.0.1:4201',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run start -- --host 127.0.0.1',
-    url: 'http://127.0.0.1:4200',
+    command: 'npm run start -- --host 127.0.0.1 --port 4201',
+    url: 'http://127.0.0.1:4201',
     reuseExistingServer: true,
   },
   projects: [

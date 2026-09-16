@@ -6,6 +6,7 @@ const resource: EntityResourceDefinition = {
   title: 'Productos',
   description: 'SKU, precios y clasificación comercial.',
   singular: 'producto',
+  createLabel: 'Registrar producto',
   listEndpoint: '/api/v1/products',
   createEndpoint: '/api/v1/products',
   updateEndpoint: '/api/v1/products/{id}',

@@ -34,6 +34,7 @@ interface AgingSegment {
   template: `
     <div class="page dashboard-page">
       <app-ui-page-header
+        data-tour="dashboard-summary"
         [eyebrow]="i18n.translate('dashboard.eyebrow')"
         [title]="i18n.translate('dashboard.title')"
         [subtitle]="i18n.translate('dashboard.subtitle')"
@@ -73,7 +74,7 @@ interface AgingSegment {
           />
         </section>
       } @else {
-        <section class="executive-hero">
+        <section class="executive-hero" data-tour="dashboard-quick-actions">
           <div>
             <span>{{ text('Pulso operativo', 'Operational pulse') }}</span>
             <h2>{{ executiveTitle() }}</h2>
@@ -85,7 +86,7 @@ interface AgingSegment {
           </a>
         </section>
 
-        <section class="metrics" [attr.aria-label]="i18n.translate('dashboard.indicators')">
+        <section data-tour="dashboard-kpis" class="metrics" [attr.aria-label]="i18n.translate('dashboard.indicators')">
           @for (metric of store.metrics(); track metric.key; let index = $index) {
             <a
               class="metric"

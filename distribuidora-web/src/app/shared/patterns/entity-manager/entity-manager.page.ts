@@ -44,11 +44,12 @@ type EntityControl = FormControl<string | number | boolean>;
   template: `
     <div class="page">
       <app-ui-page-header
+        data-tour="page-header"
         [eyebrow]="text(definition.module)"
         [title]="text(definition.title)"
         [subtitle]="text(definition.description)"
       >
-        <app-ui-button [label]="newLabel()" icon="add" (pressed)="open()" />
+        <app-ui-button data-tour="entity-primary-action" [label]="newLabel()" icon="add" (pressed)="open()" />
       </app-ui-page-header>
 
       @if (store.error()) {
@@ -64,7 +65,7 @@ type EntityControl = FormControl<string | number | boolean>;
       }
 
       @if (editorOpen()) {
-        <mat-card appearance="outlined">
+        <mat-card data-tour="entity-editor" appearance="outlined">
           <mat-card-header>
             <mat-card-title>
               {{ selected() ? text('Editar') : text('Nuevo') }} {{ text(definition.singular) }}
@@ -132,14 +133,14 @@ type EntityControl = FormControl<string | number | boolean>;
           />
         </section>
       } @else {
-        <app-responsive-data-view
+        <app-responsive-data-view data-tour="entity-list"
           [rows]="store.rows()"
           [columns]="columns"
           activeKey="active"
           (edit)="open($event)"
         />
         @if (definition.paged) {
-          <mat-paginator
+          <mat-paginator data-tour="entity-pagination"
             [length]="store.total()"
             [pageIndex]="store.page() - 1"
             [pageSize]="store.pageSize()"
@@ -205,6 +206,7 @@ export class EntityManagerPage implements OnInit {
   }
 
   protected newLabel(): string {
+    if (this.definition.createLabel) return this.text(this.definition.createLabel);
     return this.language.language() === 'en'
       ? `New ${this.text(this.definition.singular)}`
       : `Nuevo ${this.definition.singular}`;
