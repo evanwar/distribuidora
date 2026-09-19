@@ -4,19 +4,18 @@ import { copy, step } from './tour-builder';
 
 export const SHELL_TOURS: readonly TutorialDefinition[] = [
   {
-    id: 'shell-getting-started', moduleId: 'shell', version: 1, route: '/dashboard', estimatedMinutes: 3,
+    id: 'shell-getting-started', moduleId: 'shell', version: 2, route: '/dashboard', estimatedMinutes: 3,
     title: copy('Conoce el sistema', 'Meet the system'),
-    description: copy('Ubica la navegación, el resumen diario y las opciones de tu sesión.', 'Find navigation, the daily summary, and your session options.'),
+    description: copy('Un recorrido rápido para saber dónde está cada cosa.', 'Find navigation, the daily summary, and your session options.'),
     steps: [
-      step('welcome', S.pageContent, copy('Bienvenido', 'Welcome'), copy('Este espacio reúne ventas, inventario, compras, cobranza y control. El recorrido solo explica; no modifica información.'), { placement: 'bottom' }),
-      step('navigation', S.shellNavigation, copy('Navegación principal', 'Main navigation'), copy('Las opciones están agrupadas por Operación, Catálogos y Control. En móvil puedes abrir este panel desde el botón de menú.'), { placement: 'right' }),
-      step('summary', S.dashboardSummary, copy('Resumen del día', 'Daily summary'), copy('Aquí tienes una lectura rápida del negocio. Los datos mostrados provienen del servidor.'), { placement: 'bottom' }),
-      step('kpis', S.dashboardKpis, copy('Indicadores y accesos', 'Indicators and shortcuts'), copy('Cada indicador resume una situación y también funciona como acceso al detalle correspondiente.'), { placement: 'bottom' }),
+      step('welcome', S.pageContent, copy('¡Te damos la bienvenida!', 'Welcome'), copy('Desde aquí puedes atender ventas, revisar productos, registrar compras y mucho más. Puedes explorar con tranquilidad: este recorrido no guardará ningún cambio.'), { placement: 'bottom' }),
+      step('navigation', S.shellNavigation, copy('Encuentra lo que necesitas', 'Main navigation'), copy('Usa este menú para ir a las distintas áreas. Si estás en un celular, ábrelo con el botón de menú.'), { placement: 'right' }),
+      step('summary', S.dashboardSummary, copy('Lo más importante del día', 'Daily summary'), copy('Aquí puedes ver rápidamente cómo va el negocio hoy.'), { placement: 'bottom' }),
+      step('kpis', S.dashboardKpis, copy('Consulta más detalles', 'Indicators and shortcuts'), copy('Cada tarjeta muestra un dato importante. Selecciónala para ver la información completa.'), { placement: 'bottom' }),
       step('language', S.shellLanguage, copy('Idioma', 'Language'), copy('Cambia entre español e inglés. La aplicación recarga para aplicar el idioma de forma consistente.'), { placement: 'bottom' }),
-      step('identity', S.shellUser, copy('Tu sesión', 'Your session'), copy('Verifica aquí con qué cuenta estás trabajando antes de realizar una operación.'), { placement: 'bottom' }),
-      step('help', S.helpLauncher, copy('Tutoriales disponibles', 'Available tutorials'), copy('Abre este centro cuando quieras aprender un módulo, continuar un recorrido o repetirlo.'), { placement: 'bottom' }),
-      step('logout', S.shellLogout, copy('Cerrar sesión', 'Sign out'), copy('Usa esta acción al terminar. El tutorial se cerrará automáticamente y no conservará datos de negocio.'), { placement: 'bottom' }),
+      step('identity', S.shellUser, copy('Esta es tu cuenta', 'Your session'), copy('Antes de hacer una operación, confirma que estás usando la cuenta correcta.'), { placement: 'bottom' }),
+      step('help', S.helpLauncher, copy('Ayuda cuando la necesites', 'Available tutorials'), copy('Vuelve aquí para iniciar otro recorrido, continuar uno pendiente o repetirlo.'), { placement: 'bottom' }),
+      step('logout', S.shellLogout, copy('Al terminar', 'Sign out'), copy('Cierra tu sesión para proteger tu cuenta, sobre todo si compartes el equipo.'), { placement: 'bottom' }),
     ],
   },
 ];
-

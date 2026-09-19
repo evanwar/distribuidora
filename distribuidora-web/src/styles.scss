@@ -166,6 +166,38 @@ a {
   }
 }
 
+@media (max-width: 599px) {
+  .cdk-overlay-pane.pos-filter-dialog { width: 100vw !important; max-width: 100vw !important; height: 100dvh; }
+  .pos-filter-dialog .mat-mdc-dialog-container,
+  .pos-filter-dialog .mat-mdc-dialog-surface { border-radius: 0; }
+}
+
+.pos-filter-dialog .filter-dialog__form { display: flex; min-height: min(34rem, 100%); flex-direction: column; }
+.pos-filter-dialog .filter-dialog__title { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem .75rem; text-align: left; }
+.pos-filter-dialog .filter-dialog__title > div { display: grid; gap: .2rem; }
+.pos-filter-dialog .filter-dialog__title > div > span { color: var(--app-text-muted); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.pos-filter-dialog .filter-dialog__title h2 { margin: 0; font-size: 1.35rem; }
+.pos-filter-dialog mat-dialog-content { flex: 1; padding: .5rem 1.5rem 1rem; }
+.pos-filter-dialog .filters { display: grid; gap: 1.25rem; }
+.pos-filter-dialog .filter-facets { display: grid; gap: .65rem; }
+.pos-filter-dialog .filter-facets app-ui-button { justify-self: stretch; }
+.pos-filter-dialog .filter-prices { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+.pos-filter-dialog .filter-prices mat-form-field { width: 100%; }
+.pos-filter-dialog .filter-checks { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; padding: .6rem .75rem; border: 1px solid var(--app-border-subtle); border-radius: .75rem; background: transparent; }
+.pos-filter-dialog .filter-error { margin: 0; color: var(--app-danger); font-size: .85rem; }
+.pos-filter-dialog mat-dialog-actions { gap: .35rem; padding: .75rem 1.5rem 1.25rem; }
+@media (max-width: 599px) {
+  .pos-filter-dialog .filter-prices { grid-template-columns: 1fr; }
+  .pos-filter-dialog mat-dialog-actions { flex-wrap: wrap; }
+  .pos-filter-dialog mat-dialog-actions app-ui-button:last-child { width: 100%; }
+}
+
+.pos-facet-dialog .facet-options { display: grid; gap: .15rem; margin-top: .75rem; }
+.pos-facet-dialog .facet-options app-ui-button { display: block; width: 100%; }
+.pos-facet-dialog .facet-options app-ui-button button { width: 100%; justify-content: flex-start; min-height: 2.6rem; padding-inline: .75rem; text-align: left; }
+.pos-facet-dialog .facet-options app-ui-button .label { overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: normal; }
+.pos-facet-dialog mat-dialog-content > mat-form-field { width: 100%; }
+
 .driver-popover.distribuidora-tour {
   width: min(22rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);

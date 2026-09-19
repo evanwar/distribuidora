@@ -1,13 +1,29 @@
 :host { display: block; min-width: 0; container: product-picker / inline-size; }
-.picker { display: grid; gap: var(--space-3); max-height: 42rem; overflow-y: auto; padding-right: var(--space-1); }
-.search-header { position: sticky; top: 0; z-index: 2; background: var(--app-surface); padding-block: var(--space-2); }
+.picker { display: grid; gap: var(--space-3); max-height: min(48rem, calc(100dvh - 10rem)); overflow-x: hidden; overflow-y: auto; padding-right: var(--space-1); scrollbar-color: color-mix(in srgb, var(--app-text-muted) 42%, transparent) transparent; scrollbar-width: thin; }
+.search-header { position: sticky; top: 0; z-index: 2; display: grid; gap: var(--space-3); background: var(--app-surface); padding-block: var(--space-1) var(--space-2); }
 h2, h3, p { margin: 0; }
 h2 { font-size: 1.15rem; }
 h3 { font-size: 1rem; overflow-wrap: anywhere; }
-.search-header p { color: var(--app-text-muted); margin-block: var(--space-2) var(--space-3); }
+.search-header p { color: var(--app-text-muted); margin-top: var(--space-1); }
+.search-copy { min-width: 0; }
+.search-icon { color: var(--app-text-muted); }
+.shortcut { padding: .15rem .35rem; border: 1px solid var(--app-border-subtle); border-radius: .35rem; background: var(--app-surface-muted); }
 mat-form-field { width: 100%; min-width: 0; }
 .shortcut, small, .result-heading span { color: var(--app-text-muted); font-size: 0.8rem; }
 .quick-categories, .result-heading, .pagination { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.quick-categories { flex-wrap: nowrap; min-width: 0; }
+.category-strip { min-width: 0; flex: 1 1 auto; overflow-x: auto; padding-block: 0.1rem 0.25rem; scrollbar-width: thin; }
+.category-strip ::ng-deep .mdc-evolution-chip-set__chips { flex-wrap: nowrap; }
+.category-strip ::ng-deep .mat-mdc-chip { flex: 0 0 auto; }
+.category-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; }
+.category-toolbar .category-strip { grid-column: 1 / -1; }
+.category-label { max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-trigger { min-height: 2.6rem; border-radius: var(--app-radius-pill); }
+.collection-strip { width: fit-content; max-width: 100%; padding: .2rem; border-radius: var(--app-radius-pill); background: var(--app-surface-muted); }
+.collection-strip ::ng-deep .mdc-evolution-chip--selected { background: color-mix(in srgb, var(--app-primary) 14%, var(--app-surface)); }
+.view-toggle { border-radius: var(--app-radius-pill); }
+.view-toggle mat-button-toggle { min-width: 5rem; }
+.view-toggle mat-button-toggle ::ng-deep .mat-button-toggle-label-content { display: inline-flex; align-items: center; gap: .35rem; }
 .result-heading { justify-content: space-between; }
 .pagination { justify-content: flex-end; }
 .filters { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
@@ -15,4 +31,20 @@ mat-form-field { width: 100%; min-width: 0; }
 .notice { color: var(--app-primary-strong); min-height: 1.5em; }
 .skeleton { display: grid; gap: var(--space-3); }
 .skeleton div { height: 3rem; background: var(--app-surface-muted); border-radius: var(--app-radius-xs); }
+.picker::-webkit-scrollbar { width: 0.45rem; }
+.picker::-webkit-scrollbar-thumb { border-radius: var(--app-radius-pill); background: color-mix(in srgb, var(--app-text-muted) 42%, transparent); }
+@container product-picker (min-width: 48rem) {
+  .search-header {
+    display: grid;
+    grid-template-columns: minmax(12rem, auto) minmax(22rem, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+  }
+}
+@container product-picker (min-width: 37.5rem) { .category-toolbar { grid-template-columns: minmax(0, 1fr) auto auto; } .category-toolbar .category-strip { grid-column: 1 / -1; } }
+@container product-picker (max-width: 42rem) {
+  .quick-categories { align-items: stretch; flex-direction: column; }
+  .category-strip { width: 100%; }
+}
 @media (pointer: coarse) { .picker { max-height: none; overflow: visible; } }
+@media (max-width: 599px) { .picker { max-height: none; overflow: visible; padding-right: 0; } .collection-strip { width: 100%; } .view-toggle { display: none; } }

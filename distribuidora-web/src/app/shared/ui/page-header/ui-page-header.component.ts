@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 @Component({
   selector: 'app-ui-page-header',
   template: `
-    <header>
+    <header [class.ui-page-header--compact]="compact()">
       <div class="ui-page-header__copy">
         @if (eyebrow()) {
           <span class="ui-page-header__eyebrow">{{ eyebrow() }}</span>
@@ -55,6 +55,40 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       flex-wrap: wrap;
       gap: var(--space-2);
     }
+
+    @media (min-width: 48rem) {
+      header.ui-page-header--compact {
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      .ui-page-header--compact .ui-page-header__copy {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        min-width: 0;
+        align-items: baseline;
+        column-gap: var(--space-3);
+        row-gap: 0.2rem;
+      }
+
+      .ui-page-header--compact .ui-page-header__eyebrow {
+        grid-column: 1 / -1;
+        margin: 0;
+      }
+
+      .ui-page-header--compact h1 {
+        flex: 0 0 auto;
+        font-size: 1.75rem;
+      }
+
+      .ui-page-header--compact p {
+        align-self: center;
+        overflow: hidden;
+        margin: 0;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -62,4 +96,5 @@ export class UiPageHeaderComponent {
   readonly title = input.required<string>();
   readonly subtitle = input<string>();
   readonly eyebrow = input<string>();
+  readonly compact = input(false);
 }

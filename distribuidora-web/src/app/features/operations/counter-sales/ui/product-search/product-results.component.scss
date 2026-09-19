@@ -1,24 +1,29 @@
 :host { display: block; min-width: 0; }
-.product-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); padding: var(--space-3) 0; border-bottom: 1px solid var(--app-border); }
-.identity { min-width: 0; display: grid; gap: var(--space-1); overflow-wrap: anywhere; }
-.identity strong { font-weight: 600; }
-small, .stock { color: var(--app-text-muted); font-size: 0.8rem; }
-.stock.low { color: var(--app-warning); }
-.price { grid-column: 2; grid-row: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.actions { display: flex; align-items: center; justify-content: end; grid-column: 2; flex-wrap: wrap; }
-.actions small { flex-basis: 100%; text-align: right; }
-.product-image { display: none; }
-mark { background: var(--app-surface-strong); color: var(--app-primary-strong); }
-.product-row:focus-within { background: var(--app-surface-muted); }
-@container product-picker (min-width: 650px) {
-  .product-row { grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: var(--space-3); }
-  .product-image { display: block; color: var(--app-text-muted); }
-  .price, .actions { grid-column: auto; grid-row: auto; }
-  .actions { flex-wrap: nowrap; }
-  .actions small { flex-basis: auto; }
+.results { display: grid; min-width: 0; }
+.product-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'identity identity' 'stock price' 'actions actions'; gap: .55rem .8rem; align-items: center; min-height: 4.25rem; padding: .75rem .2rem; border-bottom: 1px solid var(--app-border-subtle); transition: background .16s ease, box-shadow .16s ease; }
+.product-row:hover, .product-row:focus-visible { background: var(--app-surface-muted); box-shadow: inset 3px 0 var(--app-primary); outline: none; }
+.product-row--empty { opacity: .82; }
+.identity { grid-area: identity; display: grid; min-width: 0; gap: .15rem; }
+.identity strong { overflow: hidden; display: -webkit-box; color: var(--app-text); font-size: .93rem; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.identity small { overflow: hidden; color: var(--app-text-muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+mark { padding: 0 .08em; border-radius: .18rem; background: color-mix(in srgb, var(--app-primary) 15%, transparent); color: inherit; }
+.stock { grid-area: stock; display: inline-flex; align-items: center; justify-self: start; gap: .38rem; color: var(--app-success); font-size: .73rem; font-weight: 600; white-space: nowrap; }
+.stock--low { color: var(--app-warning); }
+.stock--empty { color: var(--app-danger); }
+.stock-dot { width: .42rem; height: .42rem; border-radius: 50%; background: currentColor; }
+.price { grid-area: price; color: var(--app-text); font-size: 1rem; font-variant-numeric: tabular-nums; justify-self: end; white-space: nowrap; }
+.actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: .35rem; min-width: 0; }
+.actions small { margin-right: auto; color: var(--app-text-muted); font-size: .72rem; }
+.actions app-ui-button { min-width: 6.5rem; }
+.favorite-button { width: 2.75rem; height: 2.75rem; color: var(--app-text-muted); }
+.favorite-button:hover, .favorite-button:focus-visible, .favorite-button--active { color: var(--app-primary); }
+.favorite-button--active { background: color-mix(in srgb, var(--app-primary) 10%, transparent); }
+
+@container product-picker (min-width: 40.625rem) {
+  .product-row { grid-template-columns: minmax(0, 1fr) minmax(9.5rem, auto) auto auto; grid-template-areas: 'identity stock price actions'; gap: 1rem; min-height: 4.5rem; padding-inline: .35rem; }
+  .actions { justify-content: flex-end; }
+  .actions small { margin-right: .3rem; }
 }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--space-4); }
-.grid .product-row { grid-template-columns: minmax(0, 1fr) auto; }
-.grid .product-image { display: none; }
-.grid .price { grid-column: 2; grid-row: 1; }
-.grid .actions { grid-column: 2; }
+
+.grid-view { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; }
+.grid-view .product-row { grid-template-columns: 1fr auto; grid-template-areas: 'identity identity' 'stock price' 'actions actions'; padding: .9rem; border: 1px solid var(--app-border-subtle); border-radius: .8rem; }

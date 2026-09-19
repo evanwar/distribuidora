@@ -45,6 +45,20 @@ docker login
 .\deploy\Instalar-Distribuidora.ps1
 ```
 
+## Importar el catalogo de productos
+
+El paquete incluye una importacion transaccional preparada desde el Excel de
+catalogos. Desde la raiz del proyecto, con la aplicacion ya instalada:
+
+```powershell
+.\deploy\Importar-Catalogo.ps1
+```
+
+El script usa `deploy/.env`, levanta PostgreSQL si es necesario, crea primero un
+respaldo en `deploy/backups`, importa marcas, categorias, productos, precios y
+alias, y verifica los totales antes de confirmar la transaccion. Puede ejecutarse
+de nuevo para actualizar el mismo catalogo sin duplicarlo.
+
 El instalador descarga las tres imágenes, crea PostgreSQL, restaura el respaldo y
 levanta API y Web. `SEED_SYNC_ADMIN_CREDENTIALS=false` evita que el primer inicio
 cambie el administrador que viene en el respaldo.

@@ -130,6 +130,8 @@ export const englishUiText: Readonly<Record<string, string>> = {
   'Preparando el punto de venta': 'Preparing the point of sale',
   'Cargando productos, clientes y formas de pago.': 'Loading products, customers, and payment methods.',
   'Almacén de salida': 'Source warehouse',
+  'Datos de venta': 'Sale details',
+  'Origen, cliente y pago': 'Origin, customer, and payment',
   'Nombre o número celular': 'Name or mobile number',
   'Venta al público': 'General public sale',
   'Buscando clientes…': 'Searching customers…',

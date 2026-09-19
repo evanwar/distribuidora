@@ -1,0 +1,233 @@
+{
+  "source_workbook": "Plantilla_catalogos_por_marca (1).xlsx",
+  "brands": 12,
+  "categories": 151,
+  "products": 1726,
+  "active_products": 1534,
+  "inactive_products": 192,
+  "missing_prices_mapped_to_zero": 3,
+  "duplicate_product_ids_adjusted": 30,
+  "duplicate_adjustments": [
+    {
+      "source_sheet": "SIN MARCA IDENTIFICADA",
+      "source_row": "298",
+      "base_sku": "SIN MARCA IDENTIFICADA-MTC250",
+      "final_sku": "SIN MARCA IDENTIFICADA-MTC250~2",
+      "original_code": "MTC250"
+    },
+    {
+      "source_sheet": "SIN MARCA IDENTIFICADA",
+      "source_row": "313",
+      "base_sku": "SIN MARCA IDENTIFICADA-JT110-4",
+      "final_sku": "SIN MARCA IDENTIFICADA-JT110-4~2",
+      "original_code": "JT110-4"
+    },
+    {
+      "source_sheet": "SIN MARCA IDENTIFICADA",
+      "source_row": "977",
+      "base_sku": "SIN MARCA IDENTIFICADA-A5",
+      "final_sku": "SIN MARCA IDENTIFICADA-A5~2",
+      "original_code": "A5"
+    },
+    {
+      "source_sheet": "SIN MARCA IDENTIFICADA",
+      "source_row": "1278",
+      "base_sku": "SIN MARCA IDENTIFICADA-CAW12",
+      "final_sku": "SIN MARCA IDENTIFICADA-CAW12~2",
+      "original_code": "CAW12"
+    },
+    {
+      "source_sheet": "SIN MARCA IDENTIFICADA",
+      "source_row": "1336",
+      "base_sku": "SIN MARCA IDENTIFICADA-CM2",
+      "final_sku": "SIN MARCA IDENTIFICADA-CM2~2",
+      "original_code": "CM2"
+    },
+    {
+      "source_sheet": "FALCON",
+      "source_row": "51",
+      "base_sku": "FALCON-ZH626S",
+      "final_sku": "FALCON-ZH626S~2",
+      "original_code": "ZH626S"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1175",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~2",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1176",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~3",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1177",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~4",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1178",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~5",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1179",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~6",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1180",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~7",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1181",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~8",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1182",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~9",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1183",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~10",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1184",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~11",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1185",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~12",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1186",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~13",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1187",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~14",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1188",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~15",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1189",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~16",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1190",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~17",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1191",
+      "base_sku": "GALGO-AGRICOLA",
+      "final_sku": "GALGO-AGRICOLA~18",
+      "original_code": "AGRICOLA"
+    },
+    {
+      "source_sheet": "GALGO",
+      "source_row": "1194",
+      "base_sku": "GALGO-CAMION",
+      "final_sku": "GALGO-CAMION~2",
+      "original_code": "CAMION"
+    },
+    {
+      "source_sheet": "PANESA",
+      "source_row": "1467",
+      "base_sku": "PANESA-TR-13",
+      "final_sku": "PANESA-TR-13~2",
+      "original_code": "TR-13"
+    },
+    {
+      "source_sheet": "PANESA",
+      "source_row": "1468",
+      "base_sku": "PANESA-TR-15",
+      "final_sku": "PANESA-TR-15~2",
+      "original_code": "TR-15"
+    },
+    {
+      "source_sheet": "PANESA",
+      "source_row": "1469",
+      "base_sku": "PANESA-TR-440",
+      "final_sku": "PANESA-TR-440~2",
+      "original_code": "TR-440"
+    },
+    {
+      "source_sheet": "PANESA",
+      "source_row": "1470",
+      "base_sku": "PANESA-TR-444",
+      "final_sku": "PANESA-TR-444~2",
+      "original_code": "TR-444"
+    },
+    {
+      "source_sheet": "PANESA",
+      "source_row": "1551",
+      "base_sku": "PANESA-RU1",
+      "final_sku": "PANESA-RU1~2",
+      "original_code": "RU1"
+    },
+    {
+      "source_sheet": "CENTURY",
+      "source_row": "1848",
+      "base_sku": "CENTURY-S36P",
+      "final_sku": "CENTURY-S36P~2",
+      "original_code": "S36P"
+    }
+  ],
+  "mapping": {
+    "product_sku": "ID_Producto; duplicate IDs receive a deterministic ~N suffix",
+    "product_alias": "Codigo",
+    "product_name": "Descripcion",
+    "product_description": "Atributos C/D/E and Notas_Migracion when present",
+    "product_base_price": "Precio_Mayoreo rounded to numeric(18,2)",
+    "product_cost": "Not supplied; preserved on update and initialized to 0 on insert",
+    "product_minimum_stock": "Not supplied; preserved on update and initialized to 0 on insert",
+    "unit": "Pieza (PZ)",
+    "currency": "All source prices are MXN; the current product model has no currency column"
+  }
+}

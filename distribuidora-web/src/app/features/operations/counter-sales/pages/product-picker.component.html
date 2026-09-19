@@ -1,13 +1,16 @@
 <section class="picker" [attr.aria-label]="text('Agregar productos')">
   <div data-tour="pos-product-search" class="search-header">
-    <h2>{{ text('Agregar productos') }}</h2>
-    <p>{{ text('Busca por nombre, SKU o código de barras.') }}</p>
+    <div class="search-copy">
+      <h2>{{ text('Agregar productos') }}</h2>
+      <p>{{ text('Busca por nombre, SKU o código de barras.') }}</p>
+    </div>
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>{{ text('Buscar producto') }}</mat-label>
+      <app-ui-icon matIconPrefix class="search-icon" name="search" />
       <input #searchInput matInput type="search" autocomplete="off" maxlength="160"
         placeholder="Nombre, SKU o código de barras…" [formControl]="search"
         [matAutocomplete]="suggestions" (keydown)="searchKey($event)" />
-      <span matTextSuffix class="shortcut">F2</span>
+      <kbd matTextSuffix class="shortcut">F2</kbd>
       @if (search.value) { <app-ui-icon-button matSuffix icon="close" ariaLabel="Limpiar búsqueda" (pressed)="search.setValue(''); focusSearch()" /> }
       <mat-autocomplete #suggestions="matAutocomplete" (optionSelected)="selectSuggestion($event)">
         @if (!store.loading()) {
@@ -29,32 +32,26 @@
       </mat-autocomplete>
     </mat-form-field>
   </div>
-  <mat-chip-listbox aria-label="Colección de productos">
+  <mat-chip-listbox class="collection-strip" aria-label="Colección de productos">
     @for (collection of collections; track collection.id) {
       <mat-chip-option [selected]="store.state().collection === collection.id" (click)="store.update({ collection: collection.id })">{{ collection.label }}</mat-chip-option>
     }
   </mat-chip-listbox>
-  <div class="quick-categories">
-    <mat-chip-listbox aria-label="Categorías rápidas">
-      @for (category of store.categories(); track category.id) {
-        <mat-chip-option [selected]="store.state().category?.id === category.id" (click)="store.update({ category: store.state().category?.id === category.id ? null : category })">{{ category.name }}</mat-chip-option>
+  <div class="category-toolbar">
+    <mat-chip-listbox class="category-strip" aria-label="Categorías rápidas">
+      @for (category of visibleCategories(); track category.id) {
+        <mat-chip-option [matTooltip]="category.name" [selected]="store.state().category?.id === category.id" (click)="store.update({ category: store.state().category?.id === category.id ? null : category })">{{ category.name }}</mat-chip-option>
       }
     </mat-chip-listbox>
     <app-ui-button label="Más categorías" variant="text" (pressed)="openFacets('category')" />
-    <app-ui-button [label]="'Filtros (' + chips().length + ')'" icon="settings" variant="text" (pressed)="showFilters.set(!showFilters())" />
+    <button matButton="outlined" type="button" class="filter-trigger"
+      [matBadge]="chips().length" [matBadgeHidden]="chips().length === 0"
+      matBadgeColor="primary" [attr.aria-label]="'Abrir filtros. ' + chips().length + ' activos'"
+      (click)="openFilters()">
+      <app-ui-icon name="settings" />
+      <span>Filtros</span>
+    </button>
   </div>
-  @if (showFilters()) {
-    <form [formGroup]="filters" (ngSubmit)="applyFilters()" class="filters">
-      <app-ui-button label="Elegir categoría" variant="outlined" (pressed)="openFacets('category')" />
-      <app-ui-button label="Elegir marca" variant="outlined" (pressed)="openFacets('brand')" />
-      <mat-form-field appearance="outline"><mat-label>Precio mínimo</mat-label><input matInput type="number" min="0" formControlName="minimumPrice" /></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Precio máximo</mat-label><input matInput type="number" min="0" formControlName="maximumPrice" /></mat-form-field>
-      <mat-checkbox formControlName="inStockOnly">Con existencia</mat-checkbox>
-      <mat-checkbox formControlName="lowStockOnly">Inventario bajo</mat-checkbox>
-      @if (filterError()) { <p role="alert">{{ filterError() }}</p> }
-      <app-ui-button label="Aplicar filtros" type="submit" />
-    </form>
-  }
   @if (chips().length) {
     <mat-chip-set aria-label="Filtros activos">
       @for (chip of chips(); track chip.key) {
@@ -65,8 +62,9 @@
   }
   <div data-tour="pos-product-results" class="result-heading">
     <div><h3>{{ heading() }}</h3><span aria-live="polite">{{ store.loading() ? 'Buscando…' : store.total() + ' resultados' }}</span></div>
-    <mat-button-toggle-group aria-label="Vista de productos" [value]="view()" (change)="view.set($event.value)">
-      <mat-button-toggle value="list">Lista</mat-button-toggle><mat-button-toggle value="grid">Cuadrícula</mat-button-toggle>
+    <mat-button-toggle-group class="view-toggle" aria-label="Vista de productos" [value]="effectiveView()" (change)="view.set($event.value)">
+      <mat-button-toggle value="list"><app-ui-icon name="list" /><span>Lista</span></mat-button-toggle>
+      <mat-button-toggle value="grid"><app-ui-icon name="grid" /><span>Cuadrícula</span></mat-button-toggle>
     </mat-button-toggle-group>
   </div>
   @if (store.loading()) {
@@ -80,7 +78,7 @@
     <app-ui-button label="Limpiar filtros" variant="text" (pressed)="clearFilters()" />
     <app-ui-button label="Cambiar búsqueda" variant="text" (pressed)="focusSearch()" />
   } @else {
-    <app-product-results [products]="store.products()" [query]="store.state().query" [view]="view()"
+    <app-product-results [products]="store.products()" [query]="store.state().query" [view]="effectiveView()"
       [quantities]="quantities()" [favoriteBusy]="store.favoriteBusy()"
       (add)="addProduct($event)" (favorite)="store.favorite($event)" (decrease)="decrease.emit($event)" />
   }
@@ -92,6 +90,39 @@
   <p class="notice" aria-live="polite" aria-atomic="true">{{ store.notice() }}</p>
   <small>F2 Buscar · ↑ ↓ Sugerencias · Enter Agregar · Esc Cerrar o limpiar</small>
 </section>
+<ng-template #filterDialog>
+  <form [formGroup]="filters" (ngSubmit)="applyFilters()" class="filter-dialog__form">
+    <div mat-dialog-title class="filter-dialog__title">
+      <div>
+        <span>Catálogo</span>
+        <h2>Filtros</h2>
+      </div>
+      <app-ui-icon-button icon="close" ariaLabel="Cerrar filtros" (pressed)="closeDialogs()" />
+    </div>
+    <mat-dialog-content>
+      <div class="filters">
+        <div class="filter-facets">
+          <app-ui-button label="Elegir categoría" icon="category" variant="outlined" (pressed)="openFacets('category')" />
+          <app-ui-button label="Elegir marca" icon="products" variant="outlined" (pressed)="openFacets('brand')" />
+        </div>
+        <div class="filter-prices">
+          <mat-form-field appearance="outline"><mat-label>Precio mínimo</mat-label><span matTextPrefix>$&nbsp;</span><input matInput type="number" min="0" formControlName="minimumPrice" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Precio máximo</mat-label><span matTextPrefix>$&nbsp;</span><input matInput type="number" min="0" formControlName="maximumPrice" /></mat-form-field>
+        </div>
+        <div class="filter-checks">
+          <mat-checkbox formControlName="inStockOnly">Con existencia</mat-checkbox>
+          <mat-checkbox formControlName="lowStockOnly">Poco stock</mat-checkbox>
+        </div>
+        @if (filterError()) { <p class="filter-error" role="alert">{{ filterError() }}</p> }
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <app-ui-button label="Limpiar" variant="text" tone="neutral" (pressed)="clearFilters()" />
+      <app-ui-button label="Cancelar" variant="text" tone="neutral" (pressed)="closeDialogs()" />
+      <app-ui-button label="Aplicar filtros" type="submit" />
+    </mat-dialog-actions>
+  </form>
+</ng-template>
 <ng-template #facetDialog>
   <h2 mat-dialog-title>{{ facetKind() === 'category' ? 'Elegir categoría' : 'Elegir marca' }}</h2>
   <mat-dialog-content>

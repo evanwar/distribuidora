@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, output, signal, TemplateRef, ViewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
@@ -9,6 +12,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { UiButtonComponent } from '../../../../shared/ui/button/ui-button.component';
 import { UiIconButtonComponent } from '../../../../shared/ui/button/ui-icon-button.component';
 import { UiFeedbackComponent } from '../../../../shared/ui/feedback/ui-feedback.component';
@@ -17,13 +21,16 @@ import { ProductCollection, ProductFacet, SearchProduct } from '../models/produc
 import { SaleLine } from '../models/counter-sale.models';
 import { ProductResultsComponent } from '../ui/product-search/product-results.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
+import { UiIconComponent } from '../../../../shared/ui/icon/ui-icon.component';
+import { map } from 'rxjs';
 
 @Component({
   selector: 'app-product-picker',
   providers: [ProductSearchStore],
-  imports: [ReactiveFormsModule, MatAutocompleteModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatCheckboxModule, MatButtonToggleModule, MatDialogModule, MatProgressBarModule,
-    UiButtonComponent, UiIconButtonComponent, UiFeedbackComponent, ProductResultsComponent],
+  imports: [ReactiveFormsModule, MatAutocompleteModule, MatBadgeModule, MatButtonModule,
+    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, MatButtonToggleModule,
+    MatDialogModule, MatProgressBarModule, MatTooltipModule, UiButtonComponent,
+    UiIconButtonComponent, UiFeedbackComponent, UiIconComponent, ProductResultsComponent],
   templateUrl: './product-picker.component.html',
   styleUrl: './product-picker.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,7 +40,9 @@ export class ProductPickerComponent {
   @ViewChild('searchInput') private searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild(MatAutocompleteTrigger) private autocomplete?: MatAutocompleteTrigger;
   @ViewChild('facetDialog') private facetDialog?: TemplateRef<unknown>;
+  @ViewChild('filterDialog') private filterDialog?: TemplateRef<unknown>;
   private readonly dialog = inject(MatDialog);
+  private readonly breakpoint = inject(BreakpointObserver);
   private readonly language = inject(LanguageService);
   protected readonly store = inject(ProductSearchStore);
   readonly warehouseId = input.required<string>();
@@ -43,7 +52,11 @@ export class ProductPickerComponent {
   readonly results = output<{ products: readonly SearchProduct[]; warehouseId: string }>();
   protected readonly search = new FormControl('', { nonNullable: true });
   protected readonly view = signal<'list' | 'grid'>('list');
-  protected readonly showFilters = signal(false);
+  protected readonly isMobile = toSignal(
+    this.breakpoint.observe('(max-width: 599px)').pipe(map(result => result.matches)),
+    { initialValue: false },
+  );
+  protected readonly effectiveView = computed(() => this.isMobile() ? 'list' : this.view());
   protected readonly facetKind = signal<'category' | 'brand'>('category');
   protected readonly facetSearch = new FormControl('', { nonNullable: true });
   protected readonly filters = new FormGroup({
@@ -53,7 +66,7 @@ export class ProductPickerComponent {
   protected readonly filterError = signal('');
   protected readonly quantities = computed(() => Object.fromEntries(this.lines().map(line => [line.productId, line.quantity])));
   protected readonly collections: { id: ProductCollection; label: string }[] = [
-    { id: 'all', label: 'Todos' }, { id: 'favorites', label: '★ Favoritos' },
+    { id: 'all', label: 'Todos' }, { id: 'favorites', label: 'Favoritos' },
     { id: 'best', label: 'Más vendidos' }, { id: 'recent', label: 'Recientes' },
   ];
   protected readonly heading = computed(() => this.store.state().query
@@ -69,6 +82,10 @@ export class ProductPickerComponent {
       state.minimumPrice !== undefined || state.maximumPrice !== undefined
         ? { key: 'price', label: `$${state.minimumPrice ?? 0} – ${state.maximumPrice === undefined ? 'sin máximo' : '$' + state.maximumPrice}` } : null,
     ].filter((item): item is { key: string; label: string } => item !== null);
+  });
+  protected readonly visibleCategories = computed(() => {
+    const categories = this.store.categories();
+    return this.isMobile() ? categories.slice(0, 3) : categories;
   });
 
   constructor() {
@@ -118,9 +135,28 @@ export class ProductPickerComponent {
       (value.minimumPrice !== null && value.maximumPrice !== null && value.minimumPrice > value.maximumPrice)) {
       this.filterError.set('Revisa el rango de precios. El mínimo no puede superar al máximo.'); return;
     }
-    this.filterError.set(''); this.showFilters.set(false);
+    this.filterError.set(''); this.dialog.closeAll();
     this.store.update({ ...value, minimumPrice: value.minimumPrice ?? undefined, maximumPrice: value.maximumPrice ?? undefined });
   }
+  protected openFilters() {
+    const state = this.store.state();
+    this.filters.setValue({
+      minimumPrice: state.minimumPrice ?? null,
+      maximumPrice: state.maximumPrice ?? null,
+      inStockOnly: state.inStockOnly,
+      lowStockOnly: state.lowStockOnly,
+    });
+    this.filterError.set('');
+    if (this.filterDialog) {
+      this.dialog.open(this.filterDialog, {
+        panelClass: 'pos-filter-dialog',
+        width: '30rem',
+        maxWidth: 'calc(100vw - 1.5rem)',
+        autoFocus: 'first-tabbable',
+      });
+    }
+  }
+  protected closeDialogs() { this.dialog.closeAll(); }
   protected clearFilters() {
     this.filters.reset(); this.filterError.set('');
     this.store.update({ category: null, brand: null, minimumPrice: undefined, maximumPrice: undefined,
@@ -133,7 +169,7 @@ export class ProductPickerComponent {
   }
   protected openFacets(kind: 'category' | 'brand') {
     this.facetKind.set(kind); this.facetSearch.setValue('', { emitEvent: false }); this.store.facets(kind);
-    if (this.facetDialog) this.dialog.open(this.facetDialog, { width: '440px', maxWidth: 'calc(100vw - 24px)', autoFocus: 'first-tabbable' });
+    if (this.facetDialog) this.dialog.open(this.facetDialog, { width: '440px', maxWidth: 'calc(100vw - 24px)', panelClass: 'pos-facet-dialog', autoFocus: 'first-tabbable' });
   }
   protected chooseFacet(facet: ProductFacet) { this.store.update({ [this.facetKind()]: facet }); this.dialog.closeAll(); }
   protected facetPage(offset: number) { this.store.facets(this.facetKind(), this.facetSearch.value, this.store.facetResults().page + offset); }

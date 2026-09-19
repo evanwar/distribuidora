@@ -74,6 +74,7 @@ type SaleAction = 'payment' | 'cancel' | null;
         [eyebrow]="text('Ventas')"
         [title]="text('Punto de venta')"
         [subtitle]="text('Agrega productos, cobra y entrega el comprobante desde una sola pantalla.')"
+        [compact]="view() === 'sale'"
       >
         <app-ui-button
           [label]="text(view() === 'sale' ? 'Ver historial' : 'Nueva venta')"
@@ -118,6 +119,16 @@ type SaleAction = 'payment' | 'cancel' | null;
           <div class="sale-main">
             <mat-card data-tour="pos-customer" appearance="outlined" class="sale-settings">
               <mat-card-content [formGroup]="saleForm">
+                <div class="sale-settings__intro">
+                  <span class="sale-settings__icon" aria-hidden="true">
+                    <app-ui-icon name="settings" />
+                  </span>
+                  <div>
+                    <strong>{{ text('Datos de venta') }}</strong>
+                    <small>{{ text('Origen, cliente y pago') }}</small>
+                  </div>
+                </div>
+
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
                   <mat-label>{{ text('Almacén de salida') }}</mat-label>
                   <mat-select formControlName="sourceWarehouseId">
@@ -165,7 +176,6 @@ type SaleAction = 'payment' | 'cancel' | null;
                       <mat-option disabled>{{ text('No encontramos clientes.') }}</mat-option>
                     }
                   </mat-autocomplete>
-                  <mat-hint>{{ text('Escribe el nombre o celular para filtrar.') }}</mat-hint>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
